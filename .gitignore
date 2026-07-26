@@ -9,6 +9,7 @@
 
 # local data and secrets
 /.env*
+!.env.example
 /data
 /storage
 

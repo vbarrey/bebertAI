@@ -9,7 +9,7 @@ export default function Home() {
     <main className="shell">
       <header>
         <p className="eyebrow">ARCHIVIST · BEBERTAI</p>
-        <h1>Retrouvez l'histoire<br />dans vos archives.</h1>
+        <h1>Retrouvez l&apos;histoire<br />dans vos archives.</h1>
         <p className="lede">Un assistant documentaire conçu pour explorer, recouper et comprendre une collection personnelle sur la Seconde Guerre mondiale.</p>
       </header>
 
@@ -19,7 +19,7 @@ export default function Home() {
           <input id="question" placeholder="Ex. Les documents sur la bataille de Normandie…" disabled />
           <button disabled>Rechercher</button>
         </div>
-        <p>Configurez d'abord vos dossiers d'archives pour démarrer l'indexation.</p>
+        <p>Configurez d&apos;abord vos dossiers d&apos;archives pour démarrer l&apos;indexation.</p>
       </section>
 
       <section className="principles">
