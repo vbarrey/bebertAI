@@ -18,11 +18,13 @@ button { cursor: pointer; }
 .project-navigation > p { margin: 0 0 7px; padding: 0 8px; color: var(--muted); font-size: .7rem; font-weight: 500; }
 .project-navigation ul { margin: 0; padding: 0; list-style: none; }
 .project-navigation li + li { margin-top: 2px; }
-.project-link { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 3px; overflow: hidden; padding: 8px; border: 0; border-radius: 6px; color: var(--foreground); background: transparent; text-align: left; }
+.project-link { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 3px; overflow: hidden; padding: 8px; border: 0; border-radius: 6px; color: var(--foreground); background: transparent; text-align: left; text-decoration: none; }
 .project-link:hover { background: var(--hover); }
+.project-link.is-active { background: #eaeaea; }
 .project-link span, .project-link small { overflow: hidden; max-width: 100%; white-space: nowrap; text-overflow: ellipsis; }
 .project-link span { font-size: .8125rem; }
 .project-link small { color: var(--muted); font-size: .6875rem; }
+.empty-sidebar { display: block; padding: 8px; color: var(--muted); font-size: .75rem; }
 .sidebar-bottom { display: grid; gap: 2px; margin-top: auto; }
 .sidebar-bottom button { padding: 8px; border: 0; border-radius: 6px; color: #555; background: transparent; font-size: .75rem; text-align: left; }
 .sidebar-bottom button:hover { color: var(--foreground); background: var(--hover); }
@@ -37,9 +39,7 @@ h1 { margin: 0 0 31px; font-size: clamp(1.9rem, 3.6vw, 2.65rem); font-weight: 60
 .composer textarea::placeholder { color: #777; }
 .composer-actions { display: flex; align-items: center; gap: 9px; min-height: 30px; }
 .composer-actions > span { overflow: hidden; flex: 1; color: var(--muted); font-size: .6875rem; white-space: nowrap; text-overflow: ellipsis; }
-.attach-button, .send-button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; }
-.attach-button { color: #555; background: var(--subtle); font-size: 1.15rem; font-weight: 300; }
-.attach-button:hover { background: #e9e9e9; }
+.send-button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 7px; }
 .send-button { color: white; background: var(--charcoal); font-size: 1.1rem; line-height: 1; }
 .send-button:hover { background: #000; }
 .quick-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
@@ -49,10 +49,9 @@ h1 { margin: 0 0 31px; font-size: clamp(1.9rem, 3.6vw, 2.65rem); font-weight: 60
 .recent-projects { width: min(100%, 900px); margin: 104px auto 30px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
 .section-heading h2 { margin: 0; font-size: .875rem; font-weight: 600; letter-spacing: -.015em; }
-.section-heading button { border: 0; padding: 3px; color: var(--muted); background: transparent; font-size: .75rem; }
-.section-heading button:hover { color: var(--foreground); }
+.section-heading > span { color: var(--muted); font-size: .75rem; }
 .project-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.project-card { display: flex; min-width: 0; align-items: flex-start; gap: 11px; padding: 14px; border: 1px solid var(--border); border-radius: 9px; color: var(--foreground); background: var(--surface); text-align: left; }
+.project-card { display: flex; min-width: 0; align-items: flex-start; gap: 11px; padding: 14px; border: 1px solid var(--border); border-radius: 9px; color: var(--foreground); background: var(--surface); text-align: left; text-decoration: none; }
 .project-card:hover { border-color: #d4d4d4; background: #fcfcfc; }
 .project-icon { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border-radius: 6px; color: #555; background: var(--subtle); font-size: 1rem; }
 .card-content { display: grid; min-width: 0; gap: 4px; padding-top: 1px; }
@@ -60,6 +59,18 @@ h1 { margin: 0 0 31px; font-size: clamp(1.9rem, 3.6vw, 2.65rem); font-weight: 60
 .card-content strong { font-size: .8125rem; font-weight: 500; }
 .card-content small { color: var(--muted); font-size: .6875rem; }
 .more { margin-left: auto; color: #969696; font-size: .75rem; letter-spacing: 1px; }
+.empty-projects { padding: 20px; border: 1px dashed var(--border); border-radius: 9px; color: var(--muted); font-size: .8125rem; }
+
+.project-page { width: min(100%, 900px); margin: 0 auto; padding-top: clamp(70px, 12vh, 118px); }
+.project-title-form { display: grid; gap: 8px; max-width: 520px; }
+.project-title-form label { color: var(--muted); font-size: .75rem; font-weight: 500; }
+.project-title-form > div { display: flex; gap: 8px; }
+.project-title-form input { min-width: 0; flex: 1; padding: 10px 11px; border: 1px solid var(--border); border-radius: 7px; outline: 0; color: var(--foreground); background: var(--surface); font-size: .875rem; }
+.project-title-form input:focus { border-color: #a6a6a6; }
+.project-title-form button { padding: 0 12px; border: 0; border-radius: 7px; color: white; background: var(--charcoal); font-size: .75rem; }
+.conversation-empty { margin-top: 72px; padding-top: 23px; border-top: 1px solid var(--border); }
+.conversation-empty h1 { margin-bottom: 12px; font-size: clamp(1.6rem, 3vw, 2.25rem); }
+.conversation-empty p { margin: 0; color: var(--muted); font-size: .875rem; }
 
 @media (max-width: 760px) {
   .workspace { display: block; }
