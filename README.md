@@ -1,30 +1,88 @@
-# Archivist BebertAI
+# Bebert AI
 
-Assistant local de recherche documentaire pour une collection personnelle d'archives de la Seconde Guerre mondiale.
+**Bebert AI** est un assistant documentaire local conçu pour mon père, maquettiste confirmé ayant accumulé au fils des années un nombre considérable de documentation en lien avec sa passion.
 
-## Principes non négociables
+L’objectif est de lui permettre d'explorer facilement sa collection personnelle d'archives (livres, PDF, photographies, scans, cartes, etc.) grâce à l'intelligence artificielle, tout en garantissant que chaque réponse s'appuie exclusivement sur les documents de sa bibliothèque.
 
-- Toute réponse est fondée sur les documents retrouvés et cite ses sources.
-- En l'absence de source pertinente, l'assistant le dit explicitement.
-- La recherche documentaire prévaut sur la génération de texte.
-- Les traitements lourds (OCR, embeddings, indexation) sont conçus comme des services séparés.
+Le projet est entièrement pensé pour fonctionner en local, préserver la confidentialité des données et fournir des réponses transparentes accompagnées de leurs sources.
 
-## Architecture cible
+## Fonctionnalités
 
-```text
-src/
-  app/             Routes et interface Next.js
-  modules/         Cas d'usage métier par domaine
-  services/        Adaptateurs OCR, embeddings, Qdrant, Ollama
-  repositories/    Persistance Prisma/SQLite
-  components/      Composants UI réutilisables
-prisma/            Schéma et migrations SQLite
+- 📚 Gestion de plusieurs bibliothèques documentaires
+
+- 🔍 Recherche sémantique en langage naturel
+
+- 🤖 Assistant IA basé sur un système RAG
+
+- 📄 OCR des documents numérisés
+
+- 📖 Citations automatiques des sources
+
+- 💻 Fonctionnement 100 % local avec Ollama
+
+
+
+## Stack technique
+
+### Frontend
+
+- Next.js 16
+
+- React 19
+
+- TypeScript
+
+- Tailwind CSS v4
+
+- shadcn/ui
+
+- Radix UI
+
+### Backend
+
+- Next.js Server Actions
+
+- Prisma
+
+- SQLite
+
+### IA
+
+- Ollama
+
+- bge-m3
+
+- PaddleOCR
+
+- Qdrant
+
+
+## Installation
+
+```bash
+
+git clone <repository-url>
+
+cd bebert-ai
+
+npm install
+
+npm run dev
+
 ```
 
-## Démarrage
+L'application est ensuite accessible à l'adresse :
 
-1. Copier `.env.example` vers `.env`.
-2. Installer les dépendances : `npm install`.
-3. Lancer l'application : `npm run dev`.
+```
 
-Les intégrations Ollama, Qdrant, PaddleOCR et le schéma Prisma seront introduits par modules au fur et à mesure du MVP, afin que l'interface, l'indexation et l'IA évoluent indépendamment.
+http://localhost:3000
+
+```
+
+
+
+## État du projet
+
+🚧 Projet en cours de développement.
+
+Les fonctionnalités seront intégrées progressivement, en commençant par la gestion des projets documentaires, l'indexation, puis la recherche assistée par IA.
