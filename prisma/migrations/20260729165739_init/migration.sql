@@ -2,6 +2,7 @@
 CREATE TABLE "Project" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
+    "description" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
@@ -43,12 +44,26 @@ CREATE TABLE "Document" (
     "fileName" TEXT NOT NULL,
     "mimeType" TEXT,
     "fileSize" INTEGER,
-    "checksum" TEXT,
-    "extractedText" TEXT,
+    "checksum" TEXT NOT NULL,
+    "language" TEXT,
     "indexedAt" DATETIME,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
+    "indexingStatus" TEXT NOT NULL DEFAULT 'PENDING',
     CONSTRAINT "Document_sourceFolderId_fkey" FOREIGN KEY ("sourceFolderId") REFERENCES "SourceFolder" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "Chunk" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "documentId" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "pageNumber" INTEGER,
+    "x" INTEGER,
+    "y" INTEGER,
+    "width" INTEGER,
+    "height" INTEGER,
+    CONSTRAINT "Chunk_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable

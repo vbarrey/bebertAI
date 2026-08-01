@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Les accès aux fichiers restent côté serveur : aucun chemin local n'est exposé au navigateur.
+  /* config options here */
+  reactCompiler: true,
 };
 
 export default nextConfig;
