@@ -1,5 +1,4 @@
 import { ProjectGrid } from "@/components/projects/ProjectGrid";
-
 import { getProjects } from "@/lib/queries/project";
 
 export default async function Home() {

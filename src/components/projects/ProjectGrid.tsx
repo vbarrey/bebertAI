@@ -1,16 +1,12 @@
 import type { Project } from "@prisma/client";
-
 import { FolderSearch } from "lucide-react";
-
 import { ProjectCard } from "./ProjectCard";
 
 type ProjectGridProps = {
   projects: Project[];
 };
 
-export function ProjectGrid({
-  projects,
-}: ProjectGridProps) {
+export function ProjectGrid({ projects }: ProjectGridProps) {
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-20 text-center">

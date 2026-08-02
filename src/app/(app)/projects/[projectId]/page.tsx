@@ -4,7 +4,22 @@ import { updateProject } from "@/lib/mutations/projects";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { prisma } from "@/lib/prisma";
+import { Settings, Plus } from "lucide-react";
+
+import { ConversationGrid } from "@/components/conversations/ConversationGrid";
+
+import { getProjectWithConversations } from "@/lib/queries/project";
+import { createConversation } from "@/lib/mutations/conversation";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogClose,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type ProjectPageProps = {
   params: Promise<{ projectId: string }>;
@@ -12,57 +27,86 @@ type ProjectPageProps = {
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { projectId } = await params;
-  const [project, projects] = await Promise.all([
-    prisma.project.findUnique({ where: { id: projectId } }),
-    prisma.project.findMany({ take: 20 }),
-  ]);
+  const project = await getProjectWithConversations(projectId);
 
   if (!project) notFound();
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col p-6 lg:p-10">
-      <form action={updateProject} className="space-y-6">
-        <input type="hidden" name="projectId" value={project.id} />
+      <div className="flex gap-4 justify-between w-full">
+        <h1 className="text-4xl">{project.name}</h1>
 
-        <div className="flex flex-col gap-3">
-          <label htmlFor="project-name" className="text-sm font-medium pl-1">
-            Nom du projet
-          </label>
+        <Dialog>
+          <DialogTrigger>
+            <Settings />
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-xl">Modifier le projet</DialogTitle>
+            </DialogHeader>
+            <form action={updateProject} className="space-y-6">
+              <input type="hidden" name="projectId" value={project.id} />
 
-          <Input
-            id="project-name"
-            name="name"
-            defaultValue={project.name}
-            className="max-w-md"
-          />
-        </div>
+              <div className="flex flex-col gap-3">
+                <label
+                  htmlFor="project-name"
+                  className="text-sm font-medium pl-1"
+                >
+                  Nom du projet
+                </label>
 
-        <div className="flex flex-col gap-3">
-          <label
-            htmlFor="project-description"
-            className="text-sm font-medium pl-1"
-          >
-            Description
-          </label>
-          <Input
-            id="project-description"
-            name="description"
-            defaultValue={project.description || ""}
-            className="max-w-md"
-          />
-        </div>
+                <Input
+                  id="project-name"
+                  name="name"
+                  defaultValue={project.name}
+                  className="max-w-md"
+                />
+              </div>
 
-        <Button type="submit">Enregistrer</Button>
-      </form>
+              <div className="flex flex-col gap-3">
+                <label
+                  htmlFor="project-description"
+                  className="text-sm font-medium pl-1"
+                >
+                  Description
+                </label>
+                <Input
+                  id="project-description"
+                  name="description"
+                  defaultValue={project.description || ""}
+                  className="max-w-md"
+                />
+              </div>
 
-      <div className="mt-12 flex flex-1 items-center justify-center rounded-xl border border-dashed">
-        <div className="max-w-md text-center">
-          <h1 className="text-2xl font-semibold">{project.name}</h1>
+              <DialogFooter className="sm:justify-start">
+                <DialogClose asChild>
+                  <Button type="submit">Enregistrer</Button>
+                </DialogClose>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-          {/** TODO : Find conversation's objects and display them */}
-          <p className="mt-3 text-muted-foreground">
-            Aucune conversation n'a encore été créée dans ce projet.
-          </p>
+      <p className="text-muted-foreground">{project.description}</p>
+
+      <br />
+
+      <div className="flex justify-end gap-2 mb-4">
+        <form action={createConversation}>
+          <input type="hidden" name="projectId" value={project.id} />
+
+          <Button type="submit">
+            <Plus />
+            Nouvelle conversation
+          </Button>
+        </form>
+      </div>
+
+      <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed w-full">
+        <div className="max-w-md text-center w-full">
+          <h1 className="text-2xl font-semibold mt-4 mb-2">Conversations</h1>
+          <ConversationGrid conversations={project.conversations} />
         </div>
       </div>
     </div>
