@@ -1,3 +1,5 @@
+"use server";
+
 import { prisma } from "../prisma";
 
 import { MessageRole, MessageStatus } from "@prisma/client";

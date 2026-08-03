@@ -14,10 +14,31 @@ export const getConversation = cache(
 );
 
 export const getConversationWithMessages = cache(
-  async (conversationId: string) => prisma.conversation.findUnique({
-      where: { id: conversationId },
-      include: { messages: true },
-  })
+  async (conversationId: string, projectId: string) => {
+    return prisma.conversation.findUnique({
+      where: {
+        id: conversationId,
+        projectId: projectId
+      },
+      select: {
+        id: true,
+        title: true,
+        projectId: true,
+        messages: {
+          orderBy: {
+            createdAt: "asc",
+          },
+          select: {
+            id: true,
+            role: true,
+            status: true,
+            content: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+  }
 );
 
 export const getConversationCount = cache(

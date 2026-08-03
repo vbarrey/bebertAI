@@ -25,7 +25,7 @@ export function MainLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader />
 
-        <div className="flex-1">
+        <div className="h-[100vh] w-full flex-1 overflow-y-hidden">
           {children}
         </div>
       </div>
