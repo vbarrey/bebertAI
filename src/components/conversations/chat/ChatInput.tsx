@@ -7,16 +7,23 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 
-import { createMessage } from "@/lib/mutations/message";
+import { sendMessage } from "@/lib/mutations/chat";
 
 type Props = {
   conversationId: string;
+  projectId: string;
 };
 
-export async function ChatInput({ conversationId }: Props) {
+export async function ChatInput({ conversationId, projectId }: Props) {
   return (
     <div className="flex p-4 gap-4 w-full justify-center">
-      <form action={createMessage} className="w-full">
+      <form action={sendMessage} className="w-full">
+        <input
+          type="hidden"
+          name="projectId"
+          value={projectId}
+        />
+
         <input
           type="hidden"
           name="conversationId"

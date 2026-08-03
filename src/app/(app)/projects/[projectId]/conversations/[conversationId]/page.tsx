@@ -26,7 +26,8 @@ export default async function ConversationPage({
 
       <ChatPanel 
         conversationId={conversation.id}
-        messages={conversation.messages}/>
+        messages={conversation.messages}
+        projectId={projectId}/>
     </div>
   );
 }

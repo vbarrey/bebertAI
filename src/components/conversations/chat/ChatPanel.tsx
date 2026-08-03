@@ -8,10 +8,11 @@ type MessageList = Omit<Message, "conversationId" | "updatedAt">[];
 
 type ChatPanelProps = {
   conversationId: string;
+  projectId: string;
   messages: MessageList;
 };
 
-export async function ChatPanel({ conversationId,messages }: ChatPanelProps) {
+export async function ChatPanel({ conversationId, messages, projectId }: ChatPanelProps) {
   if (messages.length === 0) {
     return (
       <div>
@@ -22,7 +23,7 @@ export async function ChatPanel({ conversationId,messages }: ChatPanelProps) {
     return (
       <div className="flex flex-1 flex-col gap-4 justify-between h-full">
         <MessageList messages={messages} />
-        <ChatInput conversationId={conversationId} />
+        <ChatInput conversationId={conversationId} projectId={projectId}/>
       </div>
     );
   }
