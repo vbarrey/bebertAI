@@ -17,3 +17,6 @@
 *.tsbuildinfo
 *.log
 .DS_Store
+
+# Database
+dev.db
