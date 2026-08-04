@@ -5,7 +5,7 @@ type GenerateAssistantResponseInput  = {
     message: string;
 };
 
-type ChatChunk = {
+export type ChatChunk = {
     delta: string;
 };
 /**

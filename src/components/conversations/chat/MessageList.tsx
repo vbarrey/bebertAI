@@ -2,20 +2,28 @@ import { Message } from "@prisma/client";
 
 import { MessageBuble } from "./MessageBuble";
 
-type MessageList = Omit<Message, "conversationId" | "updatedAt">[];
-
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useEffect, useRef } from "react";
 
 type MessageListProps = {
-  messages: MessageList;
+  messages: Message[];
 };
 
-export async function MessageList({ messages }: MessageListProps) {
+export function MessageList({ messages }: MessageListProps) {
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+
   return (
     <ScrollArea className="h-[calc(100vh-240px)]">
       {messages.map((message) => (
         <MessageBuble key={message.id} message={message} />
       ))}
+      <div ref={bottomRef} />
     </ScrollArea>
   );
 }

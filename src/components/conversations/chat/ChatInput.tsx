@@ -7,46 +7,31 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 
-import { sendMessage } from "@/lib/mutations/chat";
-
 type Props = {
-  conversationId: string;
-  projectId: string;
+  onSendMessage: (message: string) => Promise<void>;
+  isStreaming: boolean;
 };
 
-export async function ChatInput({ conversationId, projectId }: Props) {
+export function ChatInput({ onSendMessage, isStreaming }: Props) {
+  
+  const handleSubmit = (formData: FormData) => {
+    const message = formData.get("content")?.toString();
+
+    if(!message) return; // TODO : Handle validation error
+
+    onSendMessage(message);
+  }
+  
   return (
     <div className="flex p-4 gap-4 w-full justify-center">
-      <form action={sendMessage} className="w-full">
-        <input
-          type="hidden"
-          name="projectId"
-          value={projectId}
-        />
-
-        <input
-          type="hidden"
-          name="conversationId"
-          value={conversationId}
-        />
-
-        <input
-          type="hidden"
-          name="role"
-          value="user"
-        />
-
-        <input
-          type="hidden"
-          name="status"
-          value="pending"
-        />
-
+      <form action={handleSubmit} className="w-full">
         <Field>
           <InputGroup className="w-[70%] h-15 rounded-4xl p-4">
             <InputGroupInput placeholder="Type to search..." name="content"/>
             <InputGroupAddon align="inline-end">
-              <InputGroupButton type="submit">Search</InputGroupButton>
+              <InputGroupButton type="submit" disabled={isStreaming}>
+                {isStreaming ? "Sending..." : "Search"}
+              </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
         </Field>

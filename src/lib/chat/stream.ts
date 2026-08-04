@@ -1,23 +1,19 @@
-"use server";
-
 import { MessageRole, MessageStatus } from "@prisma/client";
 
-import { createMessage, updateMessage } from "./message";
-import { generateAssistantResponse } from "../chat/engine";
-import { revalidatePath } from "next/cache";
+import { createMessage, updateMessage } from "../mutations/message";
+import { generateAssistantResponse, ChatChunk } from "../chat/engine";
+
+type StreamConversationInput = {
+    conversationId: string;
+    message: string;
+};
 
 /**
- * Send a message in a conversation, create a USER message and an ASSISTANT message, and stream the assistant response.
- * @param formData 
+ * Streams a conversation and yields chat chunks.
+ * @param input 
+ * @returns AsyncGenerator<ChatChunk>
  */
-export async function sendMessage(formData: FormData) {
-    // Read user message
-    const message = formData.get("content")?.toString();
-    const conversationId = formData.get("conversationId")?.toString();
-    const projectId = formData.get("projectId")?.toString();
-
-    if (!message || !conversationId || !projectId) return; // TODO : Handle validation error
-
+export async function* streamConversation({ conversationId, message }: StreamConversationInput): AsyncGenerator<ChatChunk> {
     // Create USER message
     await createMessage({
         conversationId: conversationId, 
@@ -37,9 +33,11 @@ export async function sendMessage(formData: FormData) {
     });
 
     // Stream assistant response
-    for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message!})) {
+    for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message})) {
+        // Yield the chunk to the caller
+        yield chunk;
         generatedContent += chunk.delta;
-        // TODO : Update ASSISTANT message with the new content and status STREAMING
+        // Update ASSISTANT message with the new content and status STREAMING
         await updateMessage({
             messageId: assistantMessage.id,
             content: generatedContent,
@@ -53,6 +51,4 @@ export async function sendMessage(formData: FormData) {
         content: generatedContent,
         status: MessageStatus.COMPLETED
     });
-
-    revalidatePath(`/projects/${projectId}/conversations/${conversationId}`); // TODO : When using streaming -> delete
 }

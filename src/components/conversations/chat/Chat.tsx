@@ -1,0 +1,112 @@
+"use client";
+
+import { MessageRole, MessageStatus } from "@prisma/client";
+
+import { Message } from "@prisma/client";
+
+import { ChatInput } from "./ChatInput";
+import { MessageList } from "./MessageList";
+
+import { useState } from "react";
+
+type ChatProps = {
+    conversationId: string;
+    messages: Message[];
+};
+
+export function Chat({ conversationId, messages }: ChatProps) {
+    const [chatMessages, setChatMessages] = useState(messages);
+    const [isStreaming, setIsStreaming] = useState(false);
+
+    const handleSendMessage = async (message: string) => {
+        setIsStreaming(true);
+        const userMessage: Message = {
+            id: crypto.randomUUID(),
+            conversationId: conversationId,
+            role: MessageRole.USER,
+            content: message,
+            status: MessageStatus.COMPLETED,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        setChatMessages((prevMessages) => [...prevMessages, userMessage]);
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const assistantMessage: Message = {
+            id: crypto.randomUUID(),
+            conversationId: conversationId,
+            role: MessageRole.ASSISTANT,
+            content: "",
+            status: MessageStatus.PENDING,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        setChatMessages((prevMessages) => [...prevMessages, assistantMessage]);
+
+        const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                conversationId,
+                message
+            }),
+        });
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        let bufferedContent = "";
+        while (true) {
+            const { done, value } = await reader!.read();
+            if (done) break;
+
+            bufferedContent += decoder.decode(value, { stream: true });
+            const lines = bufferedContent.split("\n");
+            bufferedContent = lines.pop() || "";
+
+            for (const line of lines) {
+                if (line.trim() === "") continue;
+                try {
+                    const chunk = JSON.parse(line);
+                    setChatMessages(previous => {
+                        const messages = [...previous];
+
+                        messages[messages.length - 1] = {
+                            ...messages[messages.length - 1],
+                            content: messages[messages.length - 1].content + chunk.delta,
+                        };
+
+                        return messages;
+                    });
+                } catch (error) {
+                    console.error("Error parsing chunk:", error);
+                }
+            }
+        }
+
+        setChatMessages(previous => {
+            const messages = [...previous];
+
+            messages[messages.length - 1] = {
+                ...messages[messages.length - 1],
+                status: MessageStatus.COMPLETED,
+            };
+
+            return messages;
+        });
+
+        setIsStreaming(false);
+    }
+
+    return (
+        <div>
+            <MessageList messages={chatMessages} />
+            <ChatInput onSendMessage={handleSendMessage} isStreaming={isStreaming} />
+        </div>
+    );
+}

@@ -12,3 +12,28 @@ export function sleep(ms: number) {
 export function randomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+export function generatorToHttpStream<T>(
+  generator: AsyncGenerator<T>
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { value, done } = await generator.next();
+
+      if (done) {
+        controller.close();
+        return;
+      }
+
+      controller.enqueue(
+        encoder.encode(`${JSON.stringify(value)}\n`)
+      );
+    },
+
+    async cancel() {
+      await generator.return?.(undefined);
+    },
+  });
+}
