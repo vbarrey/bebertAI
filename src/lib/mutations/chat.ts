@@ -2,18 +2,12 @@
 
 import { MessageRole, MessageStatus } from "@prisma/client";
 
-import { createMessage } from "./message";
+import { createMessage, updateMessage } from "./message";
 import { generateAssistantResponse } from "../chat/engine";
 import { revalidatePath } from "next/cache";
 
 /**
- * TODO :
- * - Read user message
- * - Create Message (role: USER) 
- * - Update lastMessageAt on conversation
- * - Call generateAssistantResponse from lib/chat.ts
- * - Create Message (role: ASSISTANT)
- * - revalidate coversation page
+ * Send a message in a conversation, create a USER message and an ASSISTANT message, and stream the assistant response.
  * @param formData 
  */
 export async function sendMessage(formData: FormData) {
@@ -26,22 +20,39 @@ export async function sendMessage(formData: FormData) {
 
     // Create USER message
     await createMessage({
-        conversationId: conversationId!, 
+        conversationId: conversationId, 
         role: MessageRole.USER, 
         content: message, 
-        status: MessageStatus.COMPLETED // TODO : When using streaming, we should set this to "pending" and update it to "completed" when the streaming is done 
+        status: MessageStatus.COMPLETED
     });
 
-    // Call generateAssistantResponse from lib/chat.ts
-    const messageResponse = await generateAssistantResponse({ conversationId: conversationId!, message });
+    let generatedContent = "";
 
     // Create ASSISTANT message
-    await createMessage({
-        conversationId: conversationId!, 
+    const assistantMessage = await createMessage({
+        conversationId: conversationId, 
         role: MessageRole.ASSISTANT, 
-        content: messageResponse.message, 
-        status: MessageStatus.COMPLETED // TODO : When using streaming, we should set this to "pending" and update it to "completed" when the streaming is done
+        content: generatedContent, 
+        status: MessageStatus.PENDING
     });
 
-    revalidatePath(`/projects/${projectId}/conversations/${conversationId}`);
+    // Stream assistant response
+    for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message!})) {
+        generatedContent += chunk.delta;
+        // TODO : Update ASSISTANT message with the new content and status STREAMING
+        await updateMessage({
+            messageId: assistantMessage.id,
+            content: generatedContent,
+            status: MessageStatus.STREAMING
+        });
+    }
+
+    // Update ASSISTANT message status to COMPLETED
+    await updateMessage({
+        messageId: assistantMessage.id,
+        content: generatedContent,
+        status: MessageStatus.COMPLETED
+    });
+
+    revalidatePath(`/projects/${projectId}/conversations/${conversationId}`); // TODO : When using streaming -> delete
 }

@@ -1,13 +1,24 @@
-type InputMessage = {
+import { sleep, randomInt } from "../utils";
+
+type GenerateAssistantResponseInput  = {
     conversationId: string;
     message: string;
 };
 
-type OutputMessage = {
-    conversationId: string;
-    message: string;
+type ChatChunk = {
+    delta: string;
 };
+/**
+ * Generates an assistant response for a given conversation and message. 
+ * Should never call prisma
+ * @param input 
+ */
+export async function* generateAssistantResponse(input: GenerateAssistantResponseInput ): AsyncGenerator<ChatChunk> {
+    const mockResponse = `This is a mock response for the message: "${input.message}" in conversation: "${input.conversationId}".`.split(" ");
 
-export async function generateAssistantResponse(input: InputMessage): Promise<OutputMessage> {
-    return new Promise(resolve => setTimeout(() => resolve({ conversationId: input.conversationId, message: "Bonjour, je suis Bebert AI!" }), 1000));
+    // Simulate streaming by yielding chunks of the mock response
+    for (const chunk of mockResponse) {
+        await sleep(randomInt(100, 500)); // Simulate network delay
+        yield { delta: chunk + " " };
+    }
 }

@@ -11,34 +11,42 @@ type CreateMessageInput = {
     status: MessageStatus;
 };
 
-export async function createMessage({conversationId, role, content, status}: CreateMessageInput) {
-    await prisma.$transaction([
+type CreateMessageOutput = {
+    id: string;
+    conversationId: string;
+};
+
+export async function createMessage({conversationId, role, content, status}: CreateMessageInput): Promise<CreateMessageOutput> {
+    return prisma.$transaction(async (tx) => {
         // Create message
-        prisma.message.create({data: {
+        const message = await tx.message.create({data: {
             conversationId: conversationId,
             role: role,
             content: content,
             status: status
-        }}),
+        }});
         // Update lastMessageAt on conversation
-        prisma.conversation.update({
+        await tx.conversation.update({
             where: {
                 id: conversationId
             },
             data: {
                 lastMessageAt: new Date()
             }
-        })
-    ]);
+        });
+
+        return { id: message.id, conversationId: message.conversationId };
+    });
 }
 
-export async function updateMessage(formData: FormData) {
-    const content = formData.get("content")?.toString();
-    const messageId = formData.get("messageId")?.toString();
-    
-    if(!messageId || !content) return; // TODO : Handle validation error
+type UpdateMessageInput = {
+    messageId: string;
+    content: string;
+    status: MessageStatus;
+};
 
-    await prisma.message.update({where: {id: messageId}, data: {content: content}});
+export async function updateMessage({messageId, content, status}: UpdateMessageInput) {
+    await prisma.message.update({where: {id: messageId}, data: {content: content, status: status}});
 }
 
 export async function deleteMessage(formData: FormData) {
