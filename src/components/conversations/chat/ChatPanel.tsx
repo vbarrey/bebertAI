@@ -16,7 +16,7 @@ export async function ChatPanel({ conversationId, messages, projectId }: ChatPan
   if (messages.length === 0) {
     return (
       <div>
-        <EmptyConversation conversationId={conversationId} />
+        <EmptyConversation conversationId={conversationId} projectId={projectId} />
       </div>
     );
   } else {
