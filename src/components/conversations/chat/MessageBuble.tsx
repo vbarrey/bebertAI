@@ -1,7 +1,9 @@
-import { Message, MessageRole } from "@prisma/client";
+import { MessageRole } from "@prisma/client";
+
+import { ChatMessage } from "@/types/chat";
 
 type Props = {
-  message: Omit<Message, "conversationId" | "updatedAt">;
+  message: ChatMessage;
 };
 
 export function MessageBuble({ message }: Props) {

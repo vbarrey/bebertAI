@@ -1,4 +1,4 @@
-import { Message } from "@prisma/client";
+import { ChatMessage } from "@/types/chat";
 
 import { MessageBuble } from "./MessageBuble";
 
@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useEffect, useRef } from "react";
 
 type MessageListProps = {
-  messages: Message[];
+  messages: ChatMessage[];
 };
 
 export function MessageList({ messages }: MessageListProps) {

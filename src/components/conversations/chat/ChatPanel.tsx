@@ -1,11 +1,11 @@
-import { Message } from "@prisma/client";
+import { ChatMessage } from "@/types/chat";
 
 import { Chat } from "./Chat";
 
 type ChatPanelProps = {
   conversationId: string;
   projectId: string;
-  messages: Message[];
+  messages: ChatMessage[];
 };
 
 export async function ChatPanel({ conversationId, messages, projectId }: ChatPanelProps) {

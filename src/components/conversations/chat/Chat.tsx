@@ -2,7 +2,7 @@
 
 import { MessageRole, MessageStatus } from "@prisma/client";
 
-import { Message } from "@prisma/client";
+import { ChatMessage } from "@/types/chat";
 
 import { ChatInput } from "./ChatInput";
 import { MessageList } from "./MessageList";
@@ -11,7 +11,7 @@ import { useState } from "react";
 
 type ChatProps = {
     conversationId: string;
-    messages: Message[];
+    messages: ChatMessage[];
 };
 
 export function Chat({ conversationId, messages }: ChatProps) {
@@ -20,28 +20,24 @@ export function Chat({ conversationId, messages }: ChatProps) {
 
     const handleSendMessage = async (message: string) => {
         setIsStreaming(true);
-        const userMessage: Message = {
+        const userMessage: ChatMessage = {
             id: crypto.randomUUID(),
-            conversationId: conversationId,
             role: MessageRole.USER,
             content: message,
             status: MessageStatus.COMPLETED,
-            createdAt: new Date(),
-            updatedAt: new Date()
+            createdAt: new Date()
         };
 
         setChatMessages((prevMessages) => [...prevMessages, userMessage]);
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const assistantMessage: Message = {
+        const assistantMessage: ChatMessage = {
             id: crypto.randomUUID(),
-            conversationId: conversationId,
             role: MessageRole.ASSISTANT,
             content: "",
             status: MessageStatus.PENDING,
-            createdAt: new Date(),
-            updatedAt: new Date()
+            createdAt: new Date()
         };
 
         setChatMessages((prevMessages) => [...prevMessages, assistantMessage]);
