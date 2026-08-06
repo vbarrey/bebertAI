@@ -1,24 +1,30 @@
-import { sleep, randomInt } from "../utils";
+import { streamOllamaModel, OllamaMessage } from "@/lib/llm/ollama";
+import { ChatChunk } from "@/lib/chat/type";
+
+import { config } from "@/lib/config";
 
 type GenerateAssistantResponseInput  = {
     conversationId: string;
     message: string;
 };
 
-export type ChatChunk = {
-    delta: string;
-};
 /**
  * Generates an assistant response for a given conversation and message. 
- * Should never call prisma
+ * Should never call prisma but prepare the context for the assistant to answer.
  * @param input 
  */
 export async function* generateAssistantResponse(input: GenerateAssistantResponseInput ): AsyncGenerator<ChatChunk> {
-    const mockResponse = `This is a mock response for the message: "${input.message}" in conversation: "${input.conversationId}".`.split(" ");
+    // TODO:
+    // - Ajouter le prompt système
+    // - Ajouter l'historique
+    // - Ajouter le contexte RAG
+    const messages: OllamaMessage[] = [
+        { role: "user", content: input.message }
+    ];
 
     // Simulate streaming by yielding chunks of the mock response
-    for (const chunk of mockResponse) {
-        await sleep(randomInt(100, 500)); // Simulate network delay
-        yield { delta: chunk + " " };
-    }
+    yield* streamOllamaModel({
+        model: config.ollama.model,
+        messages: messages
+    });
 }

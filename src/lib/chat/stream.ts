@@ -1,7 +1,8 @@
 import { MessageRole, MessageStatus } from "@prisma/client";
 
 import { createMessage, updateMessage } from "../mutations/message";
-import { generateAssistantResponse, ChatChunk } from "../chat/engine";
+import { generateAssistantResponse } from "../chat/engine";
+import { ChatChunk } from "./type";
 
 type StreamConversationInput = {
     conversationId: string;
