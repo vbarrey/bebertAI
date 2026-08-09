@@ -1,8 +1,8 @@
 import { MessageRole, MessageStatus } from "@prisma/client";
 
-import { createMessage, updateMessage } from "../mutations/message";
-import { generateAssistantResponse } from "../chat/engine";
-import { ChatChunk } from "./type";
+import { createMessage, updateMessage } from "../../mutations/message";
+import { generateAssistantResponse } from "./engine";
+import { ChatChunk } from "../types";
 
 type StreamConversationInput = {
     conversationId: string;
@@ -37,7 +37,7 @@ export async function* streamConversation({ conversationId, message }: StreamCon
     for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message})) {
         // Yield the chunk to the caller
         yield chunk;
-        generatedContent += chunk.delta;
+        generatedContent += chunk.content;
         // Update ASSISTANT message with the new content and status STREAMING
         await updateMessage({
             messageId: assistantMessage.id,

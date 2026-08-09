@@ -1,4 +1,4 @@
-import { streamConversation } from "@/lib/chat/stream";
+import { streamConversation } from "@/lib/ai/chat/stream";
 import { generatorToHttpStream } from "@/lib/utils";
 
 export async function POST(req: Request) {

@@ -25,6 +25,9 @@ model Conversation {
   messages          Message[]
   lastMessageAt     DateTime @default(now())
 
+  modelId String?
+  model   AIModel? @relation(fields: [modelId], references: [id])
+
   @@index([projectId, lastMessageAt])
 }
 
@@ -107,6 +110,63 @@ model IndexingJob {
   sourceFolder   SourceFolder? @relation(fields: [sourceFolderId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+}
+
+model AIProvider {
+  id        String @id @default(cuid())
+
+  name      String
+  type      AIProviderType
+
+  enabled   Boolean @default(true)
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  models        AIModel[] @relation("ProviderModels")
+
+  defaultModelId String?
+  defaultModel AIModel? @relation("DefaultModel", fields: [defaultModelId], references: [id])
+}
+
+model AIModel {
+  id String @id @default(cuid())
+
+  providerId String
+  provider AIProvider @relation("ProviderModels", fields: [providerId], references: [id], onDelete: Cascade)
+
+  defaultForProviders AIProvider[] @relation("DefaultModel")
+
+  name String
+  displayName String?
+
+  enabled Boolean @default(true)
+  favorite Boolean @default(false)
+
+  sizeBytes BigInt?
+  parameterSize String?
+  family String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  source AIModelSource
+
+  conversations Conversation[]
+
+  @@unique([providerId, name])
+}
+
+enum AIProviderType {
+  OLLAMA
+  OPENAI
+  ANTHROPIC
+}
+
+enum AIModelSource {
+  LOCAL
+  REMOTE
 }
 
 enum MessageRole {
