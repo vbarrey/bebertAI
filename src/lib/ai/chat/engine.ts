@@ -1,4 +1,4 @@
-import { ChatChunk, GenerateAssistantResponseInput } from "../types";
+import { ChatChunk, ChatRequestInput, GenerateAssistantResponseInput } from "../types";
 import { aiProviderRegistry } from "@/lib/ai/registry";
 
 /**
@@ -9,35 +9,33 @@ import { aiProviderRegistry } from "@/lib/ai/registry";
 export async function* generateAssistantResponse({
   conversationId,
   message,
+  providerId,
+  modelId
 }: {
   conversationId: string;
   message: string;
+  providerId: string;
+  modelId: string;
 }): AsyncGenerator<ChatChunk> {
   // TODO:
   // - Ajouter le prompt système
   // - Ajouter l'historique
   // - Ajouter le contexte RAG
 
-  const input: GenerateAssistantResponseInput = {
-    conversationId,
-    providerId: "OLLAMA LOCAL",
-    chatInput: {
-      model: "qwen3:0.6b",
-      messages: [{ role: "user", content: message }],
-    },
-  };
-
-  const provider = aiProviderRegistry.get(input.providerId);
+  const provider = aiProviderRegistry.get(providerId);
 
   if (!provider)
     throw new Error(
       `Unknown provider ${
-        input.providerId
+        providerId
       } - Known provider (${aiProviderRegistry.getNbProvider()}) are [${aiProviderRegistry
         .getProviderIdList()
         .join(" - ")}]`
     );
 
-  // Simulate streaming by yielding chunks of the mock response
-  yield* provider!.chat(input.chatInput);
+  const chatInput: ChatRequestInput = {messages: [{content: message, role: "user"}], modelId: modelId};
+
+  console.log(chatInput)
+
+  yield* provider!.chat(chatInput);
 }

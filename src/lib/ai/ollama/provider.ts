@@ -8,11 +8,13 @@ import { toAppModel, toOlllamaChatRequest, toAppChatChunk } from "./transform";
 import { OllamaProviderConfiguration, parseOllamaConfig } from "./config";
 
 export class OllamaProvider implements AIProviderClient {
+  id: string;
   name: string;
   client: OllamaClient;
 
-  constructor(config: OllamaProviderConfiguration, alterName ?: string){
-    this.name = alterName ?? "OLLAMA LOCAL";
+  constructor(id: string, name: string, config: OllamaProviderConfiguration) {
+    this.id = id;
+    this.name = name ?? "OLLAMA";
     this.client = new OllamaClient(config);
   }
 
@@ -21,8 +23,8 @@ export class OllamaProvider implements AIProviderClient {
     return models.map(toAppModel);
   }
 
-  async * chat(appInput: ChatRequestInput): AsyncGenerator<ChatChunk> {
-    const input = toOlllamaChatRequest(appInput);
+  async *chat(appInput: ChatRequestInput): AsyncGenerator<ChatChunk> {
+    const input = await toOlllamaChatRequest(appInput);
     for await (const ollamaChunk of this.client.chat(input)) {
       yield toAppChatChunk(ollamaChunk);
     }

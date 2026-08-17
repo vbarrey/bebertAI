@@ -5,12 +5,8 @@ const globalForAI = globalThis as unknown as {
 };
 
 class AIProviderRegistry {
-  private id = Math.random().toString(36);
-  private providers = new Map<string, AIProviderClient>();
 
-  getInstanceId(): string {
-    return this.id;
-  }
+  private providers = new Map<string, AIProviderClient>();
 
   get(id: string) {
     return this.providers.get(id);
@@ -21,7 +17,7 @@ class AIProviderRegistry {
   }
 
   register(provider: AIProviderClient): string {
-    this.providers.set(provider.name, provider); // Should replace with id instead of name
+    this.providers.set(provider.id, provider); // Should replace with id instead of name
     return provider.name;
   }
 

@@ -7,6 +7,8 @@ import { ChatChunk } from "../types";
 type StreamConversationInput = {
     conversationId: string;
     message: string;
+    providerId: string;
+    modelId: string;
 };
 
 /**
@@ -14,7 +16,7 @@ type StreamConversationInput = {
  * @param input 
  * @returns AsyncGenerator<ChatChunk>
  */
-export async function* streamConversation({ conversationId, message }: StreamConversationInput): AsyncGenerator<ChatChunk> {
+export async function* streamConversation({ conversationId, message, providerId, modelId }: StreamConversationInput): AsyncGenerator<ChatChunk> {
     // Create USER message
     await createMessage({
         conversationId: conversationId, 
@@ -34,7 +36,7 @@ export async function* streamConversation({ conversationId, message }: StreamCon
     });
 
     // Stream assistant response
-    for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message})) {
+    for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message, providerId, modelId})) {
         // Yield the chunk to the caller
         yield chunk;
         generatedContent += chunk.content;

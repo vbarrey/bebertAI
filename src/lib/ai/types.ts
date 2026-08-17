@@ -14,7 +14,7 @@ export interface Message {
 }
 
 export interface ChatRequestInput {
-  model: string;
+  modelId: string;
   messages: Message[];
 }
 

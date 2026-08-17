@@ -1,6 +1,7 @@
 import { AIModelInfo, ChatRequestInput, ChatChunk } from "./types";
 
 export interface AIProviderClient {
+  id: string;
   name: string;
 
   models(): Promise<AIModelInfo[]>;

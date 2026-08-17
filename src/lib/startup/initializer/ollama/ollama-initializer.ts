@@ -7,6 +7,7 @@ import { OllamaProvider } from "@/lib/ai/ollama/provider";
 
 export class OllamaInitializer implements AIInitializer {
   name: string = "OLLAMA LOCAL INIT";
+  providerId: string | undefined;
 
   async initializeProvider(): Promise<void> {
     let pProvider = await prisma.aIProvider.findFirst({
@@ -32,19 +33,20 @@ export class OllamaInitializer implements AIInitializer {
 
     const config = parseOllamaConfig(pProvider.configuration);
 
-    const ollamaProvider = new OllamaProvider(config);
+    const ollamaProvider = new OllamaProvider(pProvider.id, pProvider.name, config);
+    this.providerId = pProvider.id;
 
     aiProviderRegistry.register(ollamaProvider);
   }
 
   async synchronizeModels(): Promise<void> {
-    if (!aiProviderRegistry.has("OLLAMA LOCAL")) {
+    if (!this.providerId || !aiProviderRegistry.has(this.providerId)) {
       throw new Error(
         "Can not init ollama models since runtime instance of default Ollama provider is undefined"
       );
     }
 
-    const ollamaProviderClient = aiProviderRegistry.get("OLLAMA LOCAL")!;
+    const ollamaProviderClient = aiProviderRegistry.get(this.providerId)!;
     const models = await ollamaProviderClient.models();
 
     if (!models) {
