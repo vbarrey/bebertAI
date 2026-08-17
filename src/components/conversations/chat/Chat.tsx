@@ -74,7 +74,7 @@ export function Chat({ conversationId, messages }: ChatProps) {
 
                         messages[messages.length - 1] = {
                             ...messages[messages.length - 1],
-                            content: messages[messages.length - 1].content + chunk.delta,
+                            content: messages[messages.length - 1].content + chunk.content,
                         };
 
                         return messages;
