@@ -1,4 +1,3 @@
-import { AIProviderType } from "@prisma/client";
 
 export interface AIModelInfo {
   name: string;
@@ -25,7 +24,7 @@ export interface ChatChunk {
 }
 
 export type GenerateAssistantResponseInput = {
-    providerType: AIProviderType;
+    providerId: string;
     conversationId: string;
     chatInput: ChatRequestInput
 }

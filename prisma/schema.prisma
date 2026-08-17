@@ -121,6 +121,8 @@ model AIProvider {
   enabled   Boolean @default(true)
   isDefault Boolean @default(false)
 
+  configuration Json
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

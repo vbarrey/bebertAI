@@ -6,7 +6,7 @@
 import { initializeAI } from "@/lib/startup/initialize-ai";
 
 export async function register() {
-    console.log(`[Launch One-Time functions]`);
-    await initializeAI();
-    console.log(`[Finish all One-Time functions]`)
-} 
+  console.log(`[Launch One-Time functions]`);
+  await initializeAI();
+  console.log(`[Finish all One-Time functions]`);
+}
