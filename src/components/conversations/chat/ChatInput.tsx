@@ -25,13 +25,26 @@ type Props = {
   }[];
 };
 
+export interface Model {
+  id: string;
+  name: string;
+  value: string;
+  default: boolean;
+}
+
+export interface Provider {
+  id: string;
+  name: string;
+  models: Model[];
+}
+
 export function ChatInput({
   onSendMessage,
   isStreaming,
   providersModels,
 }: Props) {
 
-  const aiIdItems = providersModels.map((p) => {
+  const aiIdItems: Provider[] = providersModels.map((p) => {
     return {
       id: p.id,
       name: p.name,
@@ -46,7 +59,9 @@ export function ChatInput({
     };
   });
 
-  const [aiId, setAiId] = useState<string>(aiIdItems.map(item => item.models).flat().find(model => model.default)?.value ?? "");
+  const allModels: Model[] = aiIdItems.map(item => item.models).flat();
+  const defaultModel: Model = allModels.find(model => model.default) ?? allModels[0];
+  const [aiId, setAiId] = useState<string>( defaultModel?.value ?? ""); // TODO : replace with the model selected for this conversation
 
   const handleSubmit = (formData: FormData) => {
     const message = formData.get("content")?.toString();
@@ -61,16 +76,10 @@ export function ChatInput({
   };
 
   return (
-    <div className="flex p-4 gap-4 w-full justify-center">
-      <form action={handleSubmit} className="w-full">
-        <AIModelSelector
-          isStreaming={isStreaming}
-          aiIdItems={aiIdItems}
-          value={aiId}
-          onValueChange={setAiId}
-        />
+    <div className="flex p-4 gap-4 w-full max-w-5xl justify-center m-auto">
+      <form action={handleSubmit} className="w-full flex gap-4 items-center">
         <Field>
-          <InputGroup className="w-[70%] h-15 rounded-4xl p-4">
+          <InputGroup className="w-[70%] h-15 rounded-4xl p-4 shadow-md">
             <InputGroupInput placeholder="Type to search..." name="content" />
             <InputGroupAddon align="inline-end">
               <InputGroupButton type="submit" disabled={isStreaming}>
@@ -79,6 +88,12 @@ export function ChatInput({
             </InputGroupAddon>
           </InputGroup>
         </Field>
+        <AIModelSelector
+          isStreaming={isStreaming}
+          providers={aiIdItems}
+          defaultModel={defaultModel}
+          onValueChange={setAiId}
+        />
       </form>
     </div>
   );

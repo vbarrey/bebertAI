@@ -1,3 +1,5 @@
+import { Provider, Model } from "./ChatInput";
+
 import { Button } from "@/components/ui/button";
 
 import {
@@ -23,39 +25,39 @@ import { Fragment } from "react/jsx-runtime";
 
 type Props = {
   isStreaming: boolean;
-  aiIdItems: any[];
-  value?: string;
+  providers: Provider[];
+  defaultModel: Model;
   onValueChange: (value: string) => void;
 };
 
 export function AIModelSelector({
   isStreaming,
-  aiIdItems,
-  value,
+  providers,
+  defaultModel,
   onValueChange,
 }: Props) {
-  
-  const allItems = aiIdItems.map((pItem: any) => pItem.models).flat();
+
+  const modelValues = providers.map(p => p.models).flat().map(m => m.value);
 
   return (
     <>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost" disabled={isStreaming}>
-            Model
+          <Button variant="secondary" disabled={isStreaming} className="rounded-full p-4">
+            {defaultModel.name}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" side="top">
           <Select
-            items={allItems}
-            defaultValue={value}
+            items={modelValues}
+            defaultValue={defaultModel.value}
             onValueChange={onValueChange}
           >
             <SelectTrigger className="w-full max-w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {aiIdItems.map((provider, index) => (
+              {providers.map((provider, index) => (
                 <Fragment key={provider.id}>
                   <SelectGroup>
                     <SelectLabel>{provider.name}</SelectLabel>
@@ -67,7 +69,7 @@ export function AIModelSelector({
                     ))}
                   </SelectGroup>
 
-                  {index < aiIdItems.length - 1 && <SelectSeparator />}
+                  {index < providers.length - 1 && <SelectSeparator />}
                 </Fragment>
               ))}
             </SelectContent>

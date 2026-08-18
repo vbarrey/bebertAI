@@ -17,7 +17,7 @@ export default async function ConversationPage({
   if (!conversation) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col p-6 lg:p-10 h-full">
+    <div className="mx-auto flex w-full container flex-1 flex-col p-6 lg:p-10 h-full">
       <div className="mb-5">
         <h1 className="text-2xl font-bold">
           Conversations {conversation.title}
