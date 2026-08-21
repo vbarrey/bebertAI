@@ -1,3 +1,4 @@
+import { MessageRole } from "@prisma/client";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -28,4 +29,15 @@ export function generatorToHttpStream<T>(
       await generator.return?.(undefined);
     },
   });
+}
+
+export function messageRoleToString(role: MessageRole): "user" | "assistant" | "system" {
+  switch (role) {
+    case MessageRole.USER:
+      return "user";
+    case MessageRole.ASSISTANT:
+      return "assistant";
+    case MessageRole.SYSTEM:
+      return "system";
+  }
 }

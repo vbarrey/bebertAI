@@ -1,5 +1,8 @@
-import { ChatChunk, ChatRequestInput, GenerateAssistantResponseInput } from "../types";
+import { getConversationMessages } from "@/lib/queries/message";
+import { ChatChunk, ChatRequestInput } from "../types";
 import { aiProviderRegistry } from "@/lib/ai/registry";
+import { MessageRole } from "@prisma/client";
+import { messageRoleToString } from "@/lib/utils";
 
 /**
  * Generates an assistant response for a given conversation and message.
@@ -24,7 +27,7 @@ export async function* generateAssistantResponse({
 
   const provider = aiProviderRegistry.get(providerId);
 
-  if (!provider)
+  if (!provider){
     throw new Error(
       `Unknown provider ${
         providerId
@@ -32,10 +35,19 @@ export async function* generateAssistantResponse({
         .getProviderIdList()
         .join(" - ")}]`
     );
+  }
 
-  const chatInput: ChatRequestInput = {messages: [{content: message, role: "user"}], modelId: modelId};
+  // Get all messages from the conversation and format them for the assistant.
+  // This list already contains the last message from the user.
+  const messages = await getConversationMessages(conversationId);
+  const formatMessages = messages.map((msg) => {
+    return {
+      role: messageRoleToString(msg.role),
+      content: msg.content,
+    };
+  });
 
-  console.log(chatInput)
+  const chatInput: ChatRequestInput = {messages: formatMessages, modelId: modelId};
 
   yield* provider!.chat(chatInput);
 }
