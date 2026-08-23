@@ -54,61 +54,64 @@ model SourceFolder {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   documents         Document[]
-  jobs              IndexingJob[]
 }
 
 model Document {
-  id                String       @id @default(cuid())
-  sourceFolderId    String
-  relativePath      String
-  fileName          String
-  mimeType          MimeType?
-  fileSize          Int?
-  checksum          String
-  language          String?
-  
-  indexedAt         DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id             String         @id @default(cuid())
+  sourceFolderId String
+  relativePath   String
+  fileName       String
+  mimeType       MimeType?
+  fileSize       Int?
+  checksum       String
+  language       String?
 
-  indexingStatus    IndexingStatus @default(PENDING)
-  chunks            Chunk[]
+  indexedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  sourceFolder      SourceFolder @relation(fields: [sourceFolderId], references: [id], onDelete: Cascade)
-  
+  indexingStatus IndexingStatus @default(PENDING)
+
+  chunks         Chunk[]
+  indexingJobs   IndexingJob[]
+
+  sourceFolder   SourceFolder   @relation( fields: [sourceFolderId], references: [id], onDelete: Cascade )
+
   @@unique([sourceFolderId, relativePath])
   @@index([sourceFolderId])
 }
 
 model Chunk {
-  id                String @id @default(cuid())
+  id         String @id @default(cuid())
+  documentId String
 
-  documentId        String
+  position   Int
+  text       String
 
-  text              String
+  pageNumber Int?
+  x          Int?
+  y          Int?
+  width      Int?
+  height     Int?
 
-  pageNumber        Int?
-  x                 Int?
-  y                 Int?
-  width             Int?
-  height            Int?
+  document Document @relation( fields: [documentId], references: [id], onDelete: Cascade )
 
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  @@index([documentId, position])
 }
 
 model IndexingJob {
-  id             String       @id @default(cuid())
-  sourceFolderId String?
-  kind           IndexingKind
-  status         JobStatus    @default(QUEUED)
-  processedCount Int          @default(0)
-  totalCount     Int?
-  errorMessage   String?
-  startedAt      DateTime?
-  finishedAt     DateTime?
-  createdAt      DateTime     @default(now())
-  sourceFolder   SourceFolder? @relation(fields: [sourceFolderId], references: [id], onDelete: SetNull)
+  id         String   @id @default(cuid())
+  documentId String
 
+  status       JobStatus @default(QUEUED)
+  errorMessage String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  document Document @relation( fields: [documentId], references: [id], onDelete: Cascade )
+
+  @@index([documentId, createdAt])
   @@index([status, createdAt])
 }
 
@@ -157,7 +160,22 @@ model AIModel {
 
   conversations Conversation[]
 
+  capabilities AIModelCapability[]
+
   @@unique([providerId, name])
+}
+
+model AIModelCapability {
+  id String @id @default(cuid())
+  name Capability @unique
+
+  models AIModel[]
+}
+
+enum Capability {
+  GENERATION
+  EMBEDDING
+  RERANKING
 }
 
 enum AIProviderType {
@@ -175,11 +193,6 @@ enum MessageRole {
   USER
   ASSISTANT
   SYSTEM
-}
-
-enum IndexingKind {
-  FULL
-  INCREMENTAL
 }
 
 enum JobStatus {
