@@ -1,5 +1,14 @@
 import type { Document, SourceFolder, MimeType } from "@prisma/client";
 
+export type IndexingResult = {
+  fileName: string;
+  extraction: {
+    blocks: ExtractedBlock[];
+    language?: string;
+  };
+  chunks: IndexedChunk[];
+};
+
 export type ExtractedBlock = {
   text: string;
   pageNumber?: number;

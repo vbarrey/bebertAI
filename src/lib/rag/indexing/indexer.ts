@@ -1,13 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getDocumentExtractor } from "./extractor-factory";
 import { getDocumentChunker } from "./chunker-factory";
+import { IndexingResult } from "./types"
 
 export class DocumentIndexer {
   constructor(
     private readonly documentId: string
   ) {}
 
-  async index(): Promise<void> {
+  async index(): Promise<IndexingResult> {
     const document = await prisma.document.findUnique({
       where: { id: this.documentId },
       include: { sourceFolder: true }
@@ -21,10 +22,20 @@ export class DocumentIndexer {
 
     const extractor = getDocumentExtractor(document.mimeType);
 
-    const extracted = await extractor.extract(document);
+    const extraction = await extractor.extract(document);
+
+    console.log("Extractor => ", extraction);
 
     const chunker = getDocumentChunker();
 
-    const chunks = await chunker.chunk(extracted);
+    const chunks = await chunker.chunk(extraction);
+
+    console.log("Chunks => ", chunks);
+
+    return {
+      fileName: document.fileName,
+      extraction,
+      chunks
+    }
   }
 }
