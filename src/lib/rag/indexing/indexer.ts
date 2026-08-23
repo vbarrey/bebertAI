@@ -24,13 +24,9 @@ export class DocumentIndexer {
 
     const extraction = await extractor.extract(document);
 
-    console.log("Extractor => ", extraction);
-
     const chunker = getDocumentChunker();
 
     const chunks = await chunker.chunk(extraction);
-
-    console.log("Chunks => ", chunks);
 
     return {
       fileName: document.fileName,

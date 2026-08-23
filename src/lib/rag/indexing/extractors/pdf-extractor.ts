@@ -1,89 +1,80 @@
 import { readFile } from "node:fs/promises";
-import { extractTextItems, StructuredTextItem } from "unpdf";
+import { extractTextItems } from "unpdf";
+import type { StructuredTextItem } from "unpdf";
 
 import type {
-  DocumentExtractor,
-  DocumentWithSourceFolder,
-  ExtractedDocument,
-  ExtractedBlock,
+    DocumentExtractor,
+    DocumentWithSourceFolder,
+    ExtractedDocument,
 } from "../types";
 
-import { getDocumentPath } from "../indexing-utils";
-
 export class PdfExtractor implements DocumentExtractor {
-  async extract(
-    document: DocumentWithSourceFolder
-  ): Promise<ExtractedDocument> {
-    const filePath = getDocumentPath(document);
-    const buffer = await readFile(filePath);
+    async extract(
+        document: DocumentWithSourceFolder,
+    ): Promise<ExtractedDocument> { 
+        const buffer = await readFile(document.relativePath);
 
-    const { items } = await extractTextItems(new Uint8Array(buffer));
+        const { items } = await extractTextItems(
+            new Uint8Array(buffer),
+        );
 
-    const blocks: ExtractedBlock[] = [];
+        const blocks = items.flatMap(
+            (pageItems, pageIndex) => {
+                const text = pageItems
+                    .map((item) => item.str)
+                    .join(" ")
+                    .trim();
 
-    for (const [pageIndex, pageItems] of items.entries()) {
-      const pageNumber = pageIndex + 1;
+                if (!text) {
+                    return [];
+                }
 
-      let currentItems = [];
+                return [{
+                    text,
+                    pageNumber: pageIndex + 1,
+                    bounds: this.getBounds(pageItems),
+                }];
+            },
+        );
 
-      for (const item of pageItems) {
-        if (!item.str.trim()) {
-          continue;
-        }
-
-        currentItems.push(item);
-
-        if (item.hasEOL) {
-          blocks.push(this.createBlock(currentItems, pageNumber));
-
-          currentItems = [];
-        }
-      }
-
-      if (currentItems.length > 0) {
-        blocks.push(this.createBlock(currentItems, pageNumber));
-      }
+        return {
+            blocks,
+            language: document.language ?? undefined,
+        };
     }
 
-    return {
-      blocks,
-      language: document.language ?? undefined,
-    };
-  }
+    private getBounds(
+        items: StructuredTextItem[],
+    ) {
+        if (items.length === 0) {
+            return undefined;
+        }
 
-  private createBlock(
-    items: StructuredTextItem[],
-    pageNumber: number
-  ): ExtractedBlock {
-    const text = items
-      .map((item) => item.str)
-      .join(" ")
-      .trim();
+        const x = Math.min(
+            ...items.map((item) => item.x),
+        );
 
-    const bounds = this.getBounds(items);
+        const y = Math.min(
+            ...items.map((item) => item.y),
+        );
 
-    return {
-      text,
-      pageNumber,
-      bounds,
-    };
-  }
+        const right = Math.max(
+            ...items.map(
+                (item) => item.x + item.width,
+            ),
+        );
 
-  private getBounds(
-    items: StructuredTextItem[]
-  ): NonNullable<ExtractedBlock["bounds"]> {
-    const x = Math.min(...items.map((item) => item.x));
-    const y = Math.min(...items.map((item) => item.y));
+        const top = Math.max(
+            ...items.map(
+                (item) => item.y + item.height,
+            ),
+        );
 
-    const right = Math.max(...items.map((item) => item.x + item.width));
-
-    const top = Math.max(...items.map((item) => item.y + item.height));
-
-    return {
-      x,
-      y,
-      width: right - x,
-      height: top - y,
-    };
-  }
+        return {
+            x,
+            y,
+            width: right - x,
+            height: top - y,
+        };
+    }
 }
