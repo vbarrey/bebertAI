@@ -7,12 +7,14 @@ import type {
     DocumentWithSourceFolder,
     ExtractedDocument,
 } from "../types";
+import { getDocumentPath } from "../indexing-utils";
 
 export class PdfExtractor implements DocumentExtractor {
     async extract(
         document: DocumentWithSourceFolder,
     ): Promise<ExtractedDocument> { 
-        const buffer = await readFile(document.relativePath);
+        const filePath = getDocumentPath(document);
+        const buffer = await readFile(filePath);
 
         const { items } = await extractTextItems(
             new Uint8Array(buffer),

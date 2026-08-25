@@ -1,7 +1,8 @@
-import { prisma } from "@/lib/prisma";
 import { getDocumentExtractor } from "./extractor-factory";
 import { getDocumentChunker } from "./chunker-factory";
 import { IndexingResult } from "./types"
+import { replaceDocumentChunks } from "@/lib/mutations/chunk";
+import { getDocumentWithSourceFolder } from "@/lib/queries/document";
 
 export class DocumentIndexer {
   constructor(
@@ -9,10 +10,7 @@ export class DocumentIndexer {
   ) {}
 
   async index(): Promise<IndexingResult> {
-    const document = await prisma.document.findUnique({
-      where: { id: this.documentId },
-      include: { sourceFolder: true }
-    });
+    const document = await getDocumentWithSourceFolder(this.documentId);
 
     if (!document) {
       throw new Error(
@@ -27,6 +25,8 @@ export class DocumentIndexer {
     const chunker = getDocumentChunker();
 
     const chunks = await chunker.chunk(extraction);
+
+    await replaceDocumentChunks(document.id, chunks);
 
     return {
       fileName: document.fileName,

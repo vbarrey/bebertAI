@@ -3,9 +3,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 
-import { prisma } from "@/lib/prisma";
 import { MimeType } from "@prisma/client";
 import { DocumentIndexer } from "@/lib/rag/indexing/indexer";
+import { findOrCreateSourceFolder } from "@/lib/mutations/source-folder";
+import { createDocument } from "@/lib/mutations/document";
 
 const mimeTypes: Record<string, MimeType> = {
   "application/pdf": MimeType.PDF,
@@ -44,27 +45,19 @@ export async function POST(request: Request) {
 
     await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
-    const sourceFolder = await prisma.sourceFolder.upsert({
-      where: {
-        path: tmpDirectory,
-      },
-      update: {},
-      create: {
-        path: tmpDirectory,
-        label: "Development",
-      },
+    const sourceFolder = await findOrCreateSourceFolder({
+      path: tmpDirectory,
+      label: "Development",
     });
 
-    const document = await prisma.document.create({
-      data: {
-        sourceFolderId: sourceFolder.id,
-        relativePath: filePath,
-        fileName: file.name,
-        mimeType,
-        fileSize: file.size,
-        checksum: "",
-        indexingStatus: "PROCESSING",
-      },
+    const document = await createDocument({
+      sourceFolderId: sourceFolder.id,
+      relativePath: temporaryFileName, // TODO : might change later with sub directories 
+      fileName: file.name,
+      mimeType,
+      fileSize: file.size,
+      checksum: "",
+      indexingStatus: "PROCESSING",
     });
 
     const indexer = new DocumentIndexer(document.id);

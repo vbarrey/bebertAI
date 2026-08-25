@@ -89,10 +89,10 @@ model Chunk {
   text       String
 
   pageNumber Int?
-  x          Int?
-  y          Int?
-  width      Int?
-  height     Int?
+  x          Float?
+  y          Float?
+  width      Float?
+  height     Float?
 
   document Document @relation( fields: [documentId], references: [id], onDelete: Cascade )
 
