@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "worker:indexing": "tsx src/workers/indexing.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -15,8 +16,10 @@
     "@langchain/textsplitters": "^1.0.1",
     "@prisma/adapter-better-sqlite3": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "bullmq": "^6.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "ioredis": "^6.0.0",
     "lucide-react": "^1.27.0",
     "mammoth": "^1.12.1",
     "next": "16.2.12",

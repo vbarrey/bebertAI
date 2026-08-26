@@ -4,9 +4,10 @@ import path from "node:path";
 import os from "node:os";
 
 import { MimeType } from "@prisma/client";
-import { DocumentIndexer } from "@/lib/rag/indexing/indexer";
 import { findOrCreateSourceFolder } from "@/lib/mutations/source-folder";
 import { createDocument } from "@/lib/mutations/document";
+import { createIndexingJob } from "@/lib/mutations/indexing-job";
+import { enqueueIndexingJob } from "@/lib/queue/indexing";
 
 const mimeTypes: Record<string, MimeType> = {
   "application/pdf": MimeType.PDF,
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
 
     const document = await createDocument({
       sourceFolderId: sourceFolder.id,
-      relativePath: temporaryFileName, // TODO : might change later with sub directories 
+      relativePath: temporaryFileName, // TODO : might change later with sub directories
       fileName: file.name,
       mimeType,
       fileSize: file.size,
@@ -60,11 +61,13 @@ export async function POST(request: Request) {
       indexingStatus: "PROCESSING",
     });
 
-    const indexer = new DocumentIndexer(document.id);
+    const indexingJob = await createIndexingJob(document.id);
 
-    const result = await indexer.index();
+    await enqueueIndexingJob(indexingJob.id);
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      jobId: indexingJob.id,
+    });
   } catch (error) {
     console.error("[DEV_INDEXING]", error);
 

@@ -1,14 +1,101 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { CheckIcon } from "lucide-react";
 
-import { IndexingResult } from "@/lib/rag/indexing/types";
+import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { IndexingProgress } from "@/lib/queue/types";
+
+type IndexingStage =
+  | "CREATING"
+  | "EXTRACTING"
+  | "CHUNKING"
+  | "PERSISTING"
+  | "COMPLETED";
+
+const indexingSteps = [
+  {
+    id: "CREATING",
+    label: "Création de la tâche",
+  },
+  {
+    id: "EXTRACTING",
+    label: "Extraction du contenu",
+  },
+  {
+    id: "CHUNKING",
+    label: "Découpage pertinent",
+  },
+  {
+    id: "PERSISTING",
+    label: "Sauvegarde en base de données",
+  },
+  {
+    id: "COMPLETED",
+    label: "Terminé",
+  },
+] as const;
 
 export default function IndexingPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<IndexingResult | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [indexingStage, setIndexingStage] = useState<IndexingStage | null>(null);
+  const [indexingJobFinished, setIndexingJobFinished] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!jobId) {
+      return;
+    }
+
+    const events = new EventSource(`/api/dev/indexing/${jobId}/events`);
+
+    events.addEventListener("progress", (event) => {
+      const progress = JSON.parse(event.data) as IndexingProgress;
+
+      switch (progress.stage) {
+        case "EXTRACTING":
+          setIndexingStage("EXTRACTING");
+          break;
+
+        case "CHUNKING":
+          setIndexingStage("CHUNKING");
+          break;
+
+        case "PERSISTING":
+          setIndexingStage("PERSISTING");
+          break;
+      }
+    });
+
+    events.addEventListener("completed", () => {
+      setIndexingStage("COMPLETED");
+      setLoading(false);
+      setIndexingJobFinished(true);
+      events.close();
+    });
+
+    events.addEventListener("failed", (event) => {
+      const data = JSON.parse(event.data) as {
+        errorMessage?: string;
+      };
+
+      setError(data.errorMessage ?? "Indexing failed");
+      setLoading(false);
+      events.close();
+    });
+
+    events.onerror = () => {
+      events.close();
+    };
+
+    return () => {
+      events.close();
+    };
+  }, [jobId]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -18,8 +105,10 @@ export default function IndexingPage() {
     }
 
     setLoading(true);
+    setIndexingJobFinished(false);
     setError(null);
-    setResult(null);
+    setJobId(null);
+    setIndexingStage("CREATING");
 
     try {
       const formData = new FormData();
@@ -36,16 +125,20 @@ export default function IndexingPage() {
         throw new Error(data.error ?? "Indexing failed");
       }
 
-      console.log(data);
-
-      setResult(data);
+      setJobId(data.jobId);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "An unexpected error occurred"
       );
-    } finally {
       setLoading(false);
     }
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setFile(event.target.files?.[0] ?? null);
+    setJobId(null);
+    setIndexingStage(null);
+    setError(null);
   }
 
   return (
@@ -56,7 +149,7 @@ export default function IndexingPage() {
         </h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          Test document extraction and chunking.
+          Test document indexing and its progress.
         </p>
       </div>
 
@@ -67,11 +160,7 @@ export default function IndexingPage() {
         <input
           type="file"
           accept=".pdf,.docx,.txt"
-          onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
-            setResult(null);
-            setError(null);
-          }}
+          onChange={handleFileChange}
           className="block w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-secondary/80"
         />
 
@@ -80,80 +169,66 @@ export default function IndexingPage() {
           disabled={!file || loading}
           className="shrink-0 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:pointer-events-none disabled:opacity-50"
         >
-          {loading ? "Processing..." : "Process"}
+          {loading ? "Indexation..." : "Indexer"}
         </button>
       </form>
 
+      {indexingStage && (
+        <div className="mt-10 flex justify-center">
+          <IndexingTimeline stage={indexingStage} indexingJobFinished={indexingJobFinished}/>
+        </div>
+      )}
+
       {error && (
-        <div className="mt-6 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+        <div className="mx-auto mt-8 max-w-xl rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
-
-      {result && (
-        <div className="mt-8 space-y-10">
-          <div className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">
-              {result.fileName}
-            </span>{" "}
-            · {result.extraction.blocks.length} blocks · {result.chunks.length}{" "}
-            chunks
-          </div>
-
-          <section>
-            <h2 className="mb-4 text-sm font-medium">Extracted blocks</h2>
-
-            <div className="divide-y rounded-lg border">
-              {result.extraction.blocks.map((block, index) => (
-                <div key={index} className="p-4">
-                  <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Block {index}</span>
-
-                    {block.pageNumber !== undefined && (
-                      <span>Page {block.pageNumber}</span>
-                    )}
-                  </div>
-
-                  <p className="whitespace-pre-wrap text-sm leading-6">
-                    {block.text}
-                  </p>
-
-                  {block.bounds && (
-                    <div className="mt-3 font-mono text-xs text-muted-foreground">
-                      x: {block.bounds.x.toFixed(1)} · y:{" "}
-                      {block.bounds.y.toFixed(1)} · w:{" "}
-                      {block.bounds.width.toFixed(1)} · h:{" "}
-                      {block.bounds.height.toFixed(1)}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="mb-4 text-sm font-medium">Indexed chunks</h2>
-
-            <div className="divide-y rounded-lg border">
-              {result.chunks.map((chunk) => (
-                <div key={chunk.position} className="p-4">
-                  <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Chunk {chunk.position}</span>
-
-                    {chunk.pageNumber !== undefined && (
-                      <span>Page {chunk.pageNumber}</span>
-                    )}
-                  </div>
-
-                  <p className="whitespace-pre-wrap text-sm leading-6">
-                    {chunk.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      )}
     </main>
+  );
+}
+
+function IndexingTimeline({ stage, indexingJobFinished }: { stage: IndexingStage, indexingJobFinished: boolean }) {
+  const currentIndex = indexingSteps.findIndex((step) => step.id === stage);
+
+  return (
+    <div className="flex w-full max-w-xl flex-col">
+      {indexingSteps.map((step, index) => {
+        const isCompleted = index < currentIndex || indexingJobFinished;
+        const isCurrent = index === currentIndex;
+        const isPending = index > currentIndex;
+
+        return (
+          <div key={step.id}>
+            <Item
+              className={cn(
+                "transition-colors",
+                isPending && "text-muted-foreground/40",
+                isCurrent && "text-foreground",
+                isCompleted && "text-green-600 dark:text-green-500"
+              )}
+            >
+              <ItemMedia variant="icon">
+                {isCompleted ? (
+                  <CheckIcon className="size-6" />
+                ) : isCurrent ? (
+                  <Spinner className="size-6"/>
+                ) : (
+                  <div className="size-4 rounded-full bg-current opacity-40" />
+                )}
+              </ItemMedia>
+
+              <ItemContent>
+                <ItemTitle className="text-base">{step.label}</ItemTitle>
+              </ItemContent>
+            </Item>
+
+            {index < indexingSteps.length - 1 && (
+              <div className="ml-5 h-8 border-l border-dashed border-border" />
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

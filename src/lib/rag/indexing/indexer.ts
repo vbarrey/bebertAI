@@ -1,15 +1,16 @@
 import { getDocumentExtractor } from "./extractor-factory";
 import { getDocumentChunker } from "./chunker-factory";
-import { IndexingResult } from "./types"
 import { replaceDocumentChunks } from "@/lib/mutations/chunk";
 import { getDocumentWithSourceFolder } from "@/lib/queries/document";
+import { IndexingProgressCallback } from "./types";
 
 export class DocumentIndexer {
   constructor(
-    private readonly documentId: string
+    private readonly documentId: string,
+    private readonly onProgress?: IndexingProgressCallback
   ) {}
 
-  async index(): Promise<IndexingResult> {
+  async index(): Promise<void> {
     const document = await getDocumentWithSourceFolder(this.documentId);
 
     if (!document) {
@@ -20,18 +21,24 @@ export class DocumentIndexer {
 
     const extractor = getDocumentExtractor(document.mimeType);
 
+    await this.onProgress?.({
+      stage: "EXTRACTING",
+    });
+
     const extraction = await extractor.extract(document);
 
     const chunker = getDocumentChunker();
 
+    await this.onProgress?.({
+      stage: "CHUNKING",
+    });
+
     const chunks = await chunker.chunk(extraction);
 
-    await replaceDocumentChunks(document.id, chunks);
+    await this.onProgress?.({
+      stage: "PERSISTING",
+    }); 
 
-    return {
-      fileName: document.fileName,
-      extraction,
-      chunks
-    }
+    await replaceDocumentChunks(document.id, chunks);
   }
 }

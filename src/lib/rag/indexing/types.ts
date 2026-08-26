@@ -1,13 +1,5 @@
+import { IndexingProgress } from "@/lib/queue/types";
 import type { Document, SourceFolder, MimeType } from "@prisma/client";
-
-export type IndexingResult = {
-  fileName: string;
-  extraction: {
-    blocks: ExtractedBlock[];
-    language?: string;
-  };
-  chunks: IndexedChunk[];
-};
 
 export type ExtractedBlock = {
   text: string;
@@ -58,3 +50,7 @@ export class UnsupportedDocumentTypeError extends Error {
     this.name = "UnsupportedDocumentTypeError";
   }
 }
+
+export type IndexingProgressCallback = (
+  progress: IndexingProgress,
+) => Promise<void>;
