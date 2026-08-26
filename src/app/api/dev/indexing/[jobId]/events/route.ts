@@ -10,16 +10,11 @@ type Params = {
   }>;
 };
 
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  { params }: Params,
+) {
   const { jobId } = await params;
-
-  const indexingJob = await getIndexingJobById(jobId);
-
-  if (!indexingJob) {
-    return new Response("Indexing job not found", {
-      status: 404,
-    });
-  }
 
   const encoder = new TextEncoder();
 
@@ -31,7 +26,9 @@ export async function GET(request: NextRequest, { params }: Params) {
     async start(controller) {
       const send = (event: string, data: unknown) => {
         controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+          encoder.encode(
+            `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+          ),
         );
       };
 
@@ -63,7 +60,11 @@ export async function GET(request: NextRequest, { params }: Params) {
         send("progress", data);
       };
 
-      const onCompleted = ({ jobId: eventJobId }: { jobId: string }) => {
+      const onCompleted = ({
+        jobId: eventJobId,
+      }: {
+        jobId: string;
+      }) => {
         if (eventJobId !== jobId) {
           return;
         }
@@ -94,16 +95,12 @@ export async function GET(request: NextRequest, { params }: Params) {
         void cleanup();
       };
 
+      await queueEvents.waitUntilReady();
+
       queueEvents.on("progress", onProgress);
       queueEvents.on("completed", onCompleted);
       queueEvents.on("failed", onFailed);
 
-      /**
-       * Check the current state after subscribing.
-       *
-       * This avoids the case where the job finishes between
-       * the initial query and the QueueEvents subscription.
-       */
       const currentJob = await getIndexingJobById(jobId);
 
       if (!currentJob) {

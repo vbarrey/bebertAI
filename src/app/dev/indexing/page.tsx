@@ -15,6 +15,8 @@ type IndexingStage =
   | "PERSISTING"
   | "COMPLETED";
 
+type JobStatus = "COMPLETED" | "FAILED" | "CANCELLED" | "QUEUED" | "RUNNING";
+
 const indexingSteps = [
   {
     id: "CREATING",
@@ -67,6 +69,32 @@ export default function IndexingPage() {
 
         case "PERSISTING":
           setIndexingStage("PERSISTING");
+          break;
+      }
+    });
+
+    events.addEventListener("status", (event) => {
+      const data = JSON.parse(event.data) as {
+        status: JobStatus;
+      };
+
+      switch (data.status) {
+        case "COMPLETED":
+          setIndexingStage("COMPLETED");
+          setLoading(false);
+          setIndexingJobFinished(true);
+          events.close();
+          break;
+
+        case "FAILED":
+          setError("Indexing failed");
+          setLoading(false);
+          events.close();
+          break;
+
+        case "CANCELLED":
+          setLoading(false);
+          events.close();
           break;
       }
     });
