@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { ProjectGrid } from "@/components/projects/ProjectGrid";
 import { getProjects } from "@/lib/queries/project";
 

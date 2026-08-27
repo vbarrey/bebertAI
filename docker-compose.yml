@@ -6,13 +6,16 @@ services:
 
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DOCUMENTS_DIRECTORY: /app/data/documents
 
     volumes:
       - ./data:/app/data
-      - ./documents:/documents
 
     depends_on:
       - ollama
+      - redis
 
   ollama:
     image: ollama/ollama
@@ -21,6 +24,9 @@ services:
 
     volumes:
       - ollama:/root/.ollama
+
+  redis:
+    image: redis:alpine
 
 volumes:
   ollama:

@@ -49,7 +49,6 @@ export function AIModelSelector({
         </PopoverTrigger>
         <PopoverContent align="start" side="top">
           <Select
-            items={modelValues}
             defaultValue={defaultModel.value}
             onValueChange={onValueChange}
           >

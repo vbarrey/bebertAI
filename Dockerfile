@@ -1,21 +1,16 @@
-FROM node:22-alpine
+FROM oven/bun:1
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json bun.lock ./
+
+RUN bun install --frozen-lockfile
 
 COPY . .
 
-RUN mkdir -p /app/data
+RUN bunx prisma generate
 
-RUN npx prisma generate
-
-RUN npx prisma migrate deploy
-
-RUN chmod +x ./docker/start-docker.sh
-
-RUN npm run build
+RUN bun run build
 
 EXPOSE 3000
 

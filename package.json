@@ -3,19 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev\" \"tsx src/workers/indexing.ts\"",
+    "dev": "concurrently \"bun run dev:web\" \"bun run worker\"",
     "dev:web": "next dev",
-    "dev:worker": "tsx src/workers/indexing.ts",
     "build": "next build",
-    "start": "next start",
-    "start:worker": "tsx src/workers/indexing.ts"
+    "start": "concurrently \"bun run start:web\" \"bun run worker\"",
+    "start:web": "next start",
+    "worker": "bun src/workers/indexing.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@hugeicons/core-free-icons": "^4.2.3",
     "@hugeicons/react": "^1.1.9",
     "@langchain/textsplitters": "^1.0.1",
-    "@prisma/adapter-better-sqlite3": "^7.9.1",
+    "@prisma/adapter-libsql": "^7.10.0",
     "@prisma/client": "^7.9.1",
     "bullmq": "^6.2.1",
     "class-variance-authority": "^0.7.1",

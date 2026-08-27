@@ -34,20 +34,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const tmpDirectory = path.join(os.tmpdir(), "bebert-indexing");
+    const documentsDirectory = process.env.DOCUMENTS_DIRECTORY ?? "./data/documents";
 
-    await mkdir(tmpDirectory, {
+    await mkdir(documentsDirectory, {
       recursive: true,
     });
 
     const temporaryFileName = `${crypto.randomUUID()}-${file.name}`;
-
-    const filePath = path.join(tmpDirectory, temporaryFileName);
+    const filePath = path.join(documentsDirectory, temporaryFileName);
 
     await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
 
     const sourceFolder = await findOrCreateSourceFolder({
-      path: tmpDirectory,
+      path: documentsDirectory,
       label: "Development",
     });
 
