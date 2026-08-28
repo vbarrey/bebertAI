@@ -1,4 +1,4 @@
-import { AIModelInfo, ChatRequestInput, ChatChunk } from "./types";
+import { AIModelInfo, ChatRequestInput, ChatChunk, EmbedRequest, Embedding } from "./types";
 
 export interface AIProviderClient {
   id: string;
@@ -13,4 +13,6 @@ export interface AIProviderClient {
   remove?(): Promise<void>;
 
   updateConfig(config: unknown): Promise<void>;
+
+  embed?(input: EmbedRequest): Promise<Embedding[]>;
 }

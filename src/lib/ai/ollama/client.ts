@@ -3,6 +3,8 @@ import {
   OllamaModel,
   OllamaChatChunk,
   OllamaChatResponse,
+  OllamaEmbedRequest,
+  OllamaEmbedResponse,
 } from "./types";
 
 import {
@@ -14,7 +16,6 @@ import {
 import { OllamaProviderConfiguration } from "./config";
 
 export class OllamaClient {
-
   constructor(private readonly config: OllamaProviderConfiguration) {}
 
   async *chat(input: OllamaChatRequest): AsyncGenerator<OllamaChatChunk> {
@@ -23,7 +24,7 @@ export class OllamaClient {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
-      })
+      }),
     );
 
     if (!res.body) {
@@ -75,6 +76,18 @@ export class OllamaClient {
 
   async remove(): Promise<never> {
     throw new Error("Function not implemented.");
+  }
+
+  async embed(input: OllamaEmbedRequest): Promise<OllamaEmbedResponse> {
+    const res = await this.request(() =>
+      fetch(`${this.config.host}/api/embed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }),
+    );
+
+    return await res.json();
   }
 
   private async request(call: () => Promise<Response>): Promise<Response> {

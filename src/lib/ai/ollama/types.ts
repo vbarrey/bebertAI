@@ -34,7 +34,7 @@ export interface OllamaChatResponse {
         function: {
           name: string;
           description: string;
-          arguments: any;
+          arguments: string;
         };
       }
     ];
@@ -69,4 +69,13 @@ export interface OllamaChatChunk {
     content: string;
   };
   done: boolean;
+}
+
+export interface OllamaEmbedRequest {
+  model: string;
+  input: string[];
+}
+
+export interface OllamaEmbedResponse {
+  embeddings: number[][];
 }

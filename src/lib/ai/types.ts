@@ -28,3 +28,10 @@ export type GenerateAssistantResponseInput = {
     conversationId: string;
     chatInput: ChatRequestInput
 }
+
+export type EmbedRequest = {
+  model: string;
+  chunks: string[];
+}
+
+export type Embedding = number[];
