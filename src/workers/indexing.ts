@@ -31,8 +31,7 @@ const worker = new Worker<IndexingJobData>(
 
       await completeIndexingJob(indexingJob.id);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unknown indexing error";
+      const message = error instanceof Error ? error.message : "Unknown indexing error";
 
       await failIndexingJob(indexingJob.id, message);
 

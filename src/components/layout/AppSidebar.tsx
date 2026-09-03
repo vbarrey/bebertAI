@@ -11,23 +11,13 @@ import { cn } from "@/lib/utils";
 
 import { usePathname } from "next/navigation";
 
-import {
-  FileSearch,
-  FolderOpen,
-  Plus,
-  Settings,
-} from "lucide-react";
+import { FolderOpen, Plus, Settings } from "lucide-react";
 
 type AppSidebarProps = {
   projects: Project[];
-  activeProjectId?: string;
 };
 
-export function AppSidebar({
-  projects,
-  activeProjectId,
-}: AppSidebarProps) {
-
+export function AppSidebar({ projects }: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -44,11 +34,7 @@ export function AppSidebar({
 
       <div className="p-4">
         <form action={createProject}>
-          <input
-            type="hidden"
-            name="name"
-            value="Nouveau projet"
-          />
+          <input type="hidden" name="name" value="Nouveau projet" />
 
           <Button className="w-full justify-start gap-2">
             <Plus className="h-4 w-4" />
@@ -74,16 +60,13 @@ export function AppSidebar({
                 href={`/projects/${project.id}`}
                 className={cn(
                   "flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent",
-                  pathname.startsWith(`/projects/${project.id}`) &&
-                    "bg-accent"
+                  pathname.startsWith(`/projects/${project.id}`) && "bg-accent",
                 )}
               >
                 <FolderOpen className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
 
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {project.name}
-                  </p>
+                  <p className="truncate text-sm font-medium">{project.name}</p>
 
                   <p className="text-xs text-muted-foreground">
                     {project.updatedAt.toLocaleDateString("fr-FR")}
@@ -96,13 +79,12 @@ export function AppSidebar({
       </ScrollArea>
 
       <div className="border-t p-3">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2"
-        >
-          <Settings className="h-4 w-4" />
-          Réglages
-        </Button>
+        <Link href="/settings/ai" className="flex rox gap-2 items-center">
+          <Button variant="ghost" className={cn("w-full justify-start gap-2", pathname.startsWith("/settings") && "bg-accent")}>
+            <Settings className="h-4 w-4" />
+            Réglages
+          </Button>
+        </Link>
       </div>
     </aside>
   );

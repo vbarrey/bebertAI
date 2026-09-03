@@ -145,6 +145,7 @@ model AIModel {
 
   name String
   displayName String?
+  description String?
 
   enabled Boolean @default(true)
   favorite Boolean @default(false)
