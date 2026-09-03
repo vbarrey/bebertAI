@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import type { Project } from "@prisma/client";
 
-import { AppSidebar } from "./AppSidebar";
+import { MainSidebar } from "./MainSidebar";
 import { MobileHeader } from "./MobileHeader";
 
 type MainLayoutProps = {
@@ -15,7 +15,7 @@ export function MainLayout({
 }: MainLayoutProps) {
   return (
     <main className="flex min-h-screen bg-background">
-      <AppSidebar
+      <MainSidebar
         projects={projects}
       />
 
