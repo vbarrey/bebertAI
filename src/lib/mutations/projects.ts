@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 
 export async function createProject(formData: FormData) {
-  const projectName = formData.get("name")?.toString();
+  const projectName = formData.get("projectName")?.toString();
 
   if (!projectName) return; // TODO : Handle validation error
 
