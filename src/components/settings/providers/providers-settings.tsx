@@ -18,7 +18,7 @@ type AISettingsProps = {
   providers: Provider[];
 };
 
-export function AISettings({ providers }: AISettingsProps) {
+export function ProvidersSettings({ providers }: AISettingsProps) {
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
     providers[0]?.id ?? null,
   );

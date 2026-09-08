@@ -9,7 +9,6 @@ import { AnimatePresence, motion } from "motion/react";
 
 import {
   ChevronsLeft,
-  ChevronsRight,
   FolderOpen,
   Plus,
   Settings,
@@ -335,7 +334,7 @@ export function MainSidebar({ projects }: MainSidebarProps) {
           collapsed ? "p-2" : "p-3",
         )}
       >
-        <Link href="/settings/ai">
+        <Link href="/settings">
           <Button
             variant="ghost"
             className={cn(
