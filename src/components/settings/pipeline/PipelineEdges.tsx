@@ -49,12 +49,7 @@ export function PipelineEdges({ someExpanded }: { someExpanded: boolean}) {
 
       {/* Découpage → Vectorisation */}
       <path
-        d="
-          M 82 16.66
-          V 47
-          Q 82 50 79 50
-          H 50
-        "
+        d="M 82 16.66 V 47 Q 82 50 79 50 H 50"
         fill="none"
         stroke="var(--border)"
         strokeWidth="0.2"
@@ -65,12 +60,7 @@ export function PipelineEdges({ someExpanded }: { someExpanded: boolean}) {
 
       {/* Vectorisation → Récupération */}
       <path
-        d="
-          M 50 50
-          H 21
-          Q 18 50 18 53
-          V 83.33
-        "
+        d="M 50 50 H 21 Q 18 50 18 53 V 83.33"
         fill="none"
         stroke="var(--border)"
         strokeWidth="0.2"

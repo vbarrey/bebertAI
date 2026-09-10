@@ -109,7 +109,6 @@ const items: PipelineItem[] = [
 ];
 
 export default function PipelineSettingsPage() {
-
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const someExpanded = expandedCardId !== null;
   return (

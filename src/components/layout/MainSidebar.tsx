@@ -305,7 +305,7 @@ export function MainSidebar({ projects }: MainSidebarProps) {
 
       {/* Réglages */}
       <div className="border-t p-2">
-        <Link href="/settings/ai">
+        <Link href="/settings">
           <Button
             variant="ghost"
             className={cn(
