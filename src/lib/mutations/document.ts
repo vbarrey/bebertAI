@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { IndexingStatus, MimeType } from "@prisma/client";
+import { DocumentFormat } from "../pipeline/formats";
+import { IndexingStatus } from "@prisma/client";
 
 export async function createDocument(data: {
   sourceFolderId: string;
   relativePath: string;
   fileName: string;
-  mimeType?: MimeType;
+  format?: DocumentFormat;
   fileSize?: number;
   checksum: string;
   language?: string;

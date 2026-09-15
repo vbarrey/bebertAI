@@ -3,10 +3,13 @@ import { getDocumentChunker } from "./chunker-factory";
 import { replaceDocumentChunks } from "@/lib/mutations/chunk";
 import { getDocumentWithSourceFolder } from "@/lib/queries/document";
 import { IndexingProgressCallback } from "./types";
+import { DocumentFormatSchema } from "@/lib/pipeline/formats";
+import { PipelineConfig } from "@/lib/pipeline/config";
 
 export class DocumentIndexer {
   constructor(
     private readonly documentId: string,
+    private readonly pipelineConfig: PipelineConfig,
     private readonly onProgress?: IndexingProgressCallback
   ) {}
 
@@ -19,7 +22,9 @@ export class DocumentIndexer {
       );
     }
 
-    const extractor = getDocumentExtractor(document.mimeType);
+    const format = DocumentFormatSchema.parse(document.format);
+
+    const extractor = getDocumentExtractor(format);
 
     await this.onProgress?.({
       stage: "EXTRACTING",
@@ -27,7 +32,7 @@ export class DocumentIndexer {
 
     const extraction = await extractor.extract(document);
 
-    const chunker = getDocumentChunker();
+    const chunker = getDocumentChunker(this.pipelineConfig.parameters.chunking);
 
     await this.onProgress?.({
       stage: "CHUNKING",

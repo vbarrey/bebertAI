@@ -1,30 +1,18 @@
 import {
   DocumentChunker,
   ExtractedDocument,
-  IndexedChunk,
-  ChunkingConfiguration,
+  IndexedChunk
 } from "../types";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { ChunkingParameters } from "@/lib/pipeline/parameters";
 
 export class RecursiveCharacterChunker implements DocumentChunker {
   private readonly splitter: RecursiveCharacterTextSplitter;
 
-  constructor(options: ChunkingConfiguration) {
-    if (options.chunkSize <= 0) {
-      throw new Error("[RecursiveChunker] chunkSize must be greater than 0");
-    }
-
-    if (options.chunkOverlap < 0) {
-      throw new Error("[RecursiveChunker] chunkOverlap cannot be negative");
-    }
-
-    if (options.chunkOverlap >= options.chunkSize) {
-      throw new Error("[RecursiveChunker] chunkOverlap must be smaller than chunkSize");
-    }
-
+  constructor(parameters: ChunkingParameters) {
     this.splitter = new RecursiveCharacterTextSplitter({
-      chunkSize: options.chunkSize,
-      chunkOverlap: options.chunkOverlap,
+      chunkSize: parameters.chunkSize,
+      chunkOverlap: parameters.chunkOverlap,
     });
   }
 

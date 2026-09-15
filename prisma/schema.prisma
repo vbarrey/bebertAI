@@ -6,6 +6,13 @@ datasource db {
   provider = "sqlite"
 }
 
+model PipelineParameters {
+  id        Int      @id @default(1)
+  parameters    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Project {
   id                String         @id @default(cuid())
   name              String         @unique
@@ -61,7 +68,7 @@ model Document {
   sourceFolderId String
   relativePath   String
   fileName       String
-  mimeType       MimeType?
+  format         String
   fileSize       Int?
   checksum       String
   language       String?
@@ -211,15 +218,6 @@ enum IndexingStatus {
   PROCESSED
   FAILED
   CANCELLED
-}
-
-enum MimeType {
-  PDF
-  PNG
-  JPG
-  TIFF
-  DOCX
-  TXT
 }
 
 enum MessageStatus {

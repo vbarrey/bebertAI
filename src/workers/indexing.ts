@@ -8,15 +8,19 @@ import {
 } from "@/lib/mutations/indexing-job";
 import { getIndexingJobById } from "@/lib/queries/indexing-job";
 import { DocumentIndexer } from "@/lib/rag/indexing/indexer";
+import { PipelineConfig } from "@/lib/pipeline/config";
 
 type IndexingJobData = {
   indexingJobId: string;
+  pipelineConfig: PipelineConfig
 };
 
 const worker = new Worker<IndexingJobData>(
   "document-indexing",
   async (job: Job<IndexingJobData>) => {
-    const indexingJob = await getIndexingJobById(job.data.indexingJobId);
+    const {indexingJobId, pipelineConfig} = job.data;
+
+    const indexingJob = await getIndexingJobById(indexingJobId);
 
     if (!indexingJob) {
       throw new Error(`Indexing job "${job.data.indexingJobId}" not found`);
@@ -25,7 +29,7 @@ const worker = new Worker<IndexingJobData>(
     await startIndexingJob(indexingJob.id);
 
     try {
-      const indexer = new DocumentIndexer(indexingJob.documentId, (progress) => job.updateProgress(progress));
+      const indexer = new DocumentIndexer(indexingJob.documentId, pipelineConfig, (progress) => job.updateProgress(progress));
 
       await indexer.index();
 
