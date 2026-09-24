@@ -35,3 +35,9 @@ export type EmbedRequest = {
 }
 
 export type Embedding = number[];
+
+export type ChunkEmbedding = {
+  chunkId: string;
+  documentId: string;
+  embedding: number[];
+};

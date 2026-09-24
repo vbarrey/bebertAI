@@ -3,7 +3,7 @@ import {
   ExtractedDocument,
   IndexedChunk,
   ChunkingConfiguration,
-} from "../types";
+} from "../../types";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 export class RecursiveCharacterChunker implements DocumentChunker {

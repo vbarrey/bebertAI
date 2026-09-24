@@ -1,5 +1,5 @@
 import { MimeType } from "@prisma/client";
-import { DocumentExtractor, UnsupportedDocumentTypeError } from "./types";
+import { DocumentExtractor, UnsupportedDocumentTypeError } from "../types";
 import { PdfExtractor } from "./extractors/pdf-extractor";
 import { DocxExtractor } from "./extractors/docx-extractor";
 import { TextExtractor } from "./extractors/text-extractor";

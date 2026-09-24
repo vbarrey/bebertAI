@@ -3,7 +3,7 @@ import {
   ExtractedDocument,
   DocumentWithSourceFolder,
   ExtractedBlock,
-} from "../types";
+} from "../../types";
 
 import { readFile } from "node:fs/promises";
 import { getDocumentPath, splitTextIntoBlocks } from "../indexing-utils";

@@ -1,7 +1,7 @@
 import { AIProviderClient } from "./provider";
 
 const globalForAI = globalThis as unknown as {
-  aiProviderRegistry: AIProviderRegistry | undefined;
+  aiProviderRegistry?: AIProviderRegistry;
 };
 
 class AIProviderRegistry {
@@ -17,7 +17,7 @@ class AIProviderRegistry {
   }
 
   register(provider: AIProviderClient): string {
-    this.providers.set(provider.id, provider); // Should replace with id instead of name
+    this.providers.set(provider.id, provider);
     return provider.name;
   }
 

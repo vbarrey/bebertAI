@@ -8,6 +8,7 @@ import { findOrCreateSourceFolder } from "@/lib/mutations/source-folder";
 import { createDocument } from "@/lib/mutations/document";
 import { createIndexingJob } from "@/lib/mutations/indexing-job";
 import { enqueueIndexingJob } from "@/lib/queue/indexing";
+import { IndexingJobData } from "@/workers/indexing";
 
 const mimeTypes: Record<string, MimeType> = {
   "application/pdf": MimeType.PDF,
@@ -63,7 +64,13 @@ export async function POST(request: Request) {
 
     const indexingJob = await createIndexingJob(document.id);
 
-    await enqueueIndexingJob(indexingJob.id);
+    const data: IndexingJobData = {
+      indexingJobId: indexingJob.id, 
+      providerId: "cmtlhix040000qccs8q1t11li",// TODO : make configurable
+      embeddingModelName: "qwen3-embedding:4b" // TODO : make configurable);
+    }
+
+    await enqueueIndexingJob(data);
 
     return NextResponse.json({
       jobId: indexingJob.id,

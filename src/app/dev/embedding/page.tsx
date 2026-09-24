@@ -1,11 +1,12 @@
 import { aiProviderRegistry } from "@/lib/ai/registry";
+import { ensureChunksCollection } from "@/lib/qdrant/collections";
 
-export default async  function EmbeddingPlayground() {
-  const providerId = "cmsrrnux40000wguz6cmb7kpj";
+export default async function EmbeddingPlayground() {
+  const providerId = "cmtlhix040000qccs8q1t11li";
 
   const provider = aiProviderRegistry.get(providerId);
 
-  if(!provider || !provider.embed) throw new Error("Pas de provider où pas d'implémentation");
+  if (!provider || !provider.embed) throw new Error("Pas de provider où pas d'implémentation");
 
   const chunks = [
     "Les encres utilisées en imprimerie.",
@@ -13,20 +14,42 @@ export default async  function EmbeddingPlayground() {
     "La mécanique d'une presse offset.",
   ];
 
-  const embeddings = await provider.embed({model: "qwen3-embedding:4b", chunks});
+  const embeddings = await provider.embed({ model: "qwen3-embedding:4b", chunks });
 
-  console.log("Provider =>", provider);
+  if (embeddings.length === 0) {
+    throw new Error("Aucun embedding généré");
+  }
+
+  const vectorSize = embeddings[0].length;
+
+  await ensureChunksCollection(vectorSize);
+
+  /**console.log("Vector size =>", vectorSize);
   console.log("Embeddings =>", embeddings);
 
+  await upsertChunkEmbeddings(
+    embeddings.map((embedding, index) => ({
+      chunkId: `test-chunk-${index}`,
+      documentId: "test-document",
+      vector: embedding,
+    })),
+  );
+
+  const query = "Quels types d'encre utilise-t-on en imprimerie ?";
+
+  const [queryEmbedding] = await provider.embed({
+    model: "qwen3-embedding:4b",
+    chunks: [query],
+  });
+
+  const results = await searchSimilarChunks(queryEmbedding, 3);
+
+  console.log("Query =>", query);
+  console.log("Results =>", results);**/
+
   return (
-    <div className="flex container max-w-full p-4">
-      <h2 className="text-xl">{provider.name}</h2>
-        <br />
-        <div className="p-4 flex">
-            {embeddings.map((e,i)=> {
-                return (<p key={i}>{e}</p>)
-            })}
-        </div>
-    </div>
+    <pre>
+      hey !
+    </pre>
   );
 }

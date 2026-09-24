@@ -3,42 +3,53 @@
 import { useEffect, useState } from "react";
 import { CheckIcon } from "lucide-react";
 
-import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { Item, ItemContent, ItemMedia, ItemTitle, ItemDescription } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import { IndexingProgress } from "@/lib/queue/types";
+import { IndexingStage, IndexingSteps } from "@/lib/queue/types";
+import { JobStatus } from "@prisma/client";
 
-type IndexingStage =
-  | "CREATING"
-  | "EXTRACTING"
-  | "CHUNKING"
-  | "PERSISTING"
-  | "COMPLETED";
-
-type JobStatus = "COMPLETED" | "FAILED" | "CANCELLED" | "QUEUED" | "RUNNING";
-
-const indexingSteps = [
-  {
-    id: "CREATING",
-    label: "Création de la tâche",
-  },
-  {
-    id: "EXTRACTING",
-    label: "Extraction du contenu",
-  },
-  {
-    id: "CHUNKING",
-    label: "Découpage pertinent",
-  },
-  {
-    id: "PERSISTING",
-    label: "Sauvegarde en base de données",
-  },
-  {
-    id: "COMPLETED",
-    label: "Terminé",
-  },
-] as const;
+const indexingSteps: {
+  stage: IndexingStage,
+  title: string;
+  description: string;
+}[] = [
+    {
+      stage: IndexingStage.CREATING,
+      title: "Creating",
+      description: "Preparing the indexing job.",
+    },
+    {
+      stage: IndexingStage.EXTRACTING,
+      title: "Extracting",
+      description: "Extracting text from the document.",
+    },
+    {
+      stage: IndexingStage.CHUNKING,
+      title: "Chunking",
+      description: "Splitting the document into smaller chunks.",
+    },
+    {
+      stage: IndexingStage.PERSISTING_CHUNKS,
+      title: "Persisting Chunks",
+      description: "Saving the chunks to the database.",
+    },
+    {
+      stage: IndexingStage.EMBEDDING,
+      title: "Embedding",
+      description: "Generating embeddings for the chunks.",
+    },
+    {
+      stage: IndexingStage.PERSISTING_EMBEDDINGS,
+      title: "Persisting Embeddings",
+      description: "Saving the embeddings to the database.",
+    },
+    {
+      stage: IndexingStage.COMPLETED,
+      title: "Completed",
+      description: "The indexing job has completed successfully.",
+    }
+  ];
 
 export default function IndexingPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -56,21 +67,9 @@ export default function IndexingPage() {
     const events = new EventSource(`/api/dev/indexing/${jobId}/events`);
 
     events.addEventListener("progress", (event) => {
-      const progress = JSON.parse(event.data) as IndexingProgress;
+      const progress = JSON.parse(event.data) as IndexingSteps;
 
-      switch (progress.stage) {
-        case "EXTRACTING":
-          setIndexingStage("EXTRACTING");
-          break;
-
-        case "CHUNKING":
-          setIndexingStage("CHUNKING");
-          break;
-
-        case "PERSISTING":
-          setIndexingStage("PERSISTING");
-          break;
-      }
+      setIndexingStage(progress.stage);
     });
 
     events.addEventListener("status", (event) => {
@@ -80,7 +79,7 @@ export default function IndexingPage() {
 
       switch (data.status) {
         case "COMPLETED":
-          setIndexingStage("COMPLETED");
+          setIndexingStage(IndexingStage.COMPLETED);
           setLoading(false);
           setIndexingJobFinished(true);
           events.close();
@@ -100,7 +99,7 @@ export default function IndexingPage() {
     });
 
     events.addEventListener("completed", () => {
-      setIndexingStage("COMPLETED");
+      setIndexingStage(IndexingStage.COMPLETED);
       setLoading(false);
       setIndexingJobFinished(true);
       events.close();
@@ -136,7 +135,7 @@ export default function IndexingPage() {
     setIndexingJobFinished(false);
     setError(null);
     setJobId(null);
-    setIndexingStage("CREATING");
+    setIndexingStage(IndexingStage.CREATING);
 
     try {
       const formData = new FormData();
@@ -203,7 +202,7 @@ export default function IndexingPage() {
 
       {indexingStage && (
         <div className="mt-10 flex justify-center">
-          <IndexingTimeline stage={indexingStage} indexingJobFinished={indexingJobFinished}/>
+          <IndexingTimeline stage={indexingStage} indexingJobFinished={indexingJobFinished} />
         </div>
       )}
 
@@ -217,7 +216,7 @@ export default function IndexingPage() {
 }
 
 function IndexingTimeline({ stage, indexingJobFinished }: { stage: IndexingStage, indexingJobFinished: boolean }) {
-  const currentIndex = indexingSteps.findIndex((step) => step.id === stage);
+  const currentIndex: number = indexingSteps.findIndex((step) => step.stage === stage);
 
   return (
     <div className="flex w-full max-w-xl flex-col">
@@ -227,7 +226,7 @@ function IndexingTimeline({ stage, indexingJobFinished }: { stage: IndexingStage
         const isPending = index > currentIndex;
 
         return (
-          <div key={step.id}>
+          <div key={index + step.title}>
             <Item
               className={cn(
                 "transition-colors",
@@ -240,14 +239,15 @@ function IndexingTimeline({ stage, indexingJobFinished }: { stage: IndexingStage
                 {isCompleted ? (
                   <CheckIcon className="size-6" />
                 ) : isCurrent ? (
-                  <Spinner className="size-6"/>
+                  <Spinner className="size-6" />
                 ) : (
                   <div className="size-4 rounded-full bg-current opacity-40" />
                 )}
               </ItemMedia>
 
               <ItemContent>
-                <ItemTitle className="text-base">{step.label}</ItemTitle>
+                <ItemTitle className="text-base">{step.title}</ItemTitle>
+                <ItemDescription className="text-sm">{step.description}</ItemDescription>
               </ItemContent>
             </Item>
 

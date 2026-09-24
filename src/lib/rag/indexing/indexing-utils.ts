@@ -1,4 +1,4 @@
-import { ExtractedBlock } from "./types";
+import { ExtractedBlock } from "../types";
 import path from "node:path";
 import type { Document, SourceFolder } from "@prisma/client";
 

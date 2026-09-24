@@ -3,7 +3,7 @@ import {
   DocumentExtractor,
   ExtractedDocument,
   DocumentWithSourceFolder,
-} from "../types";
+} from "../../types";
 import mammoth from "mammoth";
 
 export class DocxExtractor implements DocumentExtractor {

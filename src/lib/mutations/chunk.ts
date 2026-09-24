@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/prisma";
-import type { IndexedChunk } from "@/lib/rag/indexing/types";
+import type { IndexedChunk } from "@/lib/rag/types";
+import { Chunk } from "@prisma/client";
 
+/**
+ * Replaces the chunks of a document with new ones.
+ * @param documentId the id of the document to update
+ * @param chunks the new chunks to replace the old ones with
+ * @returns the updated chunks
+ * @throws an error if the document is not found or if there is an error updating the chunks
+ */
 export async function replaceDocumentChunks(
   documentId: string,
   chunks: IndexedChunk[],
@@ -12,8 +20,10 @@ export async function replaceDocumentChunks(
       },
     });
 
+    let createdChunks: Chunk[] = [];
+
     if (chunks.length > 0) {
-      await tx.chunk.createMany({
+      createdChunks = await tx.chunk.createManyAndReturn({
         data: chunks.map((chunk) => ({
           documentId,
           position: chunk.position,
@@ -27,7 +37,7 @@ export async function replaceDocumentChunks(
       });
     }
 
-    return tx.document.update({
+    await tx.document.update({
       where: {
         id: documentId,
       },
@@ -36,5 +46,7 @@ export async function replaceDocumentChunks(
         indexedAt: new Date(),
       },
     });
+
+    return createdChunks;
   });
 }

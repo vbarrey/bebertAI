@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
 import { createQueueConnection } from "./redis";
+import { IndexingJobData } from "@/workers/indexing";
 
 export const indexingQueue = new Queue(
   "document-indexing",
@@ -15,16 +16,15 @@ export const indexingQueue = new Queue(
   },
 );
 
-export async function enqueueIndexingJob(
-  indexingJobId: string,
+export async function enqueueIndexingJob(data: IndexingJobData
 ) {
   return indexingQueue.add(
     "index-document",
     {
-      indexingJobId,
+      ...data
     },
     {
-      jobId: indexingJobId,
+      jobId: data.indexingJobId,
     },
   );
 }

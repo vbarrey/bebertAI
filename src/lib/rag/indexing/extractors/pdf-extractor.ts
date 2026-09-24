@@ -6,7 +6,7 @@ import type {
     DocumentExtractor,
     DocumentWithSourceFolder,
     ExtractedDocument,
-} from "../types";
+} from "../../types";
 import { getDocumentPath } from "../indexing-utils";
 
 export class PdfExtractor implements DocumentExtractor {

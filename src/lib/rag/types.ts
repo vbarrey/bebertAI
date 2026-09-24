@@ -50,7 +50,3 @@ export class UnsupportedDocumentTypeError extends Error {
     this.name = "UnsupportedDocumentTypeError";
   }
 }
-
-export type IndexingProgressCallback = (
-  progress: IndexingProgress,
-) => Promise<void>;
