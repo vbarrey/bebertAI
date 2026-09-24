@@ -1,3 +1,5 @@
+"use client"
+
 import { Provider, Model } from "./ChatInput";
 
 import { Button } from "@/components/ui/button";
@@ -21,12 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEffect, useState } from "react";
 import { Fragment } from "react/jsx-runtime";
 
 type Props = {
   isStreaming: boolean;
   providers: Provider[];
   defaultModel: Model;
+  selectedModelId: string;
   onValueChange: (value: string) => void;
 };
 
@@ -34,24 +38,42 @@ export function AIModelSelector({
   isStreaming,
   providers,
   defaultModel,
+  selectedModelId,
   onValueChange,
 }: Props) {
 
-  const modelValues = providers.map(p => p.models).flat().map(m => m.value);
+  const allModels = providers.map(p => p.models).flat();
+  const [selectedModel, setSelectedModel] = useState<Model>(allModels.find(model => model.id === selectedModelId) ?? defaultModel);
+
+  const handleModelChange = (value: string) => {
+    try {
+      const {_, modelId} = JSON.parse(value);
+      
+      if(!modelId) throw new Error("Invalid model ID");
+      
+      const model = allModels.find(m => m.id == modelId);
+      
+      if(!model) throw new Error(`The model with ID "${modelId}" does not exist. Please select a valid model.` );
+      
+      setSelectedModel(model);
+    } catch (error) {
+      console.error(error);
+    }
+    onValueChange(value);
+  }
 
   return (
     <>
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="secondary" disabled={isStreaming} className="rounded-full p-4">
-            {defaultModel.name}
+            {selectedModel.name}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" side="top">
           <Select
-            items={modelValues}
-            defaultValue={defaultModel.value}
-            onValueChange={onValueChange}
+            defaultValue={selectedModel.value}
+            onValueChange={handleModelChange}
           >
             <SelectTrigger className="w-full max-w-48">
               <SelectValue />

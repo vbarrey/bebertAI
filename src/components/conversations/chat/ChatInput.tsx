@@ -92,6 +92,7 @@ export function ChatInput({
           isStreaming={isStreaming}
           providers={aiIdItems}
           defaultModel={defaultModel}
+          selectedModelId={aiId}
           onValueChange={setAiId}
         />
       </form>
