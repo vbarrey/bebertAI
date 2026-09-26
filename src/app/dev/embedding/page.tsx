@@ -6,7 +6,7 @@ export default async function EmbeddingPlayground() {
 
   const provider = aiProviderRegistry.get(providerId);
 
-  if (!provider || !provider.embed) throw new Error("Pas de provider où pas d'implémentation");
+  if (!provider) throw new Error("Pas de provider où pas d'implémentation");
 
   const chunks = [
     "Les encres utilisées en imprimerie.",
@@ -14,7 +14,7 @@ export default async function EmbeddingPlayground() {
     "La mécanique d'une presse offset.",
   ];
 
-  const embeddings = await provider.embed({ model: "qwen3-embedding:4b", chunks });
+  const embeddings = await provider.embed({ model: "qwen3-embedding:4b", input: chunks });
 
   if (embeddings.length === 0) {
     throw new Error("Aucun embedding généré");

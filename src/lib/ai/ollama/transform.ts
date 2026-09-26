@@ -26,7 +26,7 @@ export function toAppChatChunk(ollamaChatChunk: OllamaChatChunk): ChatChunk {
 }
 
 export function toOllamaEmbedRequest(appInput: EmbedRequest): OllamaEmbedRequest{
-    return {model: appInput.model, input: appInput.chunks};
+    return {model: appInput.model, input: appInput.input};
 }
 
 export function toAppEmbeddings(ollamaResponse: OllamaEmbedResponse): Embedding[]{

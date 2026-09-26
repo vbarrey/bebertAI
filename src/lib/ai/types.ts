@@ -31,7 +31,7 @@ export type GenerateAssistantResponseInput = {
 
 export type EmbedRequest = {
   model: string;
-  chunks: string[];
+  input: string[];
 }
 
 export type Embedding = number[];

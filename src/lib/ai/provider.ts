@@ -14,5 +14,5 @@ export interface AIProviderClient {
 
   updateConfig(config: unknown): Promise<void>;
 
-  embed?(input: EmbedRequest): Promise<Embedding[]>;
+  embed(input: EmbedRequest): Promise<Embedding[]>;
 }

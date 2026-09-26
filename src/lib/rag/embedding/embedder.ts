@@ -10,17 +10,14 @@ export class DocumentEmbedder {
   ) {}
 
   async embed(chunks: Chunk[]): Promise<ChunkEmbedding[]> {
-    if (!this.provider.embed) {
-      throw new Error(`Provider ${this.provider.name} does not support embedding`);
-    }
-
+    
     if (chunks.length === 0) {
       return [];
     }
 
     const embeddings = await this.provider.embed({
       model: this.modelName,
-      chunks: chunks.map((chunk) => chunk.text)
+      input: chunks.map((chunk) => chunk.text)
     });
 
     if (embeddings.length !== chunks.length) {
