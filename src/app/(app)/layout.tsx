@@ -1,7 +1,7 @@
 "use server";
 
 import { MainLayout } from "@/components/layout/MainLayout"
-
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { prisma } from "@/lib/prisma"
 
 export default async function AppLayout({ children }: Readonly<{ children: React.ReactNode }>){
@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
 
     return (
         <MainLayout projects={projects}>
-            {children}
+            <TooltipProvider>{children}</TooltipProvider>
         </MainLayout>
     )
 }
