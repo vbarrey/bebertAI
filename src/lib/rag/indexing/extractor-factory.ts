@@ -5,7 +5,7 @@ import { DocxExtractor } from "./extractors/docx-extractor";
 import { TextExtractor } from "./extractors/text-extractor";
 
 export function getDocumentExtractor(
-  mimeType: MimeType | null
+  mimeType: string
 ): DocumentExtractor {
   switch (mimeType) {
     case "PDF":

@@ -1,16 +1,15 @@
 import {
   DocumentExtractor,
-  ExtractedDocument,
-  DocumentWithSourceFolder,
-  ExtractedBlock,
+  ExtractedDocument
 } from "../../types";
+import { Document } from "@prisma/client";
 
 import { readFile } from "node:fs/promises";
 import { getDocumentPath, splitTextIntoBlocks } from "../indexing-utils";
 
 export class TextExtractor implements DocumentExtractor {
   async extract(
-    document: DocumentWithSourceFolder
+    document: Document
   ): Promise<ExtractedDocument> {
     const filePath = getDocumentPath(document);
     const text = await readFile(filePath, "utf8");

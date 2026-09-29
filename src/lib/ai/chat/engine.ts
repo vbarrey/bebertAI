@@ -5,7 +5,7 @@ import { messageRoleToString } from "@/lib/utils";
 import { getDocumentRetriever } from "@/lib/rag/retrieval/retriever-factory";
 import { buildRagContext } from "@/lib/rag/context";
 
-const EMBEDDING_PROVIDER_ID = "cmtlhix040000qccs8q1t11li";
+const EMBEDDING_PROVIDER_ID = "cmumwfrrd00008scsi0vdy3fw";
 const EMBEDDING_MODEL_NAME = "qwen3-embedding:4b";
 
 /**

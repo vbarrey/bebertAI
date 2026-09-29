@@ -10,7 +10,6 @@ import { DocumentActions } from "@/components/documents/DocumentActions";
 import { File, Plus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { getAllDocuments } from "@/lib/queries/document";
 import { Document, IndexingStatus } from "@prisma/client";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
@@ -58,8 +57,7 @@ export function DocumentsDisplay({ documents }: Props) {
 
     const filtered = documents.filter((d) => {
         const matchesSearch =
-            d.fileName.toLowerCase().includes(search.toLowerCase()) ||
-            d.relativePath.toLowerCase().includes(search.toLowerCase());
+            d.filename.toLowerCase().includes(search.toLowerCase());
         const matchesStatus = statusFilter === "ALL" ? true : d.indexingStatus === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -97,7 +95,7 @@ export function DocumentsDisplay({ documents }: Props) {
             {/* Search & Filters */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-6">
                 <Input
-                    placeholder="Rechercher par nom ou chemin…"
+                    placeholder="Rechercher par nom"
                     value={search}
                     onChange={(e) => {
                         setSearch(e.target.value);
@@ -134,7 +132,6 @@ export function DocumentsDisplay({ documents }: Props) {
                         <thead className="bg-muted/20">
                             <tr>
                                 <th className="w-[25%] px-4 py-2">Fichier</th>
-                                <th className="w-[25%] px-4 py-2 hidden md:table-cell">Emplacement</th>
                                 <th className="w-[10%] px-4 py-2 hidden lg:table-cell">Type</th>
                                 <th className="w-[10%] px-4 py-2 hidden lg:table-cell">Taille</th>
                                 <th className="w-[10%] px-4 py-2">Statut</th>
@@ -154,31 +151,19 @@ export function DocumentsDisplay({ documents }: Props) {
                                                     <div className="flex flex-row items-center gap-2">
                                                         <File className="size-4" />
                                                         <div className="truncate cursor-default">
-                                                            {doc.fileName}
+                                                            {doc.filename}
                                                         </div>
                                                     </div>
                                                 </TooltipTrigger>
                                                 <TooltipContent side="top" className="max-w-md break-all">
-                                                    {doc.fileName}
+                                                    {doc.filename}
                                                 </TooltipContent>
                                             </Tooltip>
                                         </td>
-                                        <td className="hidden md:table-cell max-w-[280px] text-muted-foreground">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <div className="truncate cursor-default">
-                                                        {doc.relativePath}
-                                                    </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="top" className="max-w-md break-all">
-                                                    {doc.relativePath}
-                                                </TooltipContent>
-                                            </Tooltip>
+                                        <td className="hidden lg:table-cell text-center">{doc.format}</td>
+                                        <td className="hidden lg:table-cell text-muted-foreground">
+                                            {doc.fileSize ? sizeMB : "—"} MB
                                         </td>
-                                        <td className="hidden lg:table-cell">{doc.mimeType?.split('/')[1]}</td>
-                                        {doc.fileSize &&
-                                            <td className="hidden lg:table-cell text-muted-foreground">{sizeMB} MB</td>
-                                        }
                                         <td>
                                             <DocumentStatusBadge status={doc.indexingStatus} />
                                         </td>

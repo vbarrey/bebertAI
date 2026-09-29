@@ -1,5 +1,4 @@
-import { IndexingProgress } from "@/lib/queue/types";
-import type { Document, SourceFolder, MimeType } from "@prisma/client";
+import type { Document, MimeType } from "@prisma/client";
 
 export type ExtractedBlock = {
   text: string;
@@ -34,10 +33,8 @@ export type ChunkingConfiguration = {
   chunkOverlap: number;
 };
 
-export type DocumentWithSourceFolder = Document & { sourceFolder: SourceFolder};
-
 export interface DocumentExtractor {
-  extract(document: DocumentWithSourceFolder): Promise<ExtractedDocument>;
+  extract(document: Document): Promise<ExtractedDocument>;
 }
 
 export interface DocumentChunker {
@@ -45,7 +42,7 @@ export interface DocumentChunker {
 }
 
 export class UnsupportedDocumentTypeError extends Error {
-  constructor(mimeType: MimeType | null) {
+  constructor(mimeType: string) {
     super(`Unsupported document type: ${mimeType ?? "unknown"}`);
     this.name = "UnsupportedDocumentTypeError";
   }

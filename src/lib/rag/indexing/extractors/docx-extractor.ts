@@ -2,13 +2,13 @@ import { getDocumentPath, splitTextIntoBlocks } from "../indexing-utils";
 import {
   DocumentExtractor,
   ExtractedDocument,
-  DocumentWithSourceFolder,
 } from "../../types";
 import mammoth from "mammoth";
+import { Document } from "@prisma/client";
 
 export class DocxExtractor implements DocumentExtractor {
   async extract(
-    document: DocumentWithSourceFolder
+    document: Document
   ): Promise<ExtractedDocument> {
     const filePath = getDocumentPath(document);
 

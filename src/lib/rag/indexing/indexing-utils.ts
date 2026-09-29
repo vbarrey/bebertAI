@@ -1,13 +1,15 @@
 import { ExtractedBlock } from "../types";
 import path from "node:path";
-import type { Document, SourceFolder } from "@prisma/client";
+import type { Document } from "@prisma/client";
+import os from "node:os";
 
 export function getDocumentPath(
-    document: Document & { sourceFolder: SourceFolder },
+    document: Document
 ): string {
     return path.join(
-        document.sourceFolder.path,
-        document.relativePath,
+        os.tmpdir(),
+        process.env["TMP_FILE_REPO"] ?? "bebert-ai-file-repo",
+        document.filename,
     );
 }
 

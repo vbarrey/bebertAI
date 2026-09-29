@@ -10,7 +10,7 @@ import { getIndexingJobById } from "@/lib/queries/indexing-job";
 import { getDocumentExtractor } from "@/lib/rag/indexing/extractor-factory";
 import { getDocumentChunker } from "@/lib/rag/indexing/chunker-factory";
 import { replaceDocumentChunks } from "@/lib/mutations/chunk";
-import { getDocumentWithSourceFolder } from "@/lib/queries/document";
+import { getDocumentById } from "@/lib/queries/document";
 import { getDocumentEmbedder } from "@/lib/rag/embedding/embedder-factory";
 
 import { aiProviderRegistry } from "@/lib/ai/registry";
@@ -78,7 +78,7 @@ async function initialize() {
           );
         }
 
-        const document = await getDocumentWithSourceFolder(documentId);
+        const document = await getDocumentById(documentId);
 
         if (!document) {
           throw new Error(
@@ -86,7 +86,7 @@ async function initialize() {
           );
         }
 
-        const extractor = getDocumentExtractor(document.mimeType);
+        const extractor = getDocumentExtractor(document.format);
 
         await updateProgress(job, {
           stage: IndexingStage.EXTRACTING

@@ -47,38 +47,25 @@ model Message {
   @@index([conversationId, createdAt])
 }
 
-model SourceFolder {
-  id                String        @id @default(cuid())
-  path              String        @unique
-  label             String
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  documents         Document[]
-}
-
 model Document {
-  id             String         @id @default(cuid())
-  sourceFolderId String
-  relativePath   String
-  fileName       String
-  mimeType       MimeType?
+  id             String         @id @default(uuid())
+  filename       String         @unique
+  displayName    String
+  format         String
   fileSize       Int?
-  checksum       String
+  checksum       String         @unique
   language       String?
 
   indexedAt      DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  indexingStatus IndexingStatus @default(PENDING)
+  indexingStatus IndexingStatus @default(UNPLANNED)
 
   chunks         Chunk[]
   indexingJobs   IndexingJob[]
 
-  sourceFolder   SourceFolder   @relation( fields: [sourceFolderId], references: [id], onDelete: Cascade )
-
-  @@unique([sourceFolderId, relativePath])
-  @@index([sourceFolderId])
+  @@index([displayName])
 }
 
 model Chunk {

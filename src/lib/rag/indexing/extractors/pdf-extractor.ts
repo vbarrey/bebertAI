@@ -4,14 +4,16 @@ import type { StructuredTextItem } from "unpdf";
 
 import type {
     DocumentExtractor,
-    DocumentWithSourceFolder,
     ExtractedDocument,
 } from "../../types";
+
+import { Document } from "@prisma/client";
+
 import { getDocumentPath } from "../indexing-utils";
 
 export class PdfExtractor implements DocumentExtractor {
     async extract(
-        document: DocumentWithSourceFolder,
+        document: Document,
     ): Promise<ExtractedDocument> { 
         const filePath = getDocumentPath(document);
         const buffer = await readFile(filePath);

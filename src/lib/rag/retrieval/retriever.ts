@@ -31,7 +31,7 @@ export class DocumentRetriever {
         options: RetrievalOptions = {},
     ): Promise<RetrievedChunk[]> {
         const {
-            limit = 5,
+            limit = 20,
             scoreThreshold = 0.55,
         } = options;
 
