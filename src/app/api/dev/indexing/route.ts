@@ -34,7 +34,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { supportedFormat } = pipelineRuntime.getConfig().capabilities.import;
+    const pipelineConfig = await pipelineRuntime.getConfig();
+
+    const { supportedFormat } = pipelineConfig.capabilities.import;
 
     if (!supportedFormat.includes(format)) {
       return NextResponse.json(
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
 
     const indexingJob = await createIndexingJob(document.id);
 
-    await enqueueIndexingJob(indexingJob.id, pipelineRuntime.getConfig());
+    await enqueueIndexingJob(indexingJob.id, pipelineConfig);
 
     return NextResponse.json({
       jobId: indexingJob.id,

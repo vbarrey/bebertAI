@@ -38,13 +38,17 @@ class PipelineRuntime {
     };
   }
 
-  getConfig(): PipelineConfig {
-    if (!this.config)
-      throw Error("The pipeline runtime configuration isn't initialize yet!");
-    return this.config;
+  async getConfig(): Promise<PipelineConfig> {
+    if (!this.config){
+      await this.initialize();
+    }
+      
+    return this.config!;
   }
 
   async updateParameters(parameters: unknown) {
+    if(!this.config) await this.initialize();
+
     const validatedParameters = this.parseParameters(parameters);
 
     await prisma.pipelineParameters.update({
@@ -55,7 +59,7 @@ class PipelineRuntime {
     });
 
     this.config = {
-      ...this.getConfig(),
+      ...(await this.getConfig()),
       parameters: validatedParameters,
     };
   }
