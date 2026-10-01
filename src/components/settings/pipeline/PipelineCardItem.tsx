@@ -74,7 +74,7 @@ export function PipelineCardItem({
       </CardHeader>
 
       <CardContent>
-        {item.subCards && (
+        {item.subCards && !isExpanded && (
           <div className="flex flex-col gap-2">
             {item.subCards.map((subItem) => (
               <SubPipelineCardItem key={subItem.id} subItem={subItem} />

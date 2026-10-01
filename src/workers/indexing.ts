@@ -19,11 +19,12 @@ import { upsertChunkEmbeddings } from "@/lib/qdrant/points";
 import { ensureChunksCollection } from "@/lib/qdrant/collections";
 
 import { IndexingStage, IndexingSteps } from "@/lib/queue/types";
+import { PipelineConfig } from "@/lib/pipeline/config";
+import { DocumentFormatSchema } from "@/lib/pipeline/formats";
 
 export type IndexingJobData = {
   indexingJobId: string;
-  providerId: string;
-  embeddingModelName: string;
+  pipelineConfig: PipelineConfig
 };
 
 const NAME = "Document-Indexing-Worker";
@@ -47,8 +48,7 @@ async function initialize() {
     async (job: Job<IndexingJobData>) => {
       const {
         indexingJobId,
-        providerId,
-        embeddingModelName,
+        pipelineConfig
       } = job.data;
 
       try {
@@ -60,11 +60,11 @@ async function initialize() {
           );
         }
 
-        const provider = aiProviderRegistry.get(providerId);
+        const embeddingProvider = aiProviderRegistry.get(pipelineConfig.parameters.embedding.document.providerId);
 
-        if (!provider) {
+        if (!embeddingProvider) {
           throw new Error(
-            `Provider with id ${providerId} not found`,
+            `Provider with id ${embeddingProvider} not found`,
           );
         }
 
@@ -86,7 +86,7 @@ async function initialize() {
           );
         }
 
-        const extractor = getDocumentExtractor(document.format);
+        const extractor = getDocumentExtractor(DocumentFormatSchema.parse(document.format));
 
         await updateProgress(job, {
           stage: IndexingStage.EXTRACTING
@@ -94,7 +94,7 @@ async function initialize() {
 
         const extraction = await extractor.extract(document);
 
-        const chunker = getDocumentChunker();
+        const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);
 
         await updateProgress(job, {
           stage: IndexingStage.CHUNKING
@@ -118,8 +118,8 @@ async function initialize() {
         }
 
         const embedder = await getDocumentEmbedder(
-          provider,
-          embeddingModelName,
+          embeddingProvider,
+          pipelineConfig.parameters.embedding.document.modelId,
         );
 
         await updateProgress(job, {

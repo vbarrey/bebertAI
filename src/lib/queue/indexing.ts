@@ -1,6 +1,7 @@
 import { Queue } from "bullmq";
 import { createQueueConnection } from "./redis";
 import { IndexingJobData } from "@/workers/indexing";
+import { PipelineConfig } from "../pipeline/config";
 
 export const indexingQueue = new Queue(
   "document-indexing",
@@ -16,15 +17,18 @@ export const indexingQueue = new Queue(
   },
 );
 
-export async function enqueueIndexingJob(data: IndexingJobData
+export async function enqueueIndexingJob(
+  indexingJobId: string,
+  pipelineConfig: PipelineConfig
 ) {
   return indexingQueue.add(
     "index-document",
     {
-      ...data
+      indexingJobId,
+      pipelineConfig
     },
     {
-      jobId: data.indexingJobId,
+      jobId: indexingJobId,
     },
   );
 }

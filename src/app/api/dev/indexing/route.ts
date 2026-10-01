@@ -6,10 +6,11 @@ import os from "node:os";
 import { createDocument } from "@/lib/mutations/document";
 import { createIndexingJob } from "@/lib/mutations/indexing-job";
 import { enqueueIndexingJob } from "@/lib/queue/indexing";
-import { IndexingJobData } from "@/workers/indexing";
 import { calculateFileChecksum } from "@/lib/documents/checksum";
+import { DocumentFormat } from "@/lib/pipeline/formats";
+import { pipelineRuntime } from "@/lib/pipeline/runtime";
 
-const mimeTypesToFormat: Record<string, string> = {
+const mimeTypes: Record<string, DocumentFormat> = {
   "application/pdf": "PDF",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
   "text/plain": "TXT",
@@ -24,12 +25,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const format = mimeTypesToFormat[file.type];
+    const format = mimeTypes[file.type];
 
     if (!format) {
       return NextResponse.json(
         { error: `Unsupported file type: ${file.type}` },
-        { status: 400 }
+        { status: 400 },
+      );
+    }
+
+    const pipelineConfig = await pipelineRuntime.getConfig();
+
+    const { supportedFormat } = pipelineConfig.capabilities.import;
+
+    if (!supportedFormat.includes(format)) {
+      return NextResponse.json(
+        { error: `Unsupported document format: ${format}` },
+        { status: 400 },
       );
     }
 
@@ -58,13 +70,7 @@ export async function POST(request: Request) {
 
     const indexingJob = await createIndexingJob(document.id);
 
-    const data: IndexingJobData = {
-      indexingJobId: indexingJob.id, 
-      providerId: "cmumwfrrd00008scsi0vdy3fw",// TODO : make configurable
-      embeddingModelName: "qwen3-embedding:4b" // TODO : make configurable);
-    }
-
-    await enqueueIndexingJob(data);
+    await enqueueIndexingJob(indexingJob.id, pipelineConfig);
 
     return NextResponse.json({
       jobId: indexingJob.id,
@@ -79,7 +85,7 @@ export async function POST(request: Request) {
             ? error.message
             : "An unexpected error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

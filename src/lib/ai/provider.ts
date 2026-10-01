@@ -5,6 +5,7 @@ export interface AIProviderClient {
   name: string;
 
   models(): Promise<AIModelInfo[]>;
+  hasModel(modelName: string): Promise<boolean>;
 
   chat(appImput: ChatRequestInput): AsyncGenerator<ChatChunk>;
 
