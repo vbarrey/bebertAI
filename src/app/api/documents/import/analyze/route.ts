@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       ) {
         ignored.push({
           key: `${file.name}:${file.size}:${file.lastModified}`,
-          filename: file.name,
+          displayName: file.name,
           relativePath,
           reason: "UNSUPPORTED_FORMAT",
         });
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       if (seenChecksums.has(checksum)) {
         ignored.push({
           key: `${checksum}:${file.name}`,
-          filename: file.name,
+          displayName: file.name,
           relativePath,
           reason: "DUPLICATE",
         });
@@ -95,7 +95,6 @@ export async function POST(request: Request) {
 
       analyzed.push({
         key: `${checksum}:${file.name}`,
-        filename: file.name,
         displayName: file.name,
         format,
         fileSize: file.size,
@@ -104,8 +103,7 @@ export async function POST(request: Request) {
         conflict: existingDocument
           ? {
               documentId: existingDocument.id,
-              displayName:
-                existingDocument.displayName,
+              displayName: existingDocument.displayName,
               checksum: existingDocument.checksum,
             }
           : null,

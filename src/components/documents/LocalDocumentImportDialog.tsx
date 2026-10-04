@@ -776,7 +776,7 @@ export function LocalDocumentImportDialog({
                             className="rounded-md border px-3 py-2"
                           >
                             <p className="text-sm">
-                              {file.filename}
+                              {file.displayName}
                             </p>
 
                             <p className="text-xs text-muted-foreground">

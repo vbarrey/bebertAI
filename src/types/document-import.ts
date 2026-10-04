@@ -1,27 +1,28 @@
-import type { DocumentFormat } from "@/lib/pipeline/formats";
-
 export type DocumentImportFile = {
   key: string;
-  filename: string;
   displayName: string;
-  format: DocumentFormat;
+  format: string;
   fileSize: number;
   checksum: string;
   relativePath?: string;
-  conflict: DocumentImportConflict | null;
+  conflict: {
+    documentId: string;
+    displayName: string;
+    checksum: string;
+  } | null;
+};
+
+export type DocumentImportIgnoredFile = {
+  key: string;
+  displayName: string;
+  relativePath?: string;
+  reason: "UNSUPPORTED_FORMAT" | "DUPLICATE";
 };
 
 export type DocumentImportConflict = {
   documentId: string;
   displayName: string;
   checksum: string;
-};
-
-export type DocumentImportIgnoredFile = {
-  key: string;
-  filename: string;
-  relativePath?: string;
-  reason: "UNSUPPORTED_FORMAT" | "DUPLICATE";
 };
 
 export type DocumentImportAnalysis = {

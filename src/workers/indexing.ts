@@ -20,7 +20,7 @@ import { ensureChunksCollection } from "@/lib/qdrant/collections";
 
 import { IndexingStage, IndexingSteps } from "@/lib/queue/types";
 import { PipelineConfig } from "@/lib/pipeline/config";
-import { DocumentFormatSchema } from "@/lib/pipeline/formats";
+import { DocumentFormatSchema } from "@/lib/documents/format";
 
 export type IndexingJobData = {
   indexingJobId: string;

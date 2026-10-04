@@ -1,14 +1,21 @@
 import { prisma } from "@/lib/prisma";
-import { DocumentFormat } from "../pipeline/formats";
-import { IndexingStatus } from "@prisma/client";
+import {
+  DocumentSourceType,
+  IndexingStatus,
+} from "@prisma/client";
+
+import { DocumentFormat } from "@/lib/documents/format";
 
 export async function createDocument(data: {
-  filename: string;
+  id?: string;
+  storagePath: string;
   displayName: string;
   format: DocumentFormat;
-  fileSize?: number;
+  fileSize: number;
   checksum: string;
   language?: string;
+  sourceType: DocumentSourceType;
+  sourceRef?: string | null;
   indexingStatus: IndexingStatus;
 }) {
   return prisma.document.create({

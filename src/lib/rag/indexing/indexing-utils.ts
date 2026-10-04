@@ -1,19 +1,25 @@
-import { ExtractedBlock } from "../types";
-import path from "node:path";
 import type { Document } from "@prisma/client";
-import os from "node:os";
+
+import { ExtractedBlock } from "../types";
+import { getDocumentFilePath } from "@/lib/documents/storage";
 
 export function getDocumentPath(
-    document: Document
+    document: Document,
 ): string {
-    return path.join(
-        os.tmpdir(),
-        process.env["TMP_FILE_REPO"] ?? "bebert-ai-file-repo",
-        document.filename,
+    if (!document.storagePath) {
+        throw new Error(
+            `Document ${document.id} has no storage path.`,
+        );
+    }
+
+    return getDocumentFilePath(
+        document.storagePath,
     );
 }
 
-export function splitTextIntoBlocks(text: string): ExtractedBlock[] {
+export function splitTextIntoBlocks(
+    text: string,
+): ExtractedBlock[] {
     return text
         .split(/\r?\n\s*\r?\n/)
         .map((text) => text.trim())

@@ -1,5 +1,5 @@
 import { DocumentExtractor, UnsupportedDocumentTypeError } from "../types";
-import { DocumentFormat } from "@/lib/pipeline/formats";
+import { DocumentFormat } from "@/lib/documents/format";
 import { extractors } from "./extractors/registry";
 
 export function getDocumentExtractor(

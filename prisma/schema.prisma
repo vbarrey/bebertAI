@@ -54,14 +54,23 @@ model Message {
   @@index([conversationId, createdAt])
 }
 
+enum DocumentSourceType {
+  LOCAL
+  GOOGLE_DRIVE
+  DROPBOX
+}
+
 model Document {
   id             String         @id @default(uuid())
-  filename       String         @unique
   displayName    String
   format         String
   fileSize       Int?
   checksum       String         @unique
   language       String?
+
+  sourceType  DocumentSourceType
+  sourceRef   String?
+  storagePath String?
 
   indexedAt      DateTime?
   createdAt      DateTime       @default(now())

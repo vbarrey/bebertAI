@@ -53,11 +53,15 @@ export async function GET(
           return;
         }
 
-        controller.enqueue(
-          encoder.encode(
-            `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
-          ),
-        );
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+            ),
+          );
+        } catch {
+          closed = true;
+        }
       };
 
       const cleanup = async () => {
@@ -82,12 +86,16 @@ export async function GET(
           onFailed,
         );
 
-        await queueEvents.close();
+        try {
+          await queueEvents.close();
+        } catch {
+          // QueueEvents may already be closed.
+        }
 
         try {
           controller.close();
         } catch {
-          // Stream already closed.
+          // Stream may already be closed.
         }
       };
 
@@ -152,8 +160,20 @@ export async function GET(
         void cleanup();
       };
 
+      request.signal.addEventListener(
+        "abort",
+        () => {
+          void cleanup();
+        },
+        { once: true },
+      );
+
       try {
         await queueEvents.waitUntilReady();
+
+        if (closed) {
+          return;
+        }
 
         queueEvents.on(
           "progress",
@@ -196,13 +216,6 @@ export async function GET(
       await queueEvents.close();
     },
   });
-
-  request.signal.addEventListener(
-    "abort",
-    () => {
-      void queueEvents.close();
-    },
-  );
 
   return new Response(stream, {
     headers: {

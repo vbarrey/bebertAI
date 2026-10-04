@@ -60,7 +60,7 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
 
     const filtered = documents.filter((d) => {
         const matchesSearch =
-            d.filename.toLowerCase().includes(search.toLowerCase());
+            d.displayName.toLowerCase().includes(search.toLowerCase());
         const matchesStatus = statusFilter === "ALL" ? true : d.indexingStatus === statusFilter;
         return matchesSearch && matchesStatus;
     });
