@@ -14,7 +14,7 @@ const statusMap: Record<IndexingStatus, { label: string; icon: typeof AlertCircl
 export function DocumentStatusBadge({ status }: { status: IndexingStatus }) {
   const { label, icon: Icon, variant } = statusMap[status];
   return (
-    <Badge variant={variant} className="flex items-center gap-1 text-xs font-medium">
+    <Badge variant={variant} className="flex items-center gap-1 text-xs font-medium m-auto">
       <Icon className="size-3" />
       {label}
     </Badge>
