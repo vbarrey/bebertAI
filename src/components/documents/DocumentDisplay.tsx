@@ -60,13 +60,15 @@ const jobStatusToIndexingStatus: Partial<Record<JobStatus, IndexingStatus>> = {
 
 const finishedJobStatuses: JobStatus[] = [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED];
 
+type DocumentRow = Document & { indexingError?: string | null };
+
 type Props = {
-    initialDocuments: Document[]
+    initialDocuments: DocumentRow[]
 }
 
 // ----- Page ----
 export function DocumentsDisplay({ initialDocuments }: Props) {
-    const [documents, setDocuments] = useState(initialDocuments);
+    const [documents, setDocuments] = useState<DocumentRow[]>(initialDocuments);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | IndexingStatus>("ALL");
     const [page, setPage] = useState(1);
@@ -154,6 +156,7 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                         ? {
                             ...document,
                             indexingStatus: status,
+                            indexingError: data.errorMessage ?? null,
                         }
                         : document,
                 ),
@@ -338,7 +341,7 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                                             {doc.fileSize ? sizeMB : "—"} MB
                                         </td>
                                         <td className="text-center">
-                                            <DocumentStatusBadge status={doc.indexingStatus} />
+                                            <DocumentStatusBadge status={doc.indexingStatus} error={doc.indexingError} />
                                         </td>
                                         <td className="hidden lg:table-cell text-muted-foreground text-center">
                                             {doc.indexedAt

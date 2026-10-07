@@ -1,4 +1,4 @@
-import { Worker, type Job } from "bullmq";
+import { UnrecoverableError, Worker, type Job } from "bullmq";
 
 import { createWorkerConnection } from "@/lib/queue/redis";
 import {
@@ -19,7 +19,7 @@ import { initializeAI } from "@/lib/startup/initialize-ai";
 import { deleteDocumentEmbeddings, upsertChunkEmbeddings } from "@/lib/qdrant/points";
 import { ensureChunksCollection } from "@/lib/qdrant/collections";
 
-import { IndexingStage, IndexingSteps } from "@/lib/queue/types";
+import { IndexingStage } from "@/lib/queue/types";
 import { getPipelineProvider, PipelineConfig } from "@/lib/pipeline/config";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 
@@ -30,12 +30,15 @@ export type IndexingJobData = {
 
 const NAME = "Document-Indexing-Worker";
 
-async function updateProgress(
-  job: Job<IndexingJobData>,
-  progress: IndexingSteps,
-) {
-  await job.updateProgress(progress);
-}
+// Prefixed to error messages so the UI tells which step failed.
+const STAGE_LABELS: Partial<Record<IndexingStage, string>> = {
+  [IndexingStage.CREATING]: "Préparation",
+  [IndexingStage.EXTRACTING]: "Extraction du texte",
+  [IndexingStage.CHUNKING]: "Découpage",
+  [IndexingStage.PERSISTING_CHUNKS]: "Enregistrement des chunks",
+  [IndexingStage.EMBEDDING]: "Embedding (Ollama)",
+  [IndexingStage.PERSISTING_EMBEDDINGS]: "Enregistrement des vecteurs (Qdrant)",
+};
 
 async function initialize() {
   /*
@@ -51,6 +54,13 @@ async function initialize() {
         indexingJobId,
         pipelineConfig
       } = job.data;
+
+      let stage = IndexingStage.CREATING;
+
+      const updateProgress = async (next: IndexingStage) => {
+        stage = next;
+        await job.updateProgress({ stage: next });
+      };
 
       try {
         const indexingJob = await getIndexingJobById(indexingJobId);
@@ -83,43 +93,36 @@ async function initialize() {
 
         const extractor = getDocumentExtractor(DocumentFormatSchema.parse(document.format));
 
-        await updateProgress(job, {
-          stage: IndexingStage.EXTRACTING
-        });
+        await updateProgress(IndexingStage.EXTRACTING);
 
         const extraction = await extractor.extract(document);
 
         const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);
 
-        await updateProgress(job, {
-          stage: IndexingStage.CHUNKING
-        });
+        await updateProgress(IndexingStage.CHUNKING);
 
         const chunks = await chunker.chunk(extraction);
 
-        await updateProgress(job, {
-          stage: IndexingStage.PERSISTING_CHUNKS
-        });
+        if (chunks.length === 0) {
+          // Retrying cannot help: the file has no text layer.
+          throw new UnrecoverableError(
+            "Aucun texte extractible dans le document (PDF scanné ?). L'OCR n'est pas encore supporté.",
+          );
+        }
+
+        await updateProgress(IndexingStage.PERSISTING_CHUNKS);
 
         const persistedChunks = await replaceDocumentChunks(
           document.id,
           chunks,
         );
 
-        if (persistedChunks.length === 0) {
-          console.error(
-            `[${NAME}] No chunks were persisted for document with id ${document.id}`,
-          );
-        }
-
         const embedder = await getDocumentEmbedder(
           embeddingProvider,
           pipelineConfig.parameters.embedding.document.modelName,
         );
 
-        await updateProgress(job, {
-          stage: IndexingStage.EMBEDDING
-        });
+        await updateProgress(IndexingStage.EMBEDDING);
 
         const embeddings = await embedder.embed(
           persistedChunks,
@@ -131,9 +134,7 @@ async function initialize() {
           );
         }
 
-        await updateProgress(job, {
-          stage: IndexingStage.PERSISTING_EMBEDDINGS
-        });
+        await updateProgress(IndexingStage.PERSISTING_EMBEDDINGS);
 
         const vectorSize = embeddings[0]?.embedding.length;
 
@@ -150,9 +151,7 @@ async function initialize() {
 
         await completeIndexingJob(indexingJob.id);
 
-        await updateProgress(job, {
-          stage: IndexingStage.COMPLETED
-        });
+        await updateProgress(IndexingStage.COMPLETED);
 
         return {
           documentId: document.id,
@@ -160,13 +159,16 @@ async function initialize() {
           embeddings: embeddings.length,
         };
       } catch (error) {
-        const message =
+        const message = `${STAGE_LABELS[stage] ?? stage} : ${
           error instanceof Error
             ? error.message
-            : "Unknown indexing error";
+            : "Erreur d'indexation inconnue"
+        }`;
 
         // BullMQ will retry the job: only the last attempt marks the job and the document as FAILED.
-        const isLastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
+        const isLastAttempt =
+          error instanceof UnrecoverableError ||
+          job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
 
         if (isLastAttempt) {
           await failIndexingJob(
@@ -175,7 +177,10 @@ async function initialize() {
           );
         }
 
-        throw error;
+        // Rethrown with the stage so BullMQ's failedReason (sent over SSE) matches the DB message.
+        throw error instanceof UnrecoverableError
+          ? new UnrecoverableError(message)
+          : new Error(message, { cause: error });
       }
     },
     {

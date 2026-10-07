@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev\" \"tsx src/workers/indexing.ts\"",
+    "dev": "concurrently \"next dev\" \"tsx watch src/workers/indexing.ts\"",
     "dev:web": "next dev",
-    "dev:worker": "tsx src/workers/indexing.ts",
+    "dev:worker": "tsx watch src/workers/indexing.ts",
     "build": "next build",
     "start": "next start",
     "start:worker": "tsx src/workers/indexing.ts"

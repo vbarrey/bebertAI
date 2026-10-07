@@ -95,7 +95,9 @@ export class OllamaClient {
       const res = await call();
 
       if (!res.ok) {
-        throw new OllamaRequestError(res.status, res.statusText);
+        // Ollama puts the real cause in the body (e.g. the model runner crashed).
+        const body = await res.json().catch(() => null);
+        throw new OllamaRequestError(res.status, body?.error ?? res.statusText);
       }
 
       return res;

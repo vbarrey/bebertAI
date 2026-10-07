@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   const jobs = await prisma.indexingJob.findMany({
     where: { id: { in: ids } },
-    select: { id: true, documentId: true, status: true, document: { select: { displayName: true } } },
+    select: { id: true, documentId: true, status: true, errorMessage: true, document: { select: { displayName: true } } },
   });
 
   if (jobs.length === 0) {
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
         queueEvents.on("failed", onFailed);
 
         for (const job of jobs) {
-          send("status", { jobId: job.id, documentId: job.documentId, displayName: job.document.displayName, status: job.status });
+          send("status", { jobId: job.id, documentId: job.documentId, displayName: job.document.displayName, status: job.status, errorMessage: job.errorMessage ?? undefined });
 
           if (FINISHED_STATUSES.includes(job.status)) {
             finish(job.id);

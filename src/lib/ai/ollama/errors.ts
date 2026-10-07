@@ -17,10 +17,10 @@ export class OllamaConnectionError extends OllamaError {
 export class OllamaRequestError extends OllamaError {
   constructor(
     readonly status: number,
-    readonly statusText: string,
+    readonly detail: string,
     options?: ErrorOptions
   ) {
-    super(`[REQUEST ERROR] (STATUS ${status}) : ${statusText}`, options);
+    super(`[REQUEST ERROR] (STATUS ${status}) : ${detail}`, options);
     this.name = "OllamaRequestError";
   }
 }
