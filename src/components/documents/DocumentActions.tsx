@@ -38,9 +38,10 @@ import { type Document } from "@prisma/client";
 type Props = {
   document: Document;
   onIndexingStarted: (jobId: string) => void;
+  onDeleted: (documentId: string) => void;
 };
 
-export function DocumentActions({ document, onIndexingStarted }: Props) {
+export function DocumentActions({ document, onIndexingStarted, onDeleted }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -120,6 +121,7 @@ export function DocumentActions({ document, onIndexingStarted }: Props) {
         );
       }
 
+      onDeleted(document.id);
       setDeleteOpen(false);
     } finally {
       setLoading(false);
@@ -128,7 +130,7 @@ export function DocumentActions({ document, onIndexingStarted }: Props) {
 
   function handleVisualize() {
     window.open(
-      `/api/documents/${document.id}/file`,
+      `/api/documents/${document.id}`,
       "_blank",
       "noopener,noreferrer",
     );

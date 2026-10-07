@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
-import { getDocumentFilePath } from "@/lib/documents/storage";
+import { getDocumentFilePath, deleteDocumentFile } from "@/lib/documents/storage";
 
 type RouteContext = {
     params: Promise<{
@@ -98,6 +98,62 @@ export async function GET(
             },
             {
                 status: 404,
+            },
+        );
+    }
+}
+
+export async function DELETE(
+    _request: Request,
+    { params }: RouteContext,
+) {
+    const { documentId } = await params;
+
+    try {
+        const document = await prisma.document.findUnique({
+            where: {
+                id: documentId,
+            },
+            select: {
+                id: true,
+                storagePath: true,
+            },
+        });
+
+        if (!document) {
+            return NextResponse.json(
+                {
+                    error: "Document introuvable.",
+                },
+                {
+                    status: 404,
+                },
+            );
+        }
+
+        await prisma.document.delete({
+            where: {
+                id: document.id,
+            },
+        });
+
+        await deleteDocumentFile(document.storagePath);
+
+        return new NextResponse(null, {
+            status: 204,
+        });
+    } catch (error) {
+        console.error(
+            `Failed to delete document ${documentId}:`,
+            error,
+        );
+
+        return NextResponse.json(
+            {
+                error: "Impossible de supprimer le document.",
+            },
+            {
+                status: 500,
             },
         );
     }

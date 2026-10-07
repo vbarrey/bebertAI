@@ -501,7 +501,7 @@ export function LocalDocumentImportDialog({
         open={open}
         onOpenChange={handleOpenChange}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-full min-w-0 max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               Importer des documents
@@ -593,7 +593,7 @@ export function LocalDocumentImportDialog({
               </div>
 
               {files.length > 0 && (
-                <div className="space-y-3">
+                <div className="min-w-0 w-full space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">
                       {files.length} fichier
@@ -613,13 +613,13 @@ export function LocalDocumentImportDialog({
                     </Button>
                   </div>
 
-                  <div className="max-h-56 space-y-1 overflow-y-auto">
+                  <div className="min-w-0 w-full max-h-[50vh] space-y-1 overflow-x-hidden overflow-y-auto">
                     {files.map((item) => (
                       <div
                         key={getFileKey(item)}
-                        className="flex items-center justify-between rounded-md border px-3 py-2"
+                        className="flex min-w-0 w-full items-center justify-between rounded-md border px-3 py-2"
                       >
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="truncate text-sm">
                             {item.file.name}
                           </p>

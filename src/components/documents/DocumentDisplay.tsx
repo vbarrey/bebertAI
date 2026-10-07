@@ -176,6 +176,12 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
         ]);
     };
 
+    function onDocumentDeleted(documentId: string) {
+        setDocuments((documents) =>
+            documents.filter((document) => document.id !== documentId)
+        );
+    }
+
     return (
         <div className="p-6 max-w-7xl mx-auto">
             {/* Header */}
@@ -295,7 +301,7 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                                             })}
                                         </td>
                                         <td className="text-center">
-                                            <DocumentActions document={doc} onIndexingStarted={onIndexingStarted} />
+                                            <DocumentActions document={doc} onIndexingStarted={onIndexingStarted} onDeleted={onDocumentDeleted} />
                                         </td>
                                     </tr>
                                 );
