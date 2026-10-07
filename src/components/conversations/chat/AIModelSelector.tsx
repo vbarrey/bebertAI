@@ -1,103 +1,91 @@
-"use client"
+"use client";
 
-import { Provider, Model } from "./ChatInput";
-
-import { Button } from "@/components/ui/button";
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
   SelectGroup,
   SelectItem,
   SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect, useState } from "react";
-import { Fragment } from "react/jsx-runtime";
+import { Provider } from "@/types/augmented-prisma";
 
 type Props = {
-  isStreaming: boolean;
+  providerId: string;
+  modelName: string;
   providers: Provider[];
-  defaultModel: Model;
-  selectedModelId: string;
-  onValueChange: (value: string) => void;
+  disabled: boolean;
+  onProviderChange: (providerId: string) => void;
+  onModelChange: (modelName: string) => void;
 };
 
 export function AIModelSelector({
-  isStreaming,
+  providerId,
+  modelName,
   providers,
-  defaultModel,
-  selectedModelId,
-  onValueChange,
+  disabled = false,
+  onProviderChange,
+  onModelChange,
 }: Props) {
-
-  const allModels = providers.map(p => p.models).flat();
-  const [selectedModel, setSelectedModel] = useState<Model>(allModels.find(model => model.id === selectedModelId) ?? defaultModel);
-
-  const handleModelChange = (value: string) => {
-    try {
-      const {_, modelId} = JSON.parse(value);
-      
-      if(!modelId) throw new Error("Invalid model ID");
-      
-      const model = allModels.find(m => m.id == modelId);
-      
-      if(!model) throw new Error(`The model with ID "${modelId}" does not exist. Please select a valid model.` );
-      
-      setSelectedModel(model);
-    } catch (error) {
-      console.error(error);
-    }
-    onValueChange(value);
-  }
+  const provider = providers.find(
+    (provider) => provider.id === providerId,
+  );
 
   return (
-    <>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="secondary" disabled={isStreaming} className="rounded-full p-4">
-            {selectedModel.name}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" side="top">
-          <Select
-            defaultValue={selectedModel.value}
-            onValueChange={handleModelChange}
-          >
-            <SelectTrigger className="w-full max-w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {providers.map((provider, index) => (
-                <Fragment key={provider.id}>
-                  <SelectGroup>
-                    <SelectLabel>{provider.name}</SelectLabel>
+    <div className="group">
+      <div className="flex items-center rounded-xl border bg-background shadow-sm transition-all duration-200">
+        {/* État rétracté */}
+        <div className="flex h-10 items-center px-3 text-sm font-medium whitespace-nowrap group-hover:hidden">
+          {modelName || "Modèle"}
+        </div>
 
-                    {provider.models.map((model) => (
-                      <SelectItem key={model.id} value={model.value}>
-                        {model.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
+        {/* Formulaire */}
+        <div className="hidden items-center gap-2 p-2 group-hover:flex">
+          <Field>
+            <FieldContent>
+              <FieldLabel>Provider</FieldLabel>
+            </FieldContent>
+            <Select value={providerId} onValueChange={onProviderChange} disabled={disabled}>
+              <SelectTrigger className="h-8 w-[130px]">
+                <SelectValue placeholder="Fournisseur"/>
+              </SelectTrigger>
 
-                  {index < providers.length - 1 && <SelectSeparator />}
-                </Fragment>
-              ))}
-            </SelectContent>
-          </Select>
-        </PopoverContent>
-      </Popover>
-    </>
+              <SelectContent>
+                {providers.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id}>
+                    {provider.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field>
+            <FieldContent>
+              <FieldLabel>Model</FieldLabel>
+            </FieldContent>
+            <Select value={modelName} onValueChange={onModelChange} disabled={disabled || !providerId}>
+              <SelectTrigger className="h-8 w-[160px]">
+                <SelectValue placeholder="Modèle" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>{provider?.name}</SelectLabel>
+
+                  {provider!.models?.map((model) => (
+                    <SelectItem key={model.id} value={model.name}>
+                      {model.displayName ? model.displayName : model.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+      </div>
+    </div>
   );
 }

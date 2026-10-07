@@ -15,12 +15,14 @@ export function MessageList({ messages }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if(messages.at(-1)?.role === "USER")
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  setTimeout(()=>{bottomRef.current?.scrollIntoView({behavior: "smooth"})}, 500);
 
   return (
-    <ScrollArea className="w-full max-w-4xl m-auto h-[calc(100vh-240px)]">
+    <ScrollArea className="w-full max-w-4xl m-auto h-[calc(100vh-240px)]" >
       <div className="flex w-full flex-col gap-12 p-4 py-12">
         {messages.map((message) => {
           switch (message.role) {

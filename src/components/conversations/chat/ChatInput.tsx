@@ -1,101 +1,164 @@
-import { useState } from "react";
+"use client";
+
+import { useRef, useState } from "react";
+
+import type { PipelineParameters } from "@/lib/pipeline/parameters";
 
 import { Field } from "@/components/ui/field";
-
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+
 import { AIModelSelector } from "./AIModelSelector";
+import { Provider } from "@/types/augmented-prisma";
 
 type Props = {
-  onSendMessage: (
-    message: string,
-    aiId: { providerId: string; modelId: string }
-  ) => Promise<void>;
+  onSendMessage: (message: string) => Promise<void>;
   isStreaming: boolean;
-  providersModels: {
-    id: string;
-    name: string;
-    isDefault: boolean;
-    defaultModelId: string | null;
-    models: { name: string; id: string }[];
-  }[];
+  providersModels: Provider[];
+  parameters: PipelineParameters;
 };
-
-export interface Model {
-  id: string;
-  name: string;
-  value: string;
-  default: boolean;
-}
-
-export interface Provider {
-  id: string;
-  name: string;
-  models: Model[];
-}
 
 export function ChatInput({
   onSendMessage,
   isStreaming,
   providersModels,
+  parameters,
 }: Props) {
+  const [providerId, setProviderId] = useState(parameters.generation.providerId);
 
-  const aiIdItems: Provider[] = providersModels.map((p) => {
-    return {
-      id: p.id,
-      name: p.name,
-      models: p.models.map((m) => {
-        return {
-          name: m.name,
-          id: m.id,
-          value: JSON.stringify({ providerId: p.id, modelId: m.id }),
-          default: p.isDefault && p.defaultModelId == m.id,
-        };
-      }),
+  const [modelName, setModelName] = useState(parameters.generation.modelName);
+
+  const [isUpdatingModel, setIsUpdatingModel] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function updateGenerationParameters(
+    nextProviderId: string,
+    nextModelName: string,
+  ) {
+    const nextParameters: PipelineParameters = {
+      ...parameters,
+      generation: {
+        ...parameters.generation,
+        providerId: nextProviderId,
+        modelName: nextModelName,
+      },
     };
-  });
 
-  const allModels: Model[] = aiIdItems.map(item => item.models).flat();
-  const defaultModel: Model = allModels.find(model => model.default) ?? allModels[0];
-  const [aiId, setAiId] = useState<string>( defaultModel?.value ?? ""); // TODO : replace with the model selected for this conversation
+    const response = await fetch("/api/pipeline", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(nextParameters),
+    });
 
-  const handleSubmit = (formData: FormData) => {
-    const message = formData.get("content")?.toString();
+    const payload = await response.json();
 
-    if (!message || !aiId) return; // TODO : Handle validation error
+    if (!response.ok) {
+      throw new Error(
+        "error" in payload
+          ? payload.error
+          : "Impossible de modifier le modèle de génération.",
+      );
+    }
+  }
+
+  async function handleProviderChange(nextProviderId: string) {
+    const provider = providersModels.find(
+      (provider) => provider.id === nextProviderId,
+    );
+
+    if (!provider) return;
+
+    const currentModelExists = provider.models?.some(
+      (model) => model.name === modelName,
+    );
+
+    const nextModelName = currentModelExists
+      ? modelName
+      : provider.models?.[0].name;
+
+    if (!nextModelName) return;
+
+    setIsUpdatingModel(true);
 
     try {
-      onSendMessage(message, JSON.parse(aiId));
-    } catch (error) {
-      throw new Error("Unable to parse providerId and modelId");
+      await updateGenerationParameters(
+        nextProviderId,
+        nextModelName,
+      );
+
+      setProviderId(nextProviderId);
+      setModelName(nextModelName);
+    } finally {
+      setIsUpdatingModel(false);
     }
-  };
+  }
+
+  async function handleModelChange(nextModelName: string) {
+    setIsUpdatingModel(true);
+
+    try {
+      await updateGenerationParameters(
+        providerId,
+        nextModelName,
+      );
+
+      setModelName(nextModelName);
+    } finally {
+      setIsUpdatingModel(false);
+    }
+  }
+
+  async function handleSubmit(formData: FormData) {
+    const message = formData.get("content")?.toString();
+    if (!message) return;
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+    onSendMessage(message);
+  }
 
   return (
-    <div className="flex p-4 gap-4 w-full max-w-5xl justify-center m-auto">
-      <form action={handleSubmit} className="w-full flex gap-4 items-center">
+    <div className="flex w-full max-w-5xl justify-center items-center gap-4 p-4 m-auto">
+      <form
+        action={handleSubmit}
+        className="flex w-full items-center gap-4"
+      >
         <Field>
-          <InputGroup className="w-[70%] h-15 rounded-4xl p-4 shadow-md">
-            <InputGroupInput placeholder="Type to search..." name="content" />
+          <InputGroup className="h-15 w-[70%] rounded-4xl p-4 shadow-md">
+            <InputGroupInput
+              placeholder="Type to discuss..."
+              name="content"
+              disabled={isStreaming}
+              ref={inputRef}
+            />
+
             <InputGroupAddon align="inline-end">
-              <InputGroupButton type="submit" disabled={isStreaming}>
-                {isStreaming ? "Sending..." : "Search"}
+              <InputGroupButton
+                type="submit"
+                disabled={isStreaming || isUpdatingModel}
+              >
+                {isStreaming ? "Sending..." : "Send"}
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
         </Field>
-        <AIModelSelector
-          isStreaming={isStreaming}
-          providers={aiIdItems}
-          defaultModel={defaultModel}
-          selectedModelId={aiId}
-          onValueChange={setAiId}
-        />
       </form>
+
+      <AIModelSelector
+        providerId={providerId}
+        modelName={modelName}
+        providers={providersModels}
+        disabled={isStreaming || isUpdatingModel}
+        onProviderChange={handleProviderChange}
+        onModelChange={handleModelChange}
+      />
     </div>
   );
 }

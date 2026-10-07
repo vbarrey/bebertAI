@@ -8,24 +8,21 @@ import { ChatInput } from "./ChatInput";
 import { MessageList } from "./MessageList";
 
 import { useState } from "react";
+import { Provider } from "@/types/augmented-prisma";
+import { PipelineParameters } from "@/lib/pipeline/parameters";
 
 type ChatProps = {
   conversationId: string;
   messages: ChatMessage[];
-  providersModels: {
-    id: string;
-    name: string;
-    isDefault: boolean;
-    defaultModelId: string | null;
-    models: { name: string; id: string }[];
-  }[];
+  providersModels: Provider[];
+  parameters: PipelineParameters
 };
 
-export function Chat({ conversationId, messages, providersModels }: ChatProps) {
+export function Chat({ conversationId, messages, providersModels, parameters }: ChatProps) {
   const [chatMessages, setChatMessages] = useState(messages);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  const handleSendMessage = async (message: string, aiId: {providerId: string, modelId: string}) => {
+  async function handleSendMessage(message: string){
     setIsStreaming(true);
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -36,8 +33,6 @@ export function Chat({ conversationId, messages, providersModels }: ChatProps) {
     };
 
     setChatMessages((prevMessages) => [...prevMessages, userMessage]);
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const assistantMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -56,9 +51,7 @@ export function Chat({ conversationId, messages, providersModels }: ChatProps) {
       },
       body: JSON.stringify({
         conversationId,
-        message,
-        providerId: aiId.providerId,
-        modelId: aiId.modelId
+        message
       }),
     });
 
@@ -115,6 +108,7 @@ export function Chat({ conversationId, messages, providersModels }: ChatProps) {
         onSendMessage={handleSendMessage}
         isStreaming={isStreaming}
         providersModels={providersModels}
+        parameters={parameters}
       />
     </div>
   );
