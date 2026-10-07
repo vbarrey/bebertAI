@@ -68,7 +68,7 @@ export function EmbeddingPipelineForm({
     );
 
     const currentModelExists = provider?.models.some(
-      (model) => model.id === values.document.modelId,
+      (model) => model.id === values.document.modelName,
     );
 
     setValues({
@@ -76,8 +76,8 @@ export function EmbeddingPipelineForm({
       document: {
         ...values.document,
         providerId,
-        modelId: currentModelExists
-          ? values.document.modelId
+        modelName: currentModelExists
+          ? values.document.modelName
           : "",
       },
     });
@@ -89,7 +89,7 @@ export function EmbeddingPipelineForm({
     );
 
     const currentModelExists = provider?.models.some(
-      (model) => model.id === values.request.modelId,
+      (model) => model.name === values.request.modelName,
     );
 
     setValues({
@@ -97,8 +97,8 @@ export function EmbeddingPipelineForm({
       request: {
         ...values.request,
         providerId,
-        modelId: currentModelExists
-          ? values.request.modelId
+        modelName: currentModelExists
+          ? values.request.modelName
           : "",
       },
     });
@@ -164,13 +164,13 @@ export function EmbeddingPipelineForm({
           <FieldLabel>Modèle</FieldLabel>
 
           <Select
-            value={values.document.modelId}
-            onValueChange={(modelId) =>
+            value={values.document.modelName}
+            onValueChange={(modelName) =>
               setValues({
                 ...values,
                 document: {
                   ...values.document,
-                  modelId,
+                  modelName,
                 },
               })
             }
@@ -182,7 +182,7 @@ export function EmbeddingPipelineForm({
 
             <SelectContent>
               {documentModels.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
+                <SelectItem key={model.id} value={model.name}>
                   {model.displayName ?? model.name}
                 </SelectItem>
               ))}
@@ -230,13 +230,13 @@ export function EmbeddingPipelineForm({
           <FieldLabel>Modèle</FieldLabel>
 
           <Select
-            value={values.request.modelId}
-            onValueChange={(modelId) =>
+            value={values.request.modelName}
+            onValueChange={(modelName) =>
               setValues({
                 ...values,
                 request: {
                   ...values.request,
-                  modelId,
+                  modelName,
                 },
               })
             }
@@ -248,7 +248,7 @@ export function EmbeddingPipelineForm({
 
             <SelectContent>
               {requestModels.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
+                <SelectItem key={model.id} value={model.name}>
                   {model.displayName ?? model.name}
                 </SelectItem>
               ))}

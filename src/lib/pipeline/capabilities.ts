@@ -1,4 +1,4 @@
-import { DocumentFormat } from "./formats";
+import { DocumentFormat } from "../documents/format";
 
 export type PipelineCapabilities = {
   import: ImportCapabilities;

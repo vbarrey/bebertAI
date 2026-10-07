@@ -14,11 +14,11 @@ export const defaultPipelineParameters: PipelineParameters = {
     embedding: {
         document: {
             providerId: "...",
-            modelId: "...",
+            modelName: "...",
         },
         request: {
             providerId: "...",
-            modelId: "...",
+            modelName: "...",
         },
     },
     retrieval: {
@@ -27,7 +27,7 @@ export const defaultPipelineParameters: PipelineParameters = {
     },
     generation: {
         providerId: "...",
-        modelId: "...",
+        modelName: "...",
         temperature: 0.7,
         maxTokens: 1000,
         systemPrompt: "...",

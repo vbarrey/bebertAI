@@ -62,13 +62,13 @@ export function GenerationPipelineForm({
     );
 
     const currentModelExists = nextProvider?.models.some(
-      (model) => model.id === values.modelId,
+      (model) => model.name === values.modelName,
     );
 
     setValues({
       ...values,
       providerId,
-      modelId: currentModelExists ? values.modelId : "",
+      modelName: currentModelExists ? values.modelName : "",
     });
   }
 
@@ -121,11 +121,11 @@ export function GenerationPipelineForm({
         <FieldLabel>Modèle</FieldLabel>
 
         <Select
-          value={values.modelId}
-          onValueChange={(modelId) =>
+          value={values.modelName}
+          onValueChange={(modelName) =>
             setValues({
               ...values,
-              modelId,
+              modelName,
             })
           }
           disabled={!values.providerId}
@@ -136,7 +136,7 @@ export function GenerationPipelineForm({
 
           <SelectContent>
             {models.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
+              <SelectItem key={model.id} value={model.name}>
                 {model.displayName ?? model.name}
               </SelectItem>
             ))}

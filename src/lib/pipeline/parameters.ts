@@ -24,11 +24,11 @@ export type ChunkingParameters = z.infer<typeof ChunkingParametersSchema>;
 const EmbeddingParametersSchema = z.object({
     document: z.object({
         providerId: z.string().min(1),
-        modelId: z.string().min(1),
+        modelName: z.string().min(1),
     }),
     request: z.object({
         providerId: z.string().min(1),
-        modelId: z.string().min(1),
+        modelName: z.string().min(1),
     }),
 });
 
@@ -39,7 +39,7 @@ const RetrievalParametersSchema = z.object({
 
 const GenerationParametersSchema = z.object({
     providerId: z.string().min(1),
-    modelId: z.string().min(1),
+    modelName: z.string().min(1),
     temperature: z.number().min(0),
     maxTokens: z.number().int().positive(),
     systemPrompt: z.string(),
