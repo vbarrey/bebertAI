@@ -1,10 +1,10 @@
 import { getConversationMessages } from "@/lib/queries/message";
 import { ChatChunk, ChatRequestInput, Message } from "../types";
-import { aiProviderRegistry } from "@/lib/ai/registry";
 import { messageRoleToString } from "@/lib/utils";
 import { getDocumentRetriever } from "@/lib/rag/retrieval/retriever-factory";
 import { buildRagContext } from "@/lib/rag/context";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { getPipelineProvider } from "@/lib/pipeline/config";
 
 /**
  * Generates an assistant response for a given conversation and message.
@@ -25,24 +25,8 @@ export async function* generateAssistantResponse({
 
   const config = await pipelineRuntime.getConfig();
 
-  const generationProvider = aiProviderRegistry.get(config.parameters.generation.providerId);
-  const embeddingProvider = aiProviderRegistry.get(config.parameters.embedding.request.providerId);
-
-  if (!generationProvider) {
-    throw new Error(
-      `Unknown provider ${config.parameters.generation.providerId} for the response generation - Known provider (${aiProviderRegistry.getNbProvider()}) are [${aiProviderRegistry
-        .getProviderIdList()
-        .join(" - ")}]`
-    );
-  }
-
-  if (!embeddingProvider) {
-    throw new Error(
-      `Unknown provider ${config.parameters.embedding.request.providerId} for the response embedding - Known provider (${aiProviderRegistry.getNbProvider()}) are [${aiProviderRegistry
-        .getProviderIdList()
-        .join(" - ")}]`
-    );
-  }
+  const generationProvider = getPipelineProvider(config.parameters.generation, "génération");
+  const embeddingProvider = getPipelineProvider(config.parameters.embedding.request, "embedding des requêtes");
 
   const retriever = await getDocumentRetriever(
     embeddingProvider,
@@ -84,5 +68,5 @@ export async function* generateAssistantResponse({
     modelName: config.parameters.generation.modelName,
   };
 
-  yield* generationProvider!.chat(chatInput);
+  yield* generationProvider.chat(chatInput);
 }

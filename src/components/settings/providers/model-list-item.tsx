@@ -58,7 +58,7 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
 
   const [displayName, setDisplayName] = useState(model.displayName ?? "");
   const [description, setDescription] = useState(model.description ?? "");
-  const [capabilities, setCapabilities] = useState<Capability[]>(model.capabilities ?? []);
+  const [capabilities, setCapabilities] = useState<Capability[]>(model.capabilities?.map((capability) => capability.name) ?? []);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
 

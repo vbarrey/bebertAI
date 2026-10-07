@@ -19,7 +19,7 @@ import { upsertChunkEmbeddings } from "@/lib/qdrant/points";
 import { ensureChunksCollection } from "@/lib/qdrant/collections";
 
 import { IndexingStage, IndexingSteps } from "@/lib/queue/types";
-import { PipelineConfig } from "@/lib/pipeline/config";
+import { getPipelineProvider, PipelineConfig } from "@/lib/pipeline/config";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 
 export type IndexingJobData = {
@@ -60,13 +60,7 @@ async function initialize() {
           );
         }
 
-        const embeddingProvider = aiProviderRegistry.get(pipelineConfig.parameters.embedding.document.providerId);
-
-        if (!embeddingProvider) {
-          throw new Error(
-            `Provider with id ${embeddingProvider} not found`,
-          );
-        }
+        const embeddingProvider = getPipelineProvider(pipelineConfig.parameters.embedding.document, "embedding des documents");
 
         await startIndexingJob(indexingJob.id);
 
@@ -119,7 +113,7 @@ async function initialize() {
 
         const embedder = await getDocumentEmbedder(
           embeddingProvider,
-          pipelineConfig.parameters.embedding.document.modelId,
+          pipelineConfig.parameters.embedding.document.modelName,
         );
 
         await updateProgress(job, {

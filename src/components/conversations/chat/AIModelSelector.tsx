@@ -75,7 +75,7 @@ export function AIModelSelector({
                 <SelectGroup>
                   <SelectLabel>{provider?.name}</SelectLabel>
 
-                  {provider!.models?.map((model) => (
+                  {provider?.models?.map((model) => (
                     <SelectItem key={model.id} value={model.name}>
                       {model.displayName ? model.displayName : model.name}
                     </SelectItem>

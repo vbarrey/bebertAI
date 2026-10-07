@@ -1,4 +1,4 @@
-import type { Document, MimeType } from "@prisma/client";
+import type { Document } from "@prisma/client";
 
 export type ExtractedBlock = {
   text: string;
