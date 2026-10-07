@@ -10,6 +10,8 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -41,64 +43,58 @@ type Props = {
   onDeleted: (documentId: string) => void;
 };
 
+export function canBeIndexed(doc: Document) {
+  return doc.indexingStatus === "UNPLANNED" || doc.indexingStatus === "FAILED" || doc.indexingStatus === "CANCELLED";
+}
+
+export function canBeReindexed(doc: Document) {
+  return doc.indexingStatus !== "PENDING" && doc.indexingStatus !== "PROCESSING";
+}
+
+export function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Une erreur inattendue est survenue.";
+}
+
+async function readError(response: Response, fallback: string): Promise<Error> {
+  const data = await response.json().catch(() => null);
+  return new Error(data?.error ?? fallback);
+}
+
+async function startIndexing(documentId: string, action: "index" | "reindex"): Promise<string> {
+  const response = await fetch(`/api/documents/${documentId}/${action}`, { method: "POST" });
+
+  if (!response.ok) {
+    throw await readError(response, "Impossible de lancer l'indexation.");
+  }
+
+  const data: { indexingJobId: string } = await response.json();
+  return data.indexingJobId;
+}
+
+/** Each returns the id of the created indexing job. */
+export const indexDocument = (documentId: string) => startIndexing(documentId, "index");
+export const reindexDocument = (documentId: string) => startIndexing(documentId, "reindex");
+
+export async function deleteDocument(documentId: string): Promise<void> {
+  const response = await fetch(`/api/documents/${documentId}`, { method: "DELETE" });
+
+  if (!response.ok) {
+    throw await readError(response, "Impossible de supprimer le document.");
+  }
+}
+
 export function DocumentActions({ document, onIndexingStarted, onDeleted }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  function canBeIndex(doc: Document){
-    return doc.indexingStatus === "UNPLANNED" || doc.indexingStatus === "FAILED" ||doc.indexingStatus === "CANCELLED";
-  }
-
-  async function handleIndex() {
+  async function handleIndexing(start: (documentId: string) => Promise<string>) {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `/api/documents/${document.id}/index`,
-        {
-          method: "POST",
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Impossible de lancer l'indexation.",
-        );
-      }
-
-      const data = await response.json();
-
-      if(data.indexingJobId){
-        onIndexingStarted(data.indexingJobId);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleReindex() {
-    setLoading(true);
-
-    try {
-      const response = await fetch(
-        `/api/documents/${document.id}/reindex`,
-        {
-          method: "POST",
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Impossible de relancer l'indexation.",
-        );
-      }
-
-      const data = await response.json();
-
-      if(data.indexingJobId){
-        onIndexingStarted(data.indexingJobId);
-      }
+      onIndexingStarted(await start(document.id));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -108,21 +104,12 @@ export function DocumentActions({ document, onIndexingStarted, onDeleted }: Prop
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `/api/documents/${document.id}`,
-        {
-          method: "DELETE",
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Impossible de supprimer le document.",
-        );
-      }
-
+      await deleteDocument(document.id);
       onDeleted(document.id);
       setDeleteOpen(false);
+      toast.success("Document supprimé.");
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -161,9 +148,9 @@ export function DocumentActions({ document, onIndexingStarted, onDeleted }: Prop
               className={"w-full justify-start gap-2"}
               disabled={
                 loading ||
-                !canBeIndex(document)
+                !canBeIndexed(document)
               }
-              onClick={handleIndex}
+              onClick={() => handleIndexing(indexDocument)}
             >
               <Play className="size-4" />
               Indexer
@@ -173,8 +160,8 @@ export function DocumentActions({ document, onIndexingStarted, onDeleted }: Prop
               variant="ghost"
               size="sm"
               className="w-full justify-start gap-2"
-              disabled={loading}
-              onClick={handleReindex}
+              disabled={loading || !canBeReindexed(document)}
+              onClick={() => handleIndexing(reindexDocument)}
             >
               <RotateCcw className="size-4" />
               Réindexer
