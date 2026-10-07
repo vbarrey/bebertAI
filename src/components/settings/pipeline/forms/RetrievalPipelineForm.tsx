@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { SaveButton, type SaveStatus } from "@/components/settings/pipeline/SaveButton";
 import {
   Field,
   FieldDescription,
@@ -23,25 +23,25 @@ export function RetrievalPipelineForm({
   onSave,
 }: Props) {
   const [values, setValues] = useState(initialValues);
-  const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setIsSaving(true);
+    setStatus("saving");
     setError(null);
 
     try {
       await onSave(values);
+      setStatus("success");
     } catch (error) {
+      setStatus("error");
       setError(
         error instanceof Error
           ? error.message
           : "Impossible d'enregistrer les paramètres.",
       );
-    } finally {
-      setIsSaving(false);
     }
   }
 
@@ -99,9 +99,7 @@ export function RetrievalPipelineForm({
       )}
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? "Enregistrement…" : "Enregistrer"}
-        </Button>
+        <SaveButton status={status} onReset={() => setStatus("idle")} />
       </div>
     </form>
   );
