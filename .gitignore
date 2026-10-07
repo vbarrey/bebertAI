@@ -20,3 +20,6 @@
 
 # Database
 dev.db
+
+# AGENT
+environment.toml
