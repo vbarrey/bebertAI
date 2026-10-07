@@ -37,16 +37,6 @@ export async function replaceDocumentChunks(
       });
     }
 
-    await tx.document.update({
-      where: {
-        id: documentId,
-      },
-      data: {
-        indexingStatus: "PROCESSED",
-        indexedAt: new Date(),
-      },
-    });
-
     return createdChunks;
   });
 }

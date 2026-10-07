@@ -1,6 +1,6 @@
 import { ChatMessage } from "@/types/chat";
 
-import { MessageRole } from "@prisma/client";
+import { MessageRole, MessageStatus } from "@prisma/client";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Markdown } from "@/components/ui/markdown"
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,6 +33,15 @@ export function MessageList({ messages }: MessageListProps) {
                 </Bubble>
               );
             case MessageRole.ASSISTANT:
+              if (message.status === MessageStatus.FAILED)
+                return (
+                  <Bubble variant="destructive" align="start" key={message.id}>
+                    <BubbleContent className="text-base">
+                      {message.content && <Markdown content={message.content} />}
+                      <p>La génération de la réponse a échoué.</p>
+                    </BubbleContent>
+                  </Bubble>
+                );
               return (
                 <Bubble variant="ghost" align="start" key={message.id}>
                   <BubbleContent className="text-base"><Markdown content={message.content} /></BubbleContent>

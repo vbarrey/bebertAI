@@ -15,6 +15,7 @@ import {
     storeDocumentFile,
     deleteDocumentFile,
 } from "@/lib/documents/storage";
+import { deleteDocumentEmbeddings } from "@/lib/qdrant/points";
 
 import { enqueueIndexingJob } from "@/lib/queue/indexing";
 
@@ -43,6 +44,7 @@ type ImportResult = {
     documents: Document[];
     createdJobIds: string[];
     replacedStoragePaths: string[];
+    replacedDocumentIds: string[];
     skippedStoragePaths: string[];
 };
 
@@ -217,6 +219,7 @@ async function persistDocuments(
         const documents: Document[] = [];
         const createdJobIds: string[] = [];
         const replacedStoragePaths: string[] = [];
+        const replacedDocumentIds: string[] = [];
         const skippedStoragePaths: string[] = [];
 
         for (const file of files) {
@@ -250,6 +253,8 @@ async function persistDocuments(
                     },
                 });
 
+                replacedDocumentIds.push(existing.id);
+
                 if (existing.storagePath) {
                     replacedStoragePaths.push(
                         existing.storagePath,
@@ -269,7 +274,7 @@ async function persistDocuments(
                 indexingStatus: indexImmediately
                     ? "PENDING"
                     : "UNPLANNED",
-            })
+            }, tx);
 
             documents.push(document);
 
@@ -292,6 +297,7 @@ async function persistDocuments(
             documents,
             createdJobIds,
             replacedStoragePaths,
+            replacedDocumentIds,
             skippedStoragePaths,
         };
     });
@@ -437,6 +443,13 @@ export async function POST(
                 ),
             );
         }
+
+        await Promise.allSettled(
+            importResult.replacedDocumentIds.map(
+                (documentId) =>
+                    deleteDocumentEmbeddings(documentId),
+            ),
+        );
 
         if (importResult.createdJobIds.length > 0) {
             const pipelineConfig =

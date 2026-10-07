@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import {
   DocumentSourceType,
   IndexingStatus,
+  Prisma,
 } from "@prisma/client";
 
 import { DocumentFormat } from "@/lib/documents/format";
@@ -17,8 +18,8 @@ export async function createDocument(data: {
   sourceType: DocumentSourceType;
   sourceRef?: string | null;
   indexingStatus: IndexingStatus;
-}) {
-  return prisma.document.create({
+}, db: Prisma.TransactionClient = prisma) {
+  return db.document.create({
     data,
   });
 }

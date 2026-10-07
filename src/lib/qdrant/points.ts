@@ -25,6 +25,23 @@ export async function upsertChunkEmbeddings(
   });
 }
 
+export async function deleteDocumentEmbeddings(
+  documentId: string,
+): Promise<void> {
+  const { exists } = await qdrant.collectionExists(CHUNKS_COLLECTION);
+
+  if (!exists) {
+    return;
+  }
+
+  await qdrant.delete(CHUNKS_COLLECTION, {
+    wait: true,
+    filter: {
+      must: [{ key: "documentId", match: { value: documentId } }],
+    },
+  });
+}
+
 export async function searchSimilarChunks(
   vector: number[],
   limit = 5,

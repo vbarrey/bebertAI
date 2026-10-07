@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
 import { getDocumentFilePath, deleteDocumentFile } from "@/lib/documents/storage";
+import { deleteDocumentEmbeddings } from "@/lib/qdrant/points";
 
 type RouteContext = {
     params: Promise<{
@@ -138,6 +139,10 @@ export async function DELETE(
         });
 
         await deleteDocumentFile(document.storagePath);
+
+        await deleteDocumentEmbeddings(document.id).catch((error) =>
+            console.error(`Failed to delete embeddings of document ${document.id}:`, error),
+        );
 
         return new NextResponse(null, {
             status: 204,

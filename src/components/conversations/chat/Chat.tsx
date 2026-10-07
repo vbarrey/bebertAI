@@ -44,61 +44,73 @@ export function Chat({ conversationId, messages, providersModels, parameters }: 
 
     setChatMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        conversationId,
-        message
-      }),
-    });
+    let status: MessageStatus = MessageStatus.FAILED;
 
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversationId,
+          message
+        }),
+      });
 
-    let bufferedContent = "";
-    while (true) {
-      const { done, value } = await reader!.read();
-      if (done) break;
+      if (!response.ok || !response.body) {
+        throw new Error(`Chat request failed with status ${response.status}`);
+      }
 
-      bufferedContent += decoder.decode(value, { stream: true });
-      const lines = bufferedContent.split("\n");
-      bufferedContent = lines.pop() || "";
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-      for (const line of lines) {
-        if (line.trim() === "") continue;
-        try {
-          const chunk = JSON.parse(line);
-          setChatMessages((previous) => {
-            const messages = [...previous];
+      let bufferedContent = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-            messages[messages.length - 1] = {
-              ...messages[messages.length - 1],
-              content: messages[messages.length - 1].content + chunk.content,
-            };
+        bufferedContent += decoder.decode(value, { stream: true });
+        const lines = bufferedContent.split("\n");
+        bufferedContent = lines.pop() || "";
 
-            return messages;
-          });
-        } catch (error) {
-          console.error("Error parsing chunk:", error);
+        for (const line of lines) {
+          if (line.trim() === "") continue;
+          try {
+            const chunk = JSON.parse(line);
+            setChatMessages((previous) => {
+              const messages = [...previous];
+
+              messages[messages.length - 1] = {
+                ...messages[messages.length - 1],
+                content: messages[messages.length - 1].content + chunk.content,
+              };
+
+              return messages;
+            });
+          } catch (error) {
+            console.error("Error parsing chunk:", error);
+          }
         }
       }
+
+      status = MessageStatus.COMPLETED;
+    } catch (error) {
+      console.error("Chat streaming failed:", error);
+    } finally {
+      setChatMessages((previous) => {
+        const messages = [...previous];
+
+        messages[messages.length - 1] = {
+          ...messages[messages.length - 1],
+          status,
+        };
+
+        return messages;
+      });
+
+      setIsStreaming(false);
     }
-
-    setChatMessages((previous) => {
-      const messages = [...previous];
-
-      messages[messages.length - 1] = {
-        ...messages[messages.length - 1],
-        status: MessageStatus.COMPLETED,
-      };
-
-      return messages;
-    });
-
-    setIsStreaming(false);
   };
 
   return (

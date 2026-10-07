@@ -19,6 +19,7 @@ export async function startIndexingJob(
       status: "RUNNING",
       startedAt: new Date(),
       errorMessage: null,
+      document: { update: { indexingStatus: "PROCESSING" } },
     },
   });
 }
@@ -31,6 +32,7 @@ export async function completeIndexingJob(
     data: {
       status: "COMPLETED",
       finishedAt: new Date(),
+      document: { update: { indexingStatus: "PROCESSED", indexedAt: new Date() } },
     },
   });
 }
@@ -45,6 +47,7 @@ export async function failIndexingJob(
       status: "FAILED",
       errorMessage,
       finishedAt: new Date(),
+      document: { update: { indexingStatus: "FAILED" } },
     },
   });
 }

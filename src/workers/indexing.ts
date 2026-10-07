@@ -2,6 +2,7 @@ import { Worker, type Job } from "bullmq";
 
 import { createWorkerConnection } from "@/lib/queue/redis";
 import {
+  completeIndexingJob,
   failIndexingJob,
   startIndexingJob,
 } from "@/lib/mutations/indexing-job";
@@ -15,7 +16,7 @@ import { getDocumentEmbedder } from "@/lib/rag/embedding/embedder-factory";
 
 import { aiProviderRegistry } from "@/lib/ai/registry";
 import { initializeAI } from "@/lib/startup/initialize-ai";
-import { upsertChunkEmbeddings } from "@/lib/qdrant/points";
+import { deleteDocumentEmbeddings, upsertChunkEmbeddings } from "@/lib/qdrant/points";
 import { ensureChunksCollection } from "@/lib/qdrant/collections";
 
 import { IndexingStage, IndexingSteps } from "@/lib/queue/types";
@@ -143,7 +144,11 @@ async function initialize() {
         }
 
         await ensureChunksCollection(vectorSize);
+        // Chunks are recreated with new ids on each run: drop the previous points of the document first.
+        await deleteDocumentEmbeddings(document.id);
         await upsertChunkEmbeddings(embeddings);
+
+        await completeIndexingJob(indexingJob.id);
 
         await updateProgress(job, {
           stage: IndexingStage.COMPLETED
@@ -160,10 +165,15 @@ async function initialize() {
             ? error.message
             : "Unknown indexing error";
 
-        await failIndexingJob(
-          indexingJobId,
-          message,
-        );
+        // BullMQ will retry the job: only the last attempt marks the job and the document as FAILED.
+        const isLastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
+
+        if (isLastAttempt) {
+          await failIndexingJob(
+            indexingJobId,
+            message,
+          );
+        }
 
         throw error;
       }

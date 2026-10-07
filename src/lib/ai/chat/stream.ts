@@ -33,23 +33,27 @@ export async function* streamConversation({ conversationId, message }: StreamCon
         status: MessageStatus.PENDING
     });
 
-    // Stream assistant response
-    for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message })) {
-        // Yield the chunk to the caller
-        yield chunk;
-        generatedContent += chunk.content;
-        // Update ASSISTANT message with the new content and status STREAMING
+    // FAILED unless the generation goes to the end (error or client disconnect)
+    let status: MessageStatus = MessageStatus.FAILED;
+
+    try {
+        // Stream assistant response
+        for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message })) {
+            // Yield the chunk to the caller
+            yield chunk;
+            generatedContent += chunk.content;
+        }
+
+        status = MessageStatus.COMPLETED;
+    } catch (error) {
+        console.error(`Assistant response failed for conversation ${conversationId}:`, error);
+        throw error;
+    } finally {
+        // Single write once the generation ends instead of one write per token
         await updateMessage({
             messageId: assistantMessage.id,
             content: generatedContent,
-            status: MessageStatus.STREAMING
+            status
         });
     }
-
-    // Update ASSISTANT message status to COMPLETED
-    await updateMessage({
-        messageId: assistantMessage.id,
-        content: generatedContent,
-        status: MessageStatus.COMPLETED
-    });
 }
