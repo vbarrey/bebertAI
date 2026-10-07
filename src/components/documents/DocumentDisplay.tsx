@@ -11,6 +11,7 @@ import { DocumentActions } from "@/components/documents/DocumentActions";
 import { DocumentBulkActions } from "@/components/documents/DocumentBulkActions";
 import { File, ListChecks } from "lucide-react";
 import { toast } from "sonner";
+import { AnimatePresence, motion } from "motion/react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Document, IndexingStatus, JobStatus } from "@prisma/client";
@@ -260,20 +261,29 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                     </SelectContent>
                 </Select>
                 <div className="mt-4 sm:mt-0 sm:ml-auto">
-                    {selectionMode ? (
-                        <DocumentBulkActions
-                            documents={selectedDocuments}
-                            onIndexingStarted={onIndexingStarted}
-                            onDeleted={onDocumentDeleted}
-                            onDone={() => setSelectedIds(new Set())}
-                            onCancel={exitSelection}
-                        />
-                    ) : (
-                        <Button variant="outline" size="sm" className="gap-2" onClick={() => setSelectionMode(true)}>
-                            <ListChecks className="size-4" />
-                            Sélectionner
-                        </Button>
-                    )}
+                    <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                            key={selectionMode ? "bulk" : "select"}
+                            initial={{ opacity: 0, x: 8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 8 }}
+                        >
+                            {selectionMode ? (
+                                <DocumentBulkActions
+                                    documents={selectedDocuments}
+                                    onIndexingStarted={onIndexingStarted}
+                                    onDeleted={onDocumentDeleted}
+                                    onDone={() => setSelectedIds(new Set())}
+                                    onCancel={exitSelection}
+                                />
+                            ) : (
+                                <Button variant="outline" size="sm" className="gap-2" onClick={() => setSelectionMode(true)}>
+                                    <ListChecks className="size-4" />
+                                    Sélectionner
+                                </Button>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
             </div>
 
@@ -285,16 +295,22 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                     <table className="w-full min-w-[800px] table-fixed">
                         <thead className="bg-muted/20">
                             <tr>
-                                {selectionMode && (
-                                    <th className="w-10 px-4 py-2">
+                                {/* Always rendered so the column width can animate open/closed (table-fixed reads widths from the header). */}
+                                <motion.th
+                                    initial={false}
+                                    animate={{ width: selectionMode ? 40 : 0 }}
+                                    className="overflow-hidden p-0"
+                                >
+                                    <SelectionCell show={selectionMode}>
                                         <Checkbox
                                             checked={pageCheckState}
                                             onCheckedChange={togglePage}
                                             aria-label="Sélectionner les documents de la page"
                                         />
-                                    </th>
-                                )}
-                                <th className="w-[20%] px-4 py-2">Fichier</th>
+                                    </SelectionCell>
+                                </motion.th>
+                                {/* No width: this auto column absorbs the slack, so the selection column keeps its exact animated width. */}
+                                <th className="px-4 py-2">Fichier</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Type</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Taille</th>
                                 <th className="w-[12.5%] px-4 py-2">Statut</th>
@@ -312,15 +328,15 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                                         data-state={selectedIds.has(doc.id) ? "selected" : undefined}
                                         className="border-t transition-colors data-[state=selected]:bg-muted/50 [&>td]:px-4 [&>td]:py-3"
                                     >
-                                        {selectionMode && (
-                                            <td>
+                                        <td className="overflow-hidden p-0!">
+                                            <SelectionCell show={selectionMode}>
                                                 <Checkbox
                                                     checked={selectedIds.has(doc.id)}
                                                     onCheckedChange={(checked) => toggleSelected(doc.id, checked === true)}
                                                     aria-label={`Sélectionner ${doc.displayName}`}
                                                 />
-                                            </td>
-                                        )}
+                                            </SelectionCell>
+                                        </td>
                                         <td>
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
@@ -400,5 +416,22 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                 </div>
             )}
         </div>
+    );
+}
+
+function SelectionCell({ show, children }: { show: boolean; children: React.ReactNode }) {
+    return (
+        <AnimatePresence initial={false}>
+            {show && (
+                <motion.div
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    className="flex justify-center"
+                >
+                    {children}
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }
