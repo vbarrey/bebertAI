@@ -26,3 +26,4 @@ environment.toml
 /graphify-out
 /.claude
 CLAUDE.md
+/.playwright-mcp
