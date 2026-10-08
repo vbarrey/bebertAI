@@ -71,7 +71,7 @@ async function initialize() {
           );
         }
 
-        const embeddingProvider = getPipelineProvider(pipelineConfig.parameters.embedding.document, "embedding des documents");
+        const embeddingProvider = getPipelineProvider(pipelineConfig.parameters.embedding, "embedding");
 
         await startIndexingJob(indexingJob.id);
 
@@ -119,7 +119,7 @@ async function initialize() {
 
         const embedder = await getDocumentEmbedder(
           embeddingProvider,
-          pipelineConfig.parameters.embedding.document.modelName,
+          pipelineConfig.parameters.embedding.modelName,
         );
 
         await updateProgress(IndexingStage.EMBEDDING);

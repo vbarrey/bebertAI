@@ -20,6 +20,10 @@ export interface OllamaChatRequest {
     role: string;
     content: string;
   }[];
+  options?: {
+    temperature?: number;
+    num_predict?: number;
+  };
 }
 
 export interface OllamaChatResponse {

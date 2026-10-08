@@ -12,9 +12,15 @@ export function toAppModel(ollamaModel: OllamaModel): AIModelInfo {
     }
 }
 
-// Same properties 
 export async function toOlllamaChatRequest(appChatRequest: ChatRequestInput): Promise<OllamaChatRequest> {
-    return {messages: appChatRequest.messages, model: appChatRequest.modelName};
+    return {
+        messages: appChatRequest.messages,
+        model: appChatRequest.modelName,
+        options: {
+            temperature: appChatRequest.temperature,
+            num_predict: appChatRequest.maxTokens,
+        },
+    };
 }
 
 export function toAppChatChunk(ollamaChatChunk: OllamaChatChunk): ChatChunk {

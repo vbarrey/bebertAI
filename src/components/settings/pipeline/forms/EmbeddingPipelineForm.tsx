@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import {
   Field,
+  FieldDescription,
   FieldLabel,
 } from "@/components/ui/field";
 import {
@@ -44,63 +45,27 @@ export function EmbeddingPipelineForm({
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const documentProvider = providers.find(
-    (provider) => provider.id === values.document.providerId,
+  const provider = providers.find(
+    (item) => item.id === values.providerId,
   );
 
-  const requestProvider = providers.find(
-    (provider) => provider.id === values.request.providerId,
+  const models = useMemo(
+    () => provider?.models ?? [],
+    [provider],
   );
 
-  const documentModels = useMemo(
-    () => documentProvider?.models ?? [],
-    [documentProvider],
-  );
-
-  const requestModels = useMemo(
-    () => requestProvider?.models ?? [],
-    [requestProvider],
-  );
-
-  function setDocumentProvider(providerId: string) {
-    const provider = providers.find(
+  function setProvider(providerId: string) {
+    const nextProvider = providers.find(
       (item) => item.id === providerId,
     );
 
-    const currentModelExists = provider?.models.some(
-      (model) => model.id === values.document.modelName,
+    const currentModelExists = nextProvider?.models.some(
+      (model) => model.name === values.modelName,
     );
 
     setValues({
-      ...values,
-      document: {
-        ...values.document,
-        providerId,
-        modelName: currentModelExists
-          ? values.document.modelName
-          : "",
-      },
-    });
-  }
-
-  function setRequestProvider(providerId: string) {
-    const provider = providers.find(
-      (item) => item.id === providerId,
-    );
-
-    const currentModelExists = provider?.models.some(
-      (model) => model.name === values.request.modelName,
-    );
-
-    setValues({
-      ...values,
-      request: {
-        ...values.request,
-        providerId,
-        modelName: currentModelExists
-          ? values.request.modelName
-          : "",
-      },
+      providerId,
+      modelName: currentModelExists ? values.modelName : "",
     });
   }
 
@@ -124,138 +89,61 @@ export function EmbeddingPipelineForm({
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-medium">
-            Embedding des documents
-          </h3>
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <Field>
+        <FieldLabel>Fournisseur</FieldLabel>
 
-          <p className="text-sm text-muted-foreground">
-            Modèle utilisé pour vectoriser les documents.
-          </p>
-        </div>
+        <Select
+          value={values.providerId}
+          onValueChange={setProvider}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sélectionner un fournisseur" />
+          </SelectTrigger>
 
-        <Field>
-          <FieldLabel>Fournisseur</FieldLabel>
+          <SelectContent>
+            {providers.map((provider) => (
+              <SelectItem
+                key={provider.id}
+                value={provider.id}
+              >
+                {provider.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
 
-          <Select
-            value={values.document.providerId}
-            onValueChange={setDocumentProvider}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner un fournisseur" />
-            </SelectTrigger>
+      <Field>
+        <FieldLabel>Modèle</FieldLabel>
 
-            <SelectContent>
-              {providers.map((provider) => (
-                <SelectItem
-                  key={provider.id}
-                  value={provider.id}
-                >
-                  {provider.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+        <Select
+          value={values.modelName}
+          onValueChange={(modelName) =>
+            setValues({
+              ...values,
+              modelName,
+            })
+          }
+          disabled={!values.providerId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sélectionner un modèle" />
+          </SelectTrigger>
 
-        <Field>
-          <FieldLabel>Modèle</FieldLabel>
+          <SelectContent>
+            {models.map((model) => (
+              <SelectItem key={model.id} value={model.name}>
+                {model.displayName ?? model.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select
-            value={values.document.modelName}
-            onValueChange={(modelName) =>
-              setValues({
-                ...values,
-                document: {
-                  ...values.document,
-                  modelName,
-                },
-              })
-            }
-            disabled={!values.document.providerId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner un modèle" />
-            </SelectTrigger>
-
-            <SelectContent>
-              {documentModels.map((model) => (
-                <SelectItem key={model.id} value={model.name}>
-                  {model.displayName ?? model.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-medium">
-            Embedding des requêtes
-          </h3>
-
-          <p className="text-sm text-muted-foreground">
-            Modèle utilisé pour vectoriser les questions utilisateur.
-          </p>
-        </div>
-
-        <Field>
-          <FieldLabel>Fournisseur</FieldLabel>
-
-          <Select
-            value={values.request.providerId}
-            onValueChange={setRequestProvider}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner un fournisseur" />
-            </SelectTrigger>
-
-            <SelectContent>
-              {providers.map((provider) => (
-                <SelectItem
-                  key={provider.id}
-                  value={provider.id}
-                >
-                  {provider.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field>
-          <FieldLabel>Modèle</FieldLabel>
-
-          <Select
-            value={values.request.modelName}
-            onValueChange={(modelName) =>
-              setValues({
-                ...values,
-                request: {
-                  ...values.request,
-                  modelName,
-                },
-              })
-            }
-            disabled={!values.request.providerId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner un modèle" />
-            </SelectTrigger>
-
-            <SelectContent>
-              {requestModels.map((model) => (
-                <SelectItem key={model.id} value={model.name}>
-                  {model.displayName ?? model.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      </section>
+        <FieldDescription>
+          Utilisé pour les documents et les questions. Changer de modèle impose de réindexer tous les documents.
+        </FieldDescription>
+      </Field>
 
       {error && (
         <p className="text-sm text-destructive">

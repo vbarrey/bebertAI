@@ -12,6 +12,17 @@ export async function ensureChunksCollection(
   );
 
   if (exists) {
+    const { config } = await qdrant.getCollection(CHUNKS_COLLECTION);
+    const { vectors } = config.params;
+    const collectionSize = vectors && "size" in vectors ? vectors.size : undefined;
+
+    if (collectionSize !== undefined && collectionSize !== vectorSize) {
+      throw new Error(
+        `Le modèle d'embedding produit des vecteurs de dimension ${vectorSize} mais la collection "${CHUNKS_COLLECTION}" attend ${collectionSize}. ` +
+        `Supprimez la collection et réindexez tous les documents après un changement de modèle.`,
+      );
+    }
+
     return;
   }
 

@@ -16,6 +16,8 @@ export interface Message {
 export interface ChatRequestInput {
   modelName: string;
   messages: Message[];
+  temperature?: number;
+  maxTokens?: number;
 }
 
 export interface ChatChunk {

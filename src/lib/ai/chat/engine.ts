@@ -5,6 +5,8 @@ import { getDocumentRetriever } from "@/lib/rag/retrieval/retriever-factory";
 import { buildRagContext } from "@/lib/rag/context";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
 import { getPipelineProvider } from "@/lib/pipeline/config";
+import { DEFAULT_SYSTEM_PROMPT } from "@/lib/pipeline/default";
+import { getConversationModel } from "@/lib/queries/conversation";
 
 /**
  * Generates an assistant response for a given conversation and message.
@@ -18,22 +20,27 @@ export async function* generateAssistantResponse({
   conversationId: string;
   message: string;
 }): AsyncGenerator<ChatChunk> {
-  // TODO:
-  // - Ajouter le prompt système
-  // - Ajouter l'historique
-  // - Ajouter le contexte RAG
-
   const config = await pipelineRuntime.getConfig();
+  const { embedding, retrieval, generation } = config.parameters;
 
-  const generationProvider = getPipelineProvider(config.parameters.generation, "génération");
-  const embeddingProvider = getPipelineProvider(config.parameters.embedding.request, "embedding des requêtes");
+  // The conversation keeps the model it was started with; the pipeline model is only the default.
+  const conversationModel = (await getConversationModel(conversationId))?.model;
+  const generationModel = conversationModel
+    ? { providerId: conversationModel.providerId, modelName: conversationModel.name }
+    : generation;
+
+  const generationProvider = getPipelineProvider(generationModel, "génération");
+  const embeddingProvider = getPipelineProvider(embedding, "embedding");
 
   const retriever = await getDocumentRetriever(
     embeddingProvider,
-    config.parameters.embedding.request.modelName,
+    embedding.modelName,
   );
 
-  const retrievedChunks = await retriever.retrieve(message);
+  const retrievedChunks = await retriever.retrieve(message, {
+    limit: retrieval.topK,
+    scoreThreshold: retrieval.scoreThreshold,
+  });
 
   const ragContext = buildRagContext(retrievedChunks);
 
@@ -57,15 +64,14 @@ export async function* generateAssistantResponse({
     messages: [
       {
         role: "system",
-        content: `Tu es l'assistant de Bebert AI.
-                  Tu aides l'utilisateur à répondre à ses questions en utilisant les informations disponibles dans la conversation.
-                  Certains messages système peuvent contenir du contexte provenant de la documentation de l'utilisateur. Lorsque ce contexte est fourni, utilise-le comme source d'information pour répondre à la question.
-                  Si le contexte documentaire ne contient pas suffisamment d'informations pour répondre, indique-le plutôt que d'inventer des informations.`
+        content: generation.systemPrompt.trim() || DEFAULT_SYSTEM_PROMPT,
       },
       ...formatMessages,
       ...(ragContext ? [ragMessage] : [])
     ],
-    modelName: config.parameters.generation.modelName,
+    modelName: generationModel.modelName,
+    temperature: generation.temperature,
+    maxTokens: generation.maxTokens,
   };
 
   yield* generationProvider.chat(chatInput);

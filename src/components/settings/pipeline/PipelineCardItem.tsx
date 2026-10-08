@@ -14,8 +14,6 @@ import { cn } from "@/lib/utils";
 
 import { PipelineItem } from "./types";
 
-import { SubPipelineCardItem } from "./SubPipelineCardItem";
-
 export function PipelineCardItem({
   item,
   isExpanded,
@@ -33,8 +31,7 @@ export function PipelineCardItem({
   return (
     <Card
       className={cn(
-        "absolute -translate-x-1/2 -translate-y-1/2 transition-[left,top,width,filter,box-shadow]",
-        item.subCards ? "w-[40%]" : "w-[20%]",
+        "absolute w-[20%] -translate-x-1/2 -translate-y-1/2 transition-[left,top,width,filter,box-shadow]",
         !isExpanded && someExpanded
           ? "blur-xs cursor-default"
           : "cursor-pointer hover:border-primary hover:shadow-lg",
@@ -74,14 +71,6 @@ export function PipelineCardItem({
       </CardHeader>
 
       <CardContent>
-        {item.subCards && !isExpanded && (
-          <div className="flex flex-col gap-2">
-            {item.subCards.map((subItem) => (
-              <SubPipelineCardItem key={subItem.id} subItem={subItem} />
-            ))}
-          </div>
-        )}
-
         {isExpanded && item.content}
       </CardContent>
     </Card>

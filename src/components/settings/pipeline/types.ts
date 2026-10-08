@@ -11,5 +11,4 @@ export type PipelineItem = {
     x: number;
     y: number;
   };
-  subCards?: PipelineItem[];
 };

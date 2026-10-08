@@ -21,16 +21,15 @@ const ChunkingParametersSchema = z.object({
 
 export type ChunkingParameters = z.infer<typeof ChunkingParametersSchema>;
 
-const EmbeddingParametersSchema = z.object({
-    document: z.object({
+// Documents and queries must share one model: vectors from different models are not comparable.
+const EmbeddingParametersSchema = z.preprocess(
+    // Parameters stored before the merge had { document, request }: keep the document model, the one the vectors were built with.
+    (value) => value && typeof value === "object" && "document" in value ? value.document : value,
+    z.object({
         providerId: z.string().min(1),
         modelName: z.string().min(1),
     }),
-    request: z.object({
-        providerId: z.string().min(1),
-        modelName: z.string().min(1),
-    }),
-});
+);
 
 const RetrievalParametersSchema = z.object({
     topK: z.number().int().positive(),

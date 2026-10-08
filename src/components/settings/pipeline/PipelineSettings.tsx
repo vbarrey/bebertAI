@@ -3,10 +3,8 @@
 import { useState } from "react";
 import {
   Brackets,
-  File,
   FileDown,
   MessageCircleCheck,
-  MessageCircleQuestionMark,
   Pickaxe,
   Radar,
   Scissors,
@@ -179,38 +177,13 @@ export function PipelineSettings({ initialConfig, providers }: Props) {
     {
       id: "04-Vectorisation",
       title: "Vectorisation",
-      description: "",
+      description:
+        "Vectorise les morceaux de documents et les questions utilisateur avec le même modèle pour pouvoir les comparer.",
       icon: Brackets,
       position: {
         x: 50,
         y: 50,
       },
-
-      subCards: [
-        {
-          id: "01-Document",
-          title: "Document",
-          description:
-            "Vectorise les morceaux de documents pour les sauvegarder en base de données.",
-          icon: File,
-          position: {
-            x: 0,
-            y: 0,
-          },
-        },
-        {
-          id: "02-Requête",
-          title: "Requête",
-          description:
-            "Transforme la question utilisateur en vecteur utilisable par la base de données vectorielle.",
-          icon: MessageCircleQuestionMark,
-          position: {
-            x: 0,
-            y: 0,
-          },
-        },
-      ],
-
       content: (
         <div>
           <EmbeddingPipelineForm
