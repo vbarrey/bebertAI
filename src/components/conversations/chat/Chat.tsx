@@ -9,16 +9,15 @@ import { MessageList } from "./MessageList";
 
 import { useState } from "react";
 import { Provider } from "@/types/augmented-prisma";
-import { PipelineParameters } from "@/lib/pipeline/parameters";
 
 type ChatProps = {
   conversationId: string;
   messages: ChatMessage[];
   providersModels: Provider[];
-  parameters: PipelineParameters
+  initialModel: { providerId: string; modelName: string };
 };
 
-export function Chat({ conversationId, messages, providersModels, parameters }: ChatProps) {
+export function Chat({ conversationId, messages, providersModels, initialModel }: ChatProps) {
   const [chatMessages, setChatMessages] = useState(messages);
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -117,10 +116,12 @@ export function Chat({ conversationId, messages, providersModels, parameters }: 
     <div>
       <MessageList messages={chatMessages} />
       <ChatInput
+        conversationId={conversationId}
         onSendMessage={handleSendMessage}
         isStreaming={isStreaming}
         providersModels={providersModels}
-        parameters={parameters}
+        initialModel={initialModel}
+        modelLocked={chatMessages.length > 0}
       />
     </div>
   );

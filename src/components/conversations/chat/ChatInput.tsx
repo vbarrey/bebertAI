@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 
-import type { PipelineParameters } from "@/lib/pipeline/parameters";
+import { updateConversationModel } from "@/lib/mutations/conversation";
 
 import { Field } from "@/components/ui/field";
 import {
@@ -16,55 +17,52 @@ import { AIModelSelector } from "./AIModelSelector";
 import { Provider } from "@/types/augmented-prisma";
 
 type Props = {
+  conversationId: string;
   onSendMessage: (message: string) => Promise<void>;
   isStreaming: boolean;
   providersModels: Provider[];
-  parameters: PipelineParameters;
+  initialModel: { providerId: string; modelName: string };
+  // The model can only be picked before the first message.
+  modelLocked: boolean;
 };
 
 export function ChatInput({
+  conversationId,
   onSendMessage,
   isStreaming,
   providersModels,
-  parameters,
+  initialModel,
+  modelLocked,
 }: Props) {
-  const [providerId, setProviderId] = useState(parameters.generation.providerId);
+  const [providerId, setProviderId] = useState(initialModel.providerId);
 
-  const [modelName, setModelName] = useState(parameters.generation.modelName);
+  const [modelName, setModelName] = useState(initialModel.modelName);
 
   const [isUpdatingModel, setIsUpdatingModel] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function updateGenerationParameters(
+  async function selectModel(
     nextProviderId: string,
     nextModelName: string,
   ) {
-    const nextParameters: PipelineParameters = {
-      ...parameters,
-      generation: {
-        ...parameters.generation,
-        providerId: nextProviderId,
-        modelName: nextModelName,
-      },
-    };
+    const model = providersModels
+      .find((provider) => provider.id === nextProviderId)
+      ?.models?.find((model) => model.name === nextModelName);
 
-    const response = await fetch("/api/pipeline", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(nextParameters),
-    });
+    if (!model) return;
 
-    const payload = await response.json();
+    setIsUpdatingModel(true);
 
-    if (!response.ok) {
-      throw new Error(
-        "error" in payload
-          ? payload.error
-          : "Impossible de modifier le modèle de génération.",
-      );
+    try {
+      await updateConversationModel(conversationId, model.id);
+
+      setProviderId(nextProviderId);
+      setModelName(nextModelName);
+    } catch {
+      toast.error("Impossible de modifier le modèle de la conversation.");
+    } finally {
+      setIsUpdatingModel(false);
     }
   }
 
@@ -85,34 +83,11 @@ export function ChatInput({
 
     if (!nextModelName) return;
 
-    setIsUpdatingModel(true);
-
-    try {
-      await updateGenerationParameters(
-        nextProviderId,
-        nextModelName,
-      );
-
-      setProviderId(nextProviderId);
-      setModelName(nextModelName);
-    } finally {
-      setIsUpdatingModel(false);
-    }
+    await selectModel(nextProviderId, nextModelName);
   }
 
   async function handleModelChange(nextModelName: string) {
-    setIsUpdatingModel(true);
-
-    try {
-      await updateGenerationParameters(
-        providerId,
-        nextModelName,
-      );
-
-      setModelName(nextModelName);
-    } finally {
-      setIsUpdatingModel(false);
-    }
+    await selectModel(providerId, nextModelName);
   }
 
   async function handleSubmit(formData: FormData) {
@@ -135,6 +110,7 @@ export function ChatInput({
             <InputGroupInput
               placeholder="Type to discuss..."
               name="content"
+              autoComplete="off"
               disabled={isStreaming}
               ref={inputRef}
             />
@@ -156,6 +132,7 @@ export function ChatInput({
         modelName={modelName}
         providers={providersModels}
         disabled={isStreaming || isUpdatingModel}
+        locked={modelLocked}
         onProviderChange={handleProviderChange}
         onModelChange={handleModelChange}
       />
