@@ -119,7 +119,7 @@ async function initialize() {
           throw new UnrecoverableError(
             extractionParameters.ocrEnabled
               ? "Aucun texte extractible dans le document, même par OCR."
-              : "Aucun texte extractible dans le document (PDF scanné ou image ?). Activez l'OCR dans Paramètres > Pipeline.",
+              : "Aucun texte extractible dans le document (PDF scanné ?). Activez l'OCR dans Paramètres > Pipeline.",
           );
         }
 

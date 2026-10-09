@@ -112,7 +112,7 @@ Sous Windows : installer Tesseract (`winget install UB-Mannheim.TesseractOCR`) e
 
 Le panneau propose les langues installées pour Tesseract (`tesseract --list-langs`) : pour en ajouter une, il suffit de déposer son fichier `.traineddata` dans le dossier `tessdata` puis de recharger la page.
 
-Pour un PDF, chaque page est d’abord extraite nativement ; seules les pages contenant moins de lettres/chiffres que le seuil configuré (50 par défaut) sont rendues en image et passées à Tesseract. Les images PNG/JPEG sont toujours traitées par OCR (et ne produisent aucun texte si l’OCR est désactivé).
+Pour un PDF, chaque page est d’abord extraite nativement ; seules les pages contenant moins de lettres/chiffres que le seuil configuré (50 par défaut) sont rendues en image et passées à Tesseract. Les images PNG/JPEG ne passent jamais par l’OCR (voir « Indexation des images »).
 
 ## Installation
 
@@ -192,6 +192,15 @@ Les chunks sont conservés dans SQLite avec leur contenu et leurs métadonnées 
 
 Les embeddings sont stockés dans Qdrant avec les identifiants du document et du chunk.
 
+### Indexation des images
+
+Les images PNG et JPEG sont indexées par le même worker, sans OCR ni analyse visuelle : leur texte indexé est leur nom de fichier (nettoyé des `_`, `-` et de l’extension) et les métadonnées textuelles saisies par une personne, quand elles existent :
+
+- PNG : blocs texte `Title`, `Description`, `Comment`, `Keywords` ;
+- JPEG : commentaire (`COM`) et champs EXIF `ImageDescription`, `XPTitle`, `XPSubject`, `XPComment`, `XPKeywords` (Titre, Objet, Commentaires et Mots-clés des propriétés Windows).
+
+Les métadonnées techniques (appareil, dates, GPS) sont ignorées. Un nom de fichier explicite (`char_renault_FT_1917.jpg`) suffit donc à retrouver une image par recherche sémantique.
+
 ## Pipeline configurable
 
 Les paramètres du pipeline sont stockés dans `PipelineParameters` sous forme de JSON validé avec Zod.
@@ -227,7 +236,8 @@ Google Drive et Dropbox sont prévus mais leur intégration réelle n’est pas 
 - Stockage persistant
 - Gestion des doublons et conflits
 - Extraction PDF / TXT / DOCX
-- OCR Tesseract (pages PDF sans texte exploitable, images PNG/JPEG)
+- OCR Tesseract (pages PDF sans texte exploitable)
+- Indexation des images PNG/JPEG par leur nom et leurs métadonnées textuelles
 - Chunking configurable
 - Persistance des chunks
 - Embeddings

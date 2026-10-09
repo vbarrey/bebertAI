@@ -4,9 +4,8 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import type { Document } from "@prisma/client";
 
-import { listInstalledOcrLanguages, mergeIntoPageBlock, parseTesseractTsv } from "./ocr";
+import { listInstalledOcrLanguages, mergeIntoPageBlock, ocrImage, parseTesseractTsv } from "./ocr";
 import { PdfExtractor } from "./extractors/pdf-extractor";
-import { ImageExtractor } from "./extractors/image-extractor";
 import { RecursiveCharacterChunker } from "./chunkers/RecursiveChunker";
 import { defaultPipelineParameters } from "@/lib/pipeline/default";
 
@@ -144,7 +143,7 @@ describe("OCR with real Tesseract", { skip: !hasOcrTools && "tesseract / pdftopp
     });
 
     it("OCRs a PNG image", async () => {
-        const { blocks } = await new ImageExtractor(ocrParameters).extract(fixtureDocument("scan.png"));
+        const blocks = await ocrImage(path.resolve("src/lib/rag/indexing/__fixtures__/scan.png"), "fra+eng");
 
         assert.match(blocks.map((block) => block.text).join("\n"), /Second paragraphe du document/);
     });

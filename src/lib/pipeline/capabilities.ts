@@ -10,7 +10,7 @@ export type PipelineCapabilities = {
 };
 
 export const pipelineCapabilities: PipelineCapabilities = {
-  // PNG/JPEG are only readable through OCR.
+  // PNG/JPEG are indexed from their name and text metadata, not their pixels.
   import: { supportedFormat: ["PDF", "TXT", "DOCX", "PNG", "JPEG"] },
   extraction: {
     extractors: ["PDF", "TXT", "DOCX", "PNG", "JPEG"],

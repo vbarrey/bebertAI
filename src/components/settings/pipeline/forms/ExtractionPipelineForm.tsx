@@ -70,7 +70,7 @@ export function ExtractionPipelineForm({
 
           <FieldDescription>
             Active la reconnaissance optique de caractères (Tesseract)
-            pour les images et les pages PDF sans texte exploitable.
+            pour les pages PDF sans texte exploitable.
           </FieldDescription>
         </FieldContent>
 
