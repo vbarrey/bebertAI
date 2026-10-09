@@ -4,6 +4,8 @@ export const DocumentFormatSchema = z.enum([
   "PDF",
   "TXT",
   "DOCX",
+  "PNG",
+  "JPEG",
 ]);
 
 export type DocumentFormat = z.infer<
@@ -18,15 +20,20 @@ const MIME_TYPES_TO_FORMAT: Record<
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
     "DOCX",
   "text/plain": "TXT",
+  "image/png": "PNG",
+  "image/jpeg": "JPEG",
 };
 
-const EXTENSIONS_TO_FORMAT: Record<
+export const EXTENSIONS_TO_FORMAT: Record<
   string,
   DocumentFormat
 > = {
   ".pdf": "PDF",
   ".docx": "DOCX",
   ".txt": "TXT",
+  ".png": "PNG",
+  ".jpg": "JPEG",
+  ".jpeg": "JPEG",
 };
 
 export function getDocumentFormat(

@@ -40,9 +40,10 @@ type Provider = {
 type Props = {
   initialConfig: PipelineConfig;
   providers: readonly Provider[];
+  ocrLanguages: readonly string[];
 };
 
-export function PipelineSettings({ initialConfig, providers }: Props) {
+export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Props) {
   const [parameters, setParameters] = useState(initialConfig.parameters);
 
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
@@ -127,6 +128,7 @@ export function PipelineSettings({ initialConfig, providers }: Props) {
           <section>
             <ExtractionPipelineForm
               initialValues={parameters.extraction}
+              ocrLanguages={ocrLanguages}
               onSave={(values) => updateStep("extraction", values)}
             />
           </section>
@@ -136,6 +138,10 @@ export function PipelineSettings({ initialConfig, providers }: Props) {
               {
                 label: "Extracteurs disponibles",
                 values: initialConfig.capabilities.extraction.extractors,
+              },
+              {
+                label: "Langues OCR installées",
+                values: ocrLanguages,
               },
             ]}
           />

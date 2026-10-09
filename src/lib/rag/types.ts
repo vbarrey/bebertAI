@@ -33,8 +33,11 @@ export type ChunkingConfiguration = {
   chunkOverlap: number;
 };
 
+// Reports long extraction work (OCR pages), current out of total.
+export type ExtractionProgress = (current: number, total: number) => Promise<void> | void;
+
 export interface DocumentExtractor {
-  extract(document: Document): Promise<ExtractedDocument>;
+  extract(document: Document, onProgress?: ExtractionProgress): Promise<ExtractedDocument>;
 }
 
 export interface DocumentChunker {

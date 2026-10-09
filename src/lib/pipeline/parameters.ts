@@ -4,9 +4,18 @@ const ImportParametersSchema = z.object({
     storagePath: z.string().min(1),
 });
 
-const ExtractionParametersSchema = z.object({
+// Tesseract language code (fra, deu, deu_latf...): the format alone keeps it safe as a CLI argument.
+export const OcrLanguageSchema = z.string().regex(/^[a-z]{3}(_[a-z]+)*$/, "Code de langue OCR invalide");
+
+// Defaults keep parameters stored before these fields existed valid.
+export const ExtractionParametersSchema = z.object({
     ocrEnabled: z.boolean(),
+    // A PDF page whose native text has fewer letters/digits than this is OCRed.
+    ocrMinCharsPerPage: z.number().int().nonnegative().default(50),
+    ocrLanguages: z.array(OcrLanguageSchema).min(1).default(["fra", "eng"]),
 });
+
+export type ExtractionParameters = z.infer<typeof ExtractionParametersSchema>;
 
 const ChunkingParametersSchema = z.object({
     chunkSize: z.number().int().positive(),

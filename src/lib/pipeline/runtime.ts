@@ -3,6 +3,7 @@ import { defaultPipelineParameters } from "./default";
 import { pipelineCapabilities } from "./capabilities";
 import { PipelineParametersSchema, PipelineParameters } from "./parameters";
 import { prisma } from "@/lib/prisma";
+import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
 import { z } from "zod";
 
 class PipelineRuntime {
@@ -50,6 +51,18 @@ class PipelineRuntime {
     if(!this.config) await this.initialize();
 
     const validatedParameters = this.parseParameters(parameters);
+
+    // Checked on save only: stored parameters must still load if a language is removed later.
+    const { ocrEnabled, ocrLanguages } = validatedParameters.extraction;
+
+    if (ocrEnabled) {
+      const installed = await listInstalledOcrLanguages();
+      const missing = ocrLanguages.filter((language) => !installed.includes(language));
+
+      if (missing.length > 0) {
+        throw new Error(`Langues OCR non installées pour Tesseract : ${missing.join(", ")}.`);
+      }
+    }
 
     await prisma.pipelineParameters.update({
       where: { id: 1 },

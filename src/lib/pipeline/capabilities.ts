@@ -10,8 +10,11 @@ export type PipelineCapabilities = {
 };
 
 export const pipelineCapabilities: PipelineCapabilities = {
-  import: { supportedFormat: ["PDF", "TXT", "DOCX"] },
-  extraction: { extractors: ["PDF", "TXT", "DOCX"] },
+  // PNG/JPEG are only readable through OCR.
+  import: { supportedFormat: ["PDF", "TXT", "DOCX", "PNG", "JPEG"] },
+  extraction: {
+    extractors: ["PDF", "TXT", "DOCX", "PNG", "JPEG"],
+  },
   chunking: { strategies: ["recursive"] },
   embedding: {},
   retrieval: {},
@@ -22,7 +25,7 @@ type ImportCapabilities = {
   supportedFormat: readonly DocumentFormat[];
 };
 
-export type ExtractorId = "PDF" | "TXT" | "DOCX";
+export type ExtractorId = DocumentFormat;
 
 type ExtractionCapabilities = {
   extractors: readonly ExtractorId[];

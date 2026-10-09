@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { pipelineCapabilities } from "@/lib/pipeline/capabilities";
+import { EXTENSIONS_TO_FORMAT } from "@/lib/documents/format";
 
 import type {
   DocumentImportAnalysis,
@@ -106,11 +107,12 @@ export function LocalDocumentImportDialog({
 
   const accept = useMemo(
     () =>
-      pipelineCapabilities.import.supportedFormat
-        .map(
-          (format) =>
-            `.${format.toLowerCase()}`,
+      // From the extension map: a format can have several extensions (.jpg / .jpeg).
+      Object.entries(EXTENSIONS_TO_FORMAT)
+        .filter(([, format]) =>
+          pipelineCapabilities.import.supportedFormat.includes(format),
         )
+        .map(([extension]) => extension)
         .join(","),
     [],
   );

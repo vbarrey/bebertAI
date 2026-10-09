@@ -21,6 +21,7 @@ import { ensureChunksCollection } from "@/lib/qdrant/collections";
 
 import { IndexingStage } from "@/lib/queue/types";
 import { getPipelineProvider, PipelineConfig } from "@/lib/pipeline/config";
+import { ExtractionParametersSchema } from "@/lib/pipeline/parameters";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 
 export type IndexingJobData = {
@@ -91,11 +92,21 @@ async function initialize() {
           );
         }
 
-        const extractor = getDocumentExtractor(DocumentFormatSchema.parse(document.format));
+        // Re-parsed so jobs enqueued before the OCR fields existed get their defaults.
+        const extractionParameters = ExtractionParametersSchema.parse(pipelineConfig.parameters.extraction);
+
+        const extractor = getDocumentExtractor(
+          DocumentFormatSchema.parse(document.format),
+          extractionParameters,
+        );
 
         await updateProgress(IndexingStage.EXTRACTING);
 
-        const extraction = await extractor.extract(document);
+        // OCR runs inside this stage: progress stays on EXTRACTING with the pages done so far.
+        const extraction = await extractor.extract(
+          document,
+          (current, total) => job.updateProgress({ stage: IndexingStage.EXTRACTING, current, total }),
+        );
 
         const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);
 
@@ -106,7 +117,9 @@ async function initialize() {
         if (chunks.length === 0) {
           // Retrying cannot help: the file has no text layer.
           throw new UnrecoverableError(
-            "Aucun texte extractible dans le document (PDF scanné ?). L'OCR n'est pas encore supporté.",
+            extractionParameters.ocrEnabled
+              ? "Aucun texte extractible dans le document, même par OCR."
+              : "Aucun texte extractible dans le document (PDF scanné ou image ?). Activez l'OCR dans Paramètres > Pipeline.",
           );
         }
 
@@ -200,8 +213,6 @@ async function initialize() {
     console.log(
       `[${NAME}] Job ${job.id} completed`,
     );
-
-    console.log("RESULT =>", result);
   });
 
   worker.on("failed", (job, error) => {
