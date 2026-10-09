@@ -14,6 +14,8 @@ const CONTENT_TYPES: Record<string, string> = {
     PDF: "application/pdf",
     TXT: "text/plain; charset=utf-8",
     DOCX: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    PNG: "image/png",
+    JPEG: "image/jpeg",
 };
 
 export async function GET(

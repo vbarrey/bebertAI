@@ -170,3 +170,23 @@
     text-rendering: optimizeLegibility;
   }
 }
+/* Chat progress step: a light sweeps across the text, left to right, while the answer is prepared. */
+.chat-progress-shimmer {
+  background: linear-gradient(90deg, var(--muted-foreground) 40%, var(--foreground) 50%, var(--muted-foreground) 60%);
+  background-size: 300% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: chat-progress-shimmer 2s linear infinite;
+}
+
+@keyframes chat-progress-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-progress-shimmer {
+    animation: none;
+    color: var(--muted-foreground);
+  }
+}

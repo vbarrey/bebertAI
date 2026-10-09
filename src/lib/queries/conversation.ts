@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { cache } from "react";
+import type { ChatSource } from "@/lib/ai/types";
 
 export const getProjectConversations = cache(
   async (projectId: string) => {
@@ -22,7 +23,7 @@ export const getConversationModel = cache(
 
 export const getConversationWithMessages = cache(
   async (conversationId: string, projectId: string) => {
-    return prisma.conversation.findUnique({
+    const conversation = await prisma.conversation.findUnique({
       where: {
         id: conversationId,
         projectId: projectId
@@ -43,11 +44,21 @@ export const getConversationWithMessages = cache(
             role: true,
             status: true,
             content: true,
+            sources: true,
             createdAt: true,
           },
         },
       },
     });
+
+    return conversation && {
+      ...conversation,
+      messages: conversation.messages.map((message) => ({
+        ...message,
+        // Only ever written by the chat stream, with the ChatSource[] shape.
+        sources: (message.sources ?? undefined) as ChatSource[] | undefined,
+      })),
+    };
   }
 );
 

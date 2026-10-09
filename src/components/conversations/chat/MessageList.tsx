@@ -4,6 +4,8 @@ import { MessageRole, MessageStatus } from "@prisma/client";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Markdown } from "@/components/ui/markdown"
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChatProgress } from "./ChatProgress";
+import { ChatSources } from "./ChatSources";
 import { useEffect, useRef } from "react";
 
 type MessageListProps = {
@@ -44,7 +46,13 @@ export function MessageList({ messages }: MessageListProps) {
                 );
               return (
                 <Bubble variant="ghost" align="start" key={message.id}>
-                  <BubbleContent className="text-base"><Markdown content={message.content} /></BubbleContent>
+                  <BubbleContent className="text-base">
+                    {/* Steps until the first words of the answer arrive. */}
+                    {message.step && !message.content
+                      ? <ChatProgress step={message.step} />
+                      : <Markdown content={message.content} />}
+                    {message.sources && <ChatSources sources={message.sources} />}
+                  </BubbleContent>
                 </Bubble>
               );
             default:

@@ -3,6 +3,7 @@
 import { prisma } from "../prisma";
 
 import { MessageRole, MessageStatus } from "@prisma/client";
+import type { ChatSource } from "../ai/types";
 
 type CreateMessageInput = {
     conversationId: string;
@@ -43,10 +44,11 @@ type UpdateMessageInput = {
     messageId: string;
     content: string;
     status: MessageStatus;
+    sources?: ChatSource[];
 };
 
-export async function updateMessage({messageId, content, status}: UpdateMessageInput) {
-    await prisma.message.update({where: {id: messageId}, data: {content: content, status: status}});
+export async function updateMessage({messageId, content, status, sources}: UpdateMessageInput) {
+    await prisma.message.update({where: {id: messageId}, data: {content: content, status: status, sources: sources}});
 }
 
 export async function deleteMessage(formData: FormData) {

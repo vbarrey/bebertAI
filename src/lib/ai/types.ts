@@ -1,3 +1,4 @@
+import type { ChatStep } from "./chat/steps";
 
 export interface AIModelInfo {
   name: string;
@@ -25,6 +26,21 @@ export interface ChatChunk {
   role: "system" | "user" | "assistant";
   content: string;
 }
+
+// One NDJSON line of /api/chat: progress steps until the answer starts, then its content.
+export type ChatStreamEvent =
+  | { type: "step"; step: ChatStep }
+  | { type: "sources"; sources: ChatSource[] }
+  | { type: "content"; content: string };
+
+// A document excerpt given to the model, in the order of the "Extrait N" it was given as.
+export type ChatSource = {
+  documentId: string;
+  documentName: string;
+  // Best matching chunk of the excerpt, to open the document at its bounding box later.
+  chunkId: string;
+  pageNumber: number | null;
+};
 
 export type GenerateAssistantResponseInput = {
     providerId: string;

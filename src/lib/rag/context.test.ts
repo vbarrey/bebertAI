@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { buildRagContext, joinChunks } from "./context";
+import { buildExcerpts, buildRagContext as formatExcerpts, joinChunks } from "./context";
 import { RecursiveCharacterChunker } from "./indexing/chunkers/RecursiveChunker";
 import type { RetrievedChunk } from "./retrieval/retriever";
 
@@ -10,9 +10,12 @@ const chunk = (fields: Partial<RetrievedChunk> & Pick<RetrievedChunk, "position"
     documentId: "catalogue",
     documentName: "Catalogue Celtaquatre.pdf",
     pageNumber: 12,
+    hit: true,
     score: 0.8,
     ...fields,
 });
+
+const buildRagContext = (chunks: RetrievedChunk[]) => formatExcerpts(buildExcerpts(chunks));
 
 // Context without the instructions paragraph.
 const excerpts = (context: string) => context.slice(context.indexOf("### "));
@@ -70,5 +73,15 @@ describe("buildRagContext", () => {
             "### Extrait 2 — char.png\n\nImage\n\n" +
             "### Extrait 3 — Catalogue Celtaquatre.pdf, page 12\n\nPeu pertinent",
         );
+    });
+
+    it("points each excerpt to its best search result, not to a neighbour", () => {
+        const [excerpt] = buildExcerpts([
+            chunk({ position: 3, content: "Voisin avant", hit: false, pageNumber: 11 }),
+            chunk({ position: 4, content: "Résultat", pageNumber: 12 }),
+            chunk({ position: 5, content: "Voisin après", hit: false, pageNumber: 13 }),
+        ]);
+
+        assert.deepEqual([excerpt.chunkId, excerpt.chunkPage], ["c4", 12]);
     });
 });

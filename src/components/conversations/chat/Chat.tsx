@@ -3,6 +3,7 @@
 import { MessageRole, MessageStatus } from "@prisma/client";
 
 import { ChatMessage } from "@/types/chat";
+import type { ChatStreamEvent } from "@/lib/ai/types";
 
 import { ChatInput } from "./ChatInput";
 import { MessageList } from "./MessageList";
@@ -39,6 +40,7 @@ export function Chat({ conversationId, messages, providersModels, initialModel }
       content: "",
       status: MessageStatus.PENDING,
       createdAt: new Date(),
+      step: "ANALYZING",
     };
 
     setChatMessages((prevMessages) => [...prevMessages, assistantMessage]);
@@ -76,14 +78,15 @@ export function Chat({ conversationId, messages, providersModels, initialModel }
         for (const line of lines) {
           if (line.trim() === "") continue;
           try {
-            const chunk = JSON.parse(line);
+            const event: ChatStreamEvent = JSON.parse(line);
             setChatMessages((previous) => {
               const messages = [...previous];
+              const last = messages[messages.length - 1];
 
-              messages[messages.length - 1] = {
-                ...messages[messages.length - 1],
-                content: messages[messages.length - 1].content + chunk.content,
-              };
+              messages[messages.length - 1] =
+                event.type === "step" ? { ...last, step: event.step }
+                : event.type === "sources" ? { ...last, sources: event.sources }
+                : { ...last, content: last.content + event.content };
 
               return messages;
             });

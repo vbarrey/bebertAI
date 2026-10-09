@@ -46,6 +46,8 @@ model Message {
   status            MessageStatus @default(COMPLETED)
 
   content           String
+  // Assistant only: ChatSource[] of the document excerpts the answer was generated from.
+  sources           Json?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 

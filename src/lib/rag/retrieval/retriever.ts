@@ -10,6 +10,8 @@ export type RetrievedChunk = {
     position: number;
     pageNumber: number | null;
     content: string;
+    // False for the neighbours added around the search results.
+    hit: boolean;
     // Neighbours take the score of the best result they surround.
     score: number;
 };
@@ -35,12 +37,10 @@ export class DocumentRetriever {
         query: string,
         options: RetrievalOptions = {},
     ): Promise<RetrievedChunk[]> {
-        const {
-            limit = 20,
-            scoreThreshold = 0.55,
-            neighborChunks = 0,
-        } = options;
+        return this.search(await this.embedQuery(query), options);
+    }
 
+    async embedQuery(query: string): Promise<number[]> {
         const embeddings = await this.embeddingProvider.embed({
             model: this.embeddingModelName,
             input: [query],
@@ -53,6 +53,19 @@ export class DocumentRetriever {
                 "No embedding was generated for the retrieval query",
             );
         }
+
+        return queryEmbedding;
+    }
+
+    async search(
+        queryEmbedding: number[],
+        options: RetrievalOptions = {},
+    ): Promise<RetrievedChunk[]> {
+        const {
+            limit = 20,
+            scoreThreshold = 0.55,
+            neighborChunks = 0,
+        } = options;
 
         const results = await qdrant.query(
             CHUNKS_COLLECTION,
@@ -91,6 +104,7 @@ export class DocumentRetriever {
             position: chunk.position,
             pageNumber: chunk.pageNumber,
             content: chunk.text,
+            hit: scoreById.has(chunk.id),
             score: Math.max(
                 ...hits
                     .filter((hit) =>

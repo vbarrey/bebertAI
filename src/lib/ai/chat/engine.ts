@@ -1,8 +1,8 @@
 import type { Message as PrismaMessage } from "@prisma/client";
-import { ChatChunk, ChatRequestInput, Message } from "../types";
+import { ChatRequestInput, ChatStreamEvent, Message } from "../types";
 import { messageRoleToString } from "@/lib/utils";
 import { getDocumentRetriever } from "@/lib/rag/retrieval/retriever-factory";
-import { buildRagContext } from "@/lib/rag/context";
+import { buildExcerpts, buildRagContext } from "@/lib/rag/context";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
 import { getPipelineProvider } from "@/lib/pipeline/config";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/pipeline/default";
@@ -22,7 +22,9 @@ export async function* generateAssistantResponse({
   message: string;
   // Conversation messages, the last one being the user message to answer.
   history: PrismaMessage[];
-}): AsyncGenerator<ChatChunk> {
+}): AsyncGenerator<ChatStreamEvent> {
+  yield { type: "step", step: "ANALYZING" };
+
   const config = await pipelineRuntime.getConfig();
   const { embedding, retrieval, generation } = config.parameters;
 
@@ -40,13 +42,34 @@ export async function* generateAssistantResponse({
     embedding.modelName,
   );
 
-  const retrievedChunks = await retriever.retrieve(message, {
+  const queryEmbedding = await retriever.embedQuery(message);
+
+  yield { type: "step", step: "RETRIEVING" };
+
+  const retrievedChunks = await retriever.search(queryEmbedding, {
     limit: retrieval.topK,
     scoreThreshold: retrieval.scoreThreshold,
     neighborChunks: retrieval.neighborChunks,
   });
 
-  const ragContext = buildRagContext(retrievedChunks);
+  const excerpts = buildExcerpts(retrievedChunks);
+
+  // Sent before the answer so the sources show up while the model is still thinking.
+  if (excerpts.length > 0) {
+    yield {
+      type: "sources",
+      sources: excerpts.map(({ documentId, documentName, chunkId, chunkPage }) => ({
+        documentId,
+        documentName,
+        chunkId,
+        pageNumber: chunkPage,
+      })),
+    };
+  }
+
+  yield { type: "step", step: "BUILDING_CONTEXT" };
+
+  const ragContext = buildRagContext(excerpts);
 
   const formatMessages = history.map((msg) => {
     return {
@@ -80,5 +103,10 @@ export async function* generateAssistantResponse({
     think: generation.think,
   };
 
-  yield* generationProvider.chat(chatInput);
+  // Covers the prompt reading and, when enabled, the model thinking: until the first token.
+  yield { type: "step", step: "THINKING" };
+
+  for await (const chunk of generationProvider.chat(chatInput)) {
+    yield { type: "content", content: chunk.content };
+  }
 }

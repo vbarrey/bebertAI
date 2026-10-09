@@ -3,7 +3,7 @@ import { MessageRole, MessageStatus } from "@prisma/client";
 import { createMessage, updateMessage } from "../../mutations/message";
 import { getConversationMessages } from "../../queries/message";
 import { generateAssistantResponse } from "./engine";
-import { ChatChunk } from "../types";
+import { ChatSource, ChatStreamEvent } from "../types";
 
 type StreamConversationInput = {
     conversationId: string;
@@ -11,11 +11,11 @@ type StreamConversationInput = {
 };
 
 /**
- * Streams a conversation and yields chat chunks.
+ * Streams a conversation: progress steps, then the answer content.
  * @param input 
- * @returns AsyncGenerator<ChatChunk>
+ * @returns AsyncGenerator<ChatStreamEvent>
  */
-export async function* streamConversation({ conversationId, message }: StreamConversationInput): AsyncGenerator<ChatChunk> {
+export async function* streamConversation({ conversationId, message }: StreamConversationInput): AsyncGenerator<ChatStreamEvent> {
     // Create USER message
     await createMessage({
         conversationId: conversationId, 
@@ -28,6 +28,7 @@ export async function* streamConversation({ conversationId, message }: StreamCon
     const history = await getConversationMessages(conversationId);
 
     let generatedContent = "";
+    let sources: ChatSource[] | undefined;
 
     // Create ASSISTANT message
     const assistantMessage = await createMessage({
@@ -42,10 +43,15 @@ export async function* streamConversation({ conversationId, message }: StreamCon
 
     try {
         // Stream assistant response
-        for await (const chunk of generateAssistantResponse({ conversationId, message, history })) {
-            // Yield the chunk to the caller
-            yield chunk;
-            generatedContent += chunk.content;
+        for await (const event of generateAssistantResponse({ conversationId, message, history })) {
+            // Yield the event to the caller; the answer and its sources are saved, steps are transient.
+            yield event;
+
+            if (event.type === "content") {
+                generatedContent += event.content;
+            } else if (event.type === "sources") {
+                sources = event.sources;
+            }
         }
 
         status = MessageStatus.COMPLETED;
@@ -57,7 +63,8 @@ export async function* streamConversation({ conversationId, message }: StreamCon
         await updateMessage({
             messageId: assistantMessage.id,
             content: generatedContent,
-            status
+            status,
+            sources,
         });
     }
 }
