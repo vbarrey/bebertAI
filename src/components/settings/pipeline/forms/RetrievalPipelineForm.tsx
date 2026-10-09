@@ -92,6 +92,32 @@ export function RetrievalPipelineForm({
         </FieldDescription>
       </Field>
 
+      <Field>
+        <FieldLabel htmlFor="pipeline-neighbor-chunks">
+          Chunks voisins
+        </FieldLabel>
+
+        <Input
+          id="pipeline-neighbor-chunks"
+          type="number"
+          min={0}
+          max={5}
+          step={1}
+          value={values.neighborChunks}
+          onChange={(event) =>
+            setValues({
+              ...values,
+              neighborChunks: event.target.valueAsNumber,
+            })
+          }
+        />
+
+        <FieldDescription>
+          Nombre de chunks ajoutés avant et après chaque résultat, pour que le
+          modèle lise la suite d&apos;une liste ou d&apos;un paragraphe coupé.
+        </FieldDescription>
+      </Field>
+
       {error && (
         <p className="text-sm text-destructive">
           {error}

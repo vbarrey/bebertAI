@@ -43,6 +43,7 @@ export async function* generateAssistantResponse({
   const retrievedChunks = await retriever.retrieve(message, {
     limit: retrieval.topK,
     scoreThreshold: retrieval.scoreThreshold,
+    neighborChunks: retrieval.neighborChunks,
   });
 
   const ragContext = buildRagContext(retrievedChunks);
@@ -56,9 +57,12 @@ export async function* generateAssistantResponse({
 
   const ragMessage: Message = {
     role: "system",
-    content: `Contexte documentaire :
-              ${ragContext}`
+    content: ragContext,
   };
+
+  // The documentary context goes right before the question it was retrieved for.
+  const previousMessages = formatMessages.slice(0, -1);
+  const question = formatMessages.slice(-1);
 
   const chatInput: ChatRequestInput = {
     messages: [
@@ -66,8 +70,9 @@ export async function* generateAssistantResponse({
         role: "system",
         content: generation.systemPrompt.trim() || DEFAULT_SYSTEM_PROMPT,
       },
-      ...formatMessages,
-      ...(ragContext ? [ragMessage] : [])
+      ...previousMessages,
+      ...(ragContext ? [ragMessage] : []),
+      ...question,
     ],
     modelName: generationModel.modelName,
     temperature: generation.temperature,

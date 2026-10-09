@@ -25,6 +25,7 @@ export const defaultPipelineParameters: PipelineParameters = {
     retrieval: {
         topK: 5,
         scoreThreshold: 0.7,
+        neighborChunks: 1,
     },
     generation: {
         providerId: "...",

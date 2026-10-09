@@ -43,6 +43,8 @@ const EmbeddingParametersSchema = z.preprocess(
 const RetrievalParametersSchema = z.object({
     topK: z.number().int().positive(),
     scoreThreshold: z.number().min(0).max(1),
+    // Chunks added before and after each result: a list cut by the chunker continues in the next chunk.
+    neighborChunks: z.number().int().min(0).max(5).default(1),
 });
 
 const GenerationParametersSchema = z.object({

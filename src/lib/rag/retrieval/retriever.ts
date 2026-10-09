@@ -1,18 +1,23 @@
 import { AIProviderClient } from "@/lib/ai/provider";
 import { qdrant } from "@/lib/qdrant/client";
 import { CHUNKS_COLLECTION } from "@/lib/qdrant/collections";
-import { getChunksByIds } from "@/lib/queries/chunk";
+import { getChunksByIds, getChunksInRanges } from "@/lib/queries/chunk";
 
 export type RetrievedChunk = {
     chunkId: string;
     documentId: string;
+    documentName: string;
+    position: number;
+    pageNumber: number | null;
     content: string;
+    // Neighbours take the score of the best result they surround.
     score: number;
 };
 
 export type RetrievalOptions = {
     limit?: number;
     scoreThreshold?: number;
+    neighborChunks?: number;
 };
 
 type PointPayload = {
@@ -33,6 +38,7 @@ export class DocumentRetriever {
         const {
             limit = 20,
             scoreThreshold = 0.55,
+            neighborChunks = 0,
         } = options;
 
         const embeddings = await this.embeddingProvider.embed({
@@ -57,41 +63,42 @@ export class DocumentRetriever {
             },
         );
 
-        const relevantPoints = results.points
-            .filter((point) => point.score >= scoreThreshold)
-            .map((point) => {
-                const payload = point.payload as PointPayload;
-                return {
-                    chunkId: payload.chunkId,
-                    documentId: payload.documentId,
-                    score: point.score,
-                };
-            });
-
-        const relevantChunks = await getChunksByIds(relevantPoints.map(rp => rp.chunkId));
-
-        const chunksById = new Map(
-            relevantChunks.map((chunk) => [chunk.id, chunk]),
+        const scoreById = new Map(
+            results.points
+                .filter((point) => point.score >= scoreThreshold)
+                .map((point) => [(point.payload as PointPayload).chunkId, point.score]),
         );
 
-        return relevantPoints.map((point) => {
-            if (typeof point.chunkId !== "string") {
-                return null;
-            }
+        // Points whose chunk no longer exists in the database are dropped here.
+        const hits = await getChunksByIds([...scoreById.keys()]);
 
-            const chunk = chunksById.get(point.chunkId);
+        if (hits.length === 0) {
+            return [];
+        }
 
-            if (!chunk) {
-                return null;
-            }
+        const chunks = await getChunksInRanges(
+            hits.map((hit) => ({
+                documentId: hit.documentId,
+                from: hit.position - neighborChunks,
+                to: hit.position + neighborChunks,
+            })),
+        );
 
-            return {
-                chunkId: chunk.id,
-                documentId: chunk.documentId,
-                content: chunk.text,
-                score: point.score,
-            };
-        })
-        .filter((chunk): chunk is RetrievedChunk => chunk !== null);
+        return chunks.map((chunk) => ({
+            chunkId: chunk.id,
+            documentId: chunk.documentId,
+            documentName: chunk.document.displayName,
+            position: chunk.position,
+            pageNumber: chunk.pageNumber,
+            content: chunk.text,
+            score: Math.max(
+                ...hits
+                    .filter((hit) =>
+                        hit.documentId === chunk.documentId &&
+                        Math.abs(hit.position - chunk.position) <= neighborChunks,
+                    )
+                    .map((hit) => scoreById.get(hit.id) ?? 0),
+            ),
+        }));
     }
 }
