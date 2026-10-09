@@ -23,6 +23,13 @@ describe("PipelineParametersSchema extraction", () => {
         });
     });
 
+    it("disables thinking for generation parameters stored before the option existed", () => {
+        const stored = JSON.parse(JSON.stringify(defaultPipelineParameters));
+        delete stored.generation.think;
+
+        assert.equal(PipelineParametersSchema.parse(stored).generation.think, false);
+    });
+
     it("accepts any well-formed Tesseract language code", () => {
         const extraction = { ocrEnabled: true, ocrMinCharsPerPage: 50, ocrLanguages: ["deu", "rus", "deu_latf"] };
 

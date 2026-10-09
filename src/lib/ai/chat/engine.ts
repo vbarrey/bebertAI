@@ -1,4 +1,4 @@
-import { getConversationMessages } from "@/lib/queries/message";
+import type { Message as PrismaMessage } from "@prisma/client";
 import { ChatChunk, ChatRequestInput, Message } from "../types";
 import { messageRoleToString } from "@/lib/utils";
 import { getDocumentRetriever } from "@/lib/rag/retrieval/retriever-factory";
@@ -15,10 +15,13 @@ import { getConversationModel } from "@/lib/queries/conversation";
  */
 export async function* generateAssistantResponse({
   conversationId,
-  message
+  message,
+  history,
 }: {
   conversationId: string;
   message: string;
+  // Conversation messages, the last one being the user message to answer.
+  history: PrismaMessage[];
 }): AsyncGenerator<ChatChunk> {
   const config = await pipelineRuntime.getConfig();
   const { embedding, retrieval, generation } = config.parameters;
@@ -44,10 +47,7 @@ export async function* generateAssistantResponse({
 
   const ragContext = buildRagContext(retrievedChunks);
 
-  // Get all messages from the conversation and format them for the assistant.
-  // This list already contains the last message from the user.
-  const messages = await getConversationMessages(conversationId);
-  const formatMessages = messages.map((msg) => {
+  const formatMessages = history.map((msg) => {
     return {
       role: messageRoleToString(msg.role),
       content: msg.content,
@@ -72,6 +72,7 @@ export async function* generateAssistantResponse({
     modelName: generationModel.modelName,
     temperature: generation.temperature,
     maxTokens: generation.maxTokens,
+    think: generation.think,
   };
 
   yield* generationProvider.chat(chatInput);

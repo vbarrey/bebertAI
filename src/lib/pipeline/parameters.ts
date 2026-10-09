@@ -50,6 +50,8 @@ const GenerationParametersSchema = z.object({
     modelName: z.string().min(1),
     temperature: z.number().min(0),
     maxTokens: z.number().int().positive(),
+    // Reasoning models think before answering and the thoughts count in maxTokens.
+    think: z.boolean().default(false),
     systemPrompt: z.string(),
 });
 

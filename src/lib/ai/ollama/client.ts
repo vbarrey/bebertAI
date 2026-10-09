@@ -35,6 +35,7 @@ export class OllamaClient {
     const decoder = new TextDecoder();
 
     let buffer = "";
+    let hasContent = false;
     while (true) {
       const { value, done } = await reader.read();
 
@@ -47,7 +48,15 @@ export class OllamaClient {
       for (const line of lines) {
         if (!line.trim()) continue;
         const chunk: OllamaChatResponse = JSON.parse(line);
+        if (chunk.done && !hasContent && !chunk.message.content) {
+          throw new OllamaError(
+            chunk.done_reason === "length"
+              ? `Réponse vide : la limite de ${chunk.eval_count} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens ou désactivez la réflexion dans Paramètres > Pipeline.`
+              : `Réponse vide du modèle (done_reason: ${chunk.done_reason}).`,
+          );
+        }
         if (chunk.message.content === "") continue;
+        hasContent = true;
         yield {
           created_at: chunk.created_at,
           model: chunk.model,

@@ -1,6 +1,7 @@
 import { MessageRole, MessageStatus } from "@prisma/client";
 
 import { createMessage, updateMessage } from "../../mutations/message";
+import { getConversationMessages } from "../../queries/message";
 import { generateAssistantResponse } from "./engine";
 import { ChatChunk } from "../types";
 
@@ -23,6 +24,9 @@ export async function* streamConversation({ conversationId, message }: StreamCon
         status: MessageStatus.COMPLETED
     });
 
+    // Read before the empty ASSISTANT message exists so it never ends up in the prompt.
+    const history = await getConversationMessages(conversationId);
+
     let generatedContent = "";
 
     // Create ASSISTANT message
@@ -38,7 +42,7 @@ export async function* streamConversation({ conversationId, message }: StreamCon
 
     try {
         // Stream assistant response
-        for await (const chunk of generateAssistantResponse({conversationId: conversationId, message: message })) {
+        for await (const chunk of generateAssistantResponse({ conversationId, message, history })) {
             // Yield the chunk to the caller
             yield chunk;
             generatedContent += chunk.content;

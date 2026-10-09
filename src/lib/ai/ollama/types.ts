@@ -20,6 +20,8 @@ export interface OllamaChatRequest {
     role: string;
     content: string;
   }[];
+  // Ignored by models that cannot disable thinking (gpt-oss); true is refused by models without thinking.
+  think?: boolean;
   options?: {
     temperature?: number;
     num_predict?: number;

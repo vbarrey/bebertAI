@@ -5,10 +5,12 @@ import { useMemo, useState } from "react";
 
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -179,6 +181,30 @@ export function GenerationPipelineForm({
             setValues({
               ...values,
               maxTokens: event.target.valueAsNumber,
+            })
+          }
+        />
+      </Field>
+
+      <Field orientation="horizontal">
+        <FieldContent>
+          <FieldLabel htmlFor="pipeline-think">
+            Réflexion
+          </FieldLabel>
+
+          <FieldDescription>
+            Laisse les modèles de raisonnement réfléchir avant de répondre.
+            La réflexion est comptée dans le nombre maximal de tokens.
+          </FieldDescription>
+        </FieldContent>
+
+        <Switch
+          id="pipeline-think"
+          checked={values.think}
+          onCheckedChange={(think) =>
+            setValues({
+              ...values,
+              think,
             })
           }
         />

@@ -31,6 +31,7 @@ export const defaultPipelineParameters: PipelineParameters = {
         modelName: "...",
         temperature: 0.7,
         maxTokens: 1000,
+        think: false,
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
     },
 };

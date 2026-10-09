@@ -18,6 +18,7 @@ export interface ChatRequestInput {
   messages: Message[];
   temperature?: number;
   maxTokens?: number;
+  think?: boolean;
 }
 
 export interface ChatChunk {
