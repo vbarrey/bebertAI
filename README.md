@@ -61,6 +61,7 @@ Lors d’une conversation, les chunks pertinents sont récupérés depuis Qdrant
 ### Traitement documentaire
 - `unpdf` pour les PDF
 - `mammoth` pour les DOCX
+- Tesseract (CLI) pour l’OCR, Poppler (`pdftoppm`) pour le rendu des pages PDF
 - `RecursiveCharacterTextSplitter` pour le chunking
 
 ## Structure du projet
@@ -90,6 +91,28 @@ src/
 - Ollama
 
 Les services Redis, Qdrant et Ollama peuvent être exécutés localement ou via Docker.
+
+### OCR (optionnel)
+
+L’OCR (activable dans Paramètres > Pipeline > Extraction) appelle deux exécutables qui doivent être dans le `PATH` du worker :
+
+- `tesseract` avec les données des langues utilisées (`fra`, `eng`, `deu`, `rus`)
+- `pdftoppm` (Poppler)
+
+```bash
+# Debian / Ubuntu
+sudo apt install tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng tesseract-ocr-deu tesseract-ocr-rus poppler-utils
+# macOS
+brew install tesseract tesseract-lang poppler
+# Alpine (image Docker, déjà inclus dans le Dockerfile)
+apk add tesseract-ocr tesseract-ocr-data-fra tesseract-ocr-data-eng tesseract-ocr-data-deu tesseract-ocr-data-rus poppler-utils
+```
+
+Sous Windows : installer Tesseract (`winget install UB-Mannheim.TesseractOCR`) et Poppler (`winget install oschwartz10612.Poppler`), ajouter `C:\Program Files\Tesseract-OCR` au `PATH`, puis copier les fichiers `fra` / `deu` / `rus.traineddata` (dépôt [tesseract-ocr/tessdata](https://github.com/tesseract-ocr/tessdata)) dans son dossier `tessdata`. Redémarrer VS Code / le terminal ensuite : `tesseract --list-langs` doit lister les langues.
+
+Le panneau propose les langues installées pour Tesseract (`tesseract --list-langs`) : pour en ajouter une, il suffit de déposer son fichier `.traineddata` dans le dossier `tessdata` puis de recharger la page.
+
+Pour un PDF, chaque page est d’abord extraite nativement ; seules les pages contenant moins de lettres/chiffres que le seuil configuré (50 par défaut) sont rendues en image et passées à Tesseract. Les images PNG/JPEG sont toujours traitées par OCR (et ne produisent aucun texte si l’OCR est désactivé).
 
 ## Installation
 
@@ -136,6 +159,14 @@ bun dev
 
 L’application est ensuite disponible sur `http://localhost:3000`.
 
+Lancer les tests :
+
+```bash
+bun run test
+```
+
+Les tests utilisant le vrai moteur OCR sont ignorés si `tesseract` ou `pdftoppm` est absent.
+
 ## Stockage des documents
 
 Les fichiers locaux sont stockés en dehors de la base SQLite.
@@ -155,7 +186,7 @@ Le nom original est conservé dans `Document.displayName`.
 
 Lorsqu’un document est indexé, il suit le pipeline :
 
-**Document → Extraction → Chunking → Prisma → Embedding → Qdrant**
+**Document → Extraction (native, puis OCR si nécessaire) → Chunking → Prisma → Embedding → Qdrant**
 
 Les chunks sont conservés dans SQLite avec leur contenu et leurs métadonnées (page, bounding box, etc.).
 
@@ -196,6 +227,7 @@ Google Drive et Dropbox sont prévus mais leur intégration réelle n’est pas 
 - Stockage persistant
 - Gestion des doublons et conflits
 - Extraction PDF / TXT / DOCX
+- OCR Tesseract (pages PDF sans texte exploitable, images PNG/JPEG)
 - Chunking configurable
 - Persistance des chunks
 - Embeddings
@@ -208,7 +240,6 @@ Google Drive et Dropbox sont prévus mais leur intégration réelle n’est pas 
 
 ### À venir
 
-- OCR
 - Intégration Google Drive
 - Intégration Dropbox
 - Nettoyage des anciens vecteurs Qdrant lors des suppressions/réindexations
