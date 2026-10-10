@@ -28,6 +28,7 @@ export async function replaceDocumentChunks(
           documentId,
           position: chunk.position,
           text: chunk.text,
+          language: chunk.language,
           pageNumber: chunk.pageNumber,
           x: chunk.bounds?.x,
           y: chunk.bounds?.y,

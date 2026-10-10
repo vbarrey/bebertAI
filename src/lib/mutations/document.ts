@@ -23,3 +23,11 @@ export async function createDocument(data: {
     data,
   });
 }
+
+// Null when the text is too short or too mixed to tell.
+export async function setDocumentLanguage(documentId: string, language: string | null) {
+  return prisma.document.update({
+    where: { id: documentId },
+    data: { language },
+  });
+}

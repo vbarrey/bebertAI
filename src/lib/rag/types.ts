@@ -1,4 +1,5 @@
 import type { Document } from "@prisma/client";
+import type { Bm25Language } from "@/lib/pipeline/parameters";
 
 export type ExtractedBlock = {
   text: string;
@@ -19,6 +20,8 @@ export type ExtractedDocument = {
 export type IndexedChunk = {
   position: number;
   text: string;
+  // Set by the indexing worker after chunking.
+  language?: Bm25Language | null;
   pageNumber?: number;
   bounds?: {
     x: number;

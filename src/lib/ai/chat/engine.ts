@@ -42,7 +42,10 @@ export async function* generateAssistantResponse({
     embedding.modelName,
   );
 
-  const queryEmbedding = await retriever.embedQuery(message);
+  // Same Unicode form as the indexed chunks, normalized after extraction.
+  const query = message.normalize("NFC");
+
+  const queryEmbedding = await retriever.embedQuery(query);
 
   yield { type: "step", step: "RETRIEVING" };
 

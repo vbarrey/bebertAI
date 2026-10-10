@@ -11,6 +11,8 @@ import { getIndexingJobById } from "@/lib/queries/indexing-job";
 import { getDocumentExtractor } from "@/lib/rag/indexing/extractor-factory";
 import { getDocumentChunker } from "@/lib/rag/indexing/chunker-factory";
 import { replaceDocumentChunks } from "@/lib/mutations/chunk";
+import { setDocumentLanguage } from "@/lib/mutations/document";
+import { detectLanguage } from "@/lib/rag/indexing/language";
 import { getDocumentById } from "@/lib/queries/document";
 import { getDocumentEmbedder } from "@/lib/rag/embedding/embedder-factory";
 
@@ -19,7 +21,7 @@ import { initializeAI } from "@/lib/startup/initialize-ai";
 import { deleteDocumentEmbeddings, upsertChunkEmbeddings } from "@/lib/qdrant/points";
 import { ensureChunksCollection } from "@/lib/qdrant/collections";
 
-import { IndexingStage } from "@/lib/queue/types";
+import { INDEXING_STAGE_LABELS, IndexingStage } from "@/lib/queue/types";
 import { getPipelineProvider, PipelineConfig } from "@/lib/pipeline/config";
 import { ExtractionParametersSchema } from "@/lib/pipeline/parameters";
 import { DocumentFormatSchema } from "@/lib/documents/format";
@@ -30,16 +32,6 @@ export type IndexingJobData = {
 };
 
 const NAME = "Document-Indexing-Worker";
-
-// Prefixed to error messages so the UI tells which step failed.
-const STAGE_LABELS: Partial<Record<IndexingStage, string>> = {
-  [IndexingStage.CREATING]: "Préparation",
-  [IndexingStage.EXTRACTING]: "Extraction du texte",
-  [IndexingStage.CHUNKING]: "Découpage",
-  [IndexingStage.PERSISTING_CHUNKS]: "Enregistrement des chunks",
-  [IndexingStage.EMBEDDING]: "Embedding (Ollama)",
-  [IndexingStage.PERSISTING_EMBEDDINGS]: "Enregistrement des vecteurs (Qdrant)",
-};
 
 async function initialize() {
   /*
@@ -103,16 +95,30 @@ async function initialize() {
         await updateProgress(IndexingStage.EXTRACTING);
 
         // OCR runs inside this stage: progress stays on EXTRACTING with the pages done so far.
-        const extraction = await extractor.extract(
+        const extracted = await extractor.extract(
           document,
           (current, total) => job.updateProgress({ stage: IndexingStage.EXTRACTING, current, total }),
         );
+
+        // PDF and OCR text may hold decomposed accents (e + combining acute): Qdrant BM25 does not match them
+        // with the composed form the questions are typed in, so every later step works on NFC text.
+        const extraction = {
+          ...extracted,
+          blocks: extracted.blocks.map((block) => ({ ...block, text: block.text.normalize("NFC") })),
+        };
 
         const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);
 
         await updateProgress(IndexingStage.CHUNKING);
 
-        const chunks = await chunker.chunk(extraction);
+        // A book may hold an annex in another language: detected per chunk, the whole document as the fallback,
+        // and null (BM25 without stemmer) when neither tells.
+        const documentLanguage = detectLanguage(extraction.blocks.map((block) => block.text).join("\n"));
+
+        const chunks = (await chunker.chunk(extraction)).map((chunk) => ({
+          ...chunk,
+          language: detectLanguage(chunk.text) ?? documentLanguage,
+        }));
 
         if (chunks.length === 0) {
           // Retrying cannot help: the file has no text layer.
@@ -129,6 +135,8 @@ async function initialize() {
           document.id,
           chunks,
         );
+
+        await setDocumentLanguage(document.id, documentLanguage);
 
         const embedder = await getDocumentEmbedder(
           embeddingProvider,
@@ -170,9 +178,11 @@ async function initialize() {
           documentId: document.id,
           chunks: persistedChunks.length,
           embeddings: embeddings.length,
+          // Forwarded by the SSE route so the documents table shows it without a reload.
+          language: documentLanguage,
         };
       } catch (error) {
-        const message = `${STAGE_LABELS[stage] ?? stage} : ${
+        const message = `${INDEXING_STAGE_LABELS[stage] ?? stage} : ${
           error instanceof Error
             ? error.message
             : "Erreur d'indexation inconnue"

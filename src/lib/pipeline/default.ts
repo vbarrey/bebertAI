@@ -13,7 +13,6 @@ export const defaultPipelineParameters: PipelineParameters = {
         ocrEnabled: false,
         ocrMinCharsPerPage: 50,
         ocrLanguages: ["fra", "eng"],
-        fallbackLanguage: "french",
     },
     chunking: {
         chunkSize: 300,

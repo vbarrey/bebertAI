@@ -10,9 +10,7 @@ export const OcrLanguageSchema = z.string().regex(/^[a-z]{3}(_[a-z]+)*$/, "Code 
 // Languages of the BM25 sparse vectors (Qdrant Snowball names): one named vector per language in the collection.
 export const BM25_LANGUAGES = ["french", "english", "russian", "german"] as const;
 
-export const Bm25LanguageSchema = z.enum(BM25_LANGUAGES);
-
-export type Bm25Language = z.infer<typeof Bm25LanguageSchema>;
+export type Bm25Language = (typeof BM25_LANGUAGES)[number];
 
 // Defaults keep parameters stored before these fields existed valid.
 export const ExtractionParametersSchema = z.object({
@@ -20,8 +18,6 @@ export const ExtractionParametersSchema = z.object({
     // A PDF page whose native text has fewer letters/digits than this is OCRed.
     ocrMinCharsPerPage: z.number().int().nonnegative().default(50),
     ocrLanguages: z.array(OcrLanguageSchema).min(1).default(["fra", "eng"]),
-    // Used when the document text is too short to detect its language (an image indexed from its name).
-    fallbackLanguage: Bm25LanguageSchema.default("french"),
 });
 
 export type ExtractionParameters = z.infer<typeof ExtractionParametersSchema>;

@@ -18,6 +18,7 @@ import { Document, IndexingStatus, JobStatus } from "@prisma/client";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { DocumentImportPopover } from "./DocumentPopover";
 import { Card, CardContent } from "../ui/card";
+import type { IndexingSteps } from "@/lib/queue/types";
 
 const toIndexingStatus = (status: string): IndexingStatus | "ALL" => {
     switch (status) {
@@ -64,7 +65,15 @@ const jobStatusToIndexingStatus: Partial<Record<JobStatus, IndexingStatus>> = {
 
 const finishedJobStatuses: JobStatus[] = [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED];
 
-type DocumentRow = Document & { indexingError?: string | null };
+// Document.language holds the BM25 language detected at indexing.
+const languageLabels: Record<string, string> = {
+    french: "Français",
+    english: "Anglais",
+    russian: "Russe",
+    german: "Allemand",
+};
+
+type DocumentRow = Document & { indexingError?: string | null; activeJobId?: string | null };
 
 type Props = {
     initialDocuments: DocumentRow[]
@@ -128,7 +137,11 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
         setDocuments((prev) => [...prev, ...newDocuments]);
     };
 
-    const [activeJobIds, setActiveJobIds] = useState<string[]>([]);
+    // Jobs already queued or running when the page opens are followed too.
+    const [activeJobIds, setActiveJobIds] = useState<string[]>(() =>
+        initialDocuments.flatMap((document) => (document.activeJobId ? [document.activeJobId] : [])),
+    );
+    const [progressByDocument, setProgressByDocument] = useState<Record<string, IndexingSteps>>({});
     useEffect(() => {
         if (activeJobIds.length === 0) {
             return;
@@ -139,6 +152,15 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
             `/api/indexing-jobs/events?ids=${activeJobIds.join(",")}`,
         );
 
+        eventSource.addEventListener("progress", (event) => {
+            const { documentId, data } = JSON.parse(event.data) as {
+                documentId: string;
+                data: IndexingSteps;
+            };
+
+            setProgressByDocument((progress) => ({ ...progress, [documentId]: data }));
+        });
+
         eventSource.addEventListener("status", (event) => {
             const data = JSON.parse(event.data) as {
                 jobId: string;
@@ -146,6 +168,8 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                 displayName: string;
                 status: JobStatus;
                 errorMessage?: string;
+                // Sent with COMPLETED only.
+                language?: string | null;
             };
 
             const status = jobStatusToIndexingStatus[data.status];
@@ -161,12 +185,19 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                             ...document,
                             indexingStatus: status,
                             indexingError: data.errorMessage ?? null,
+                            language: data.language !== undefined ? data.language : document.language,
                         }
                         : document,
                 ),
             );
 
             if (finishedJobStatuses.includes(data.status)) {
+                setProgressByDocument((progress) => {
+                    const next = { ...progress };
+                    delete next[data.documentId];
+                    return next;
+                });
+
                 if (data.status === JobStatus.FAILED) {
                     toast.error(`Échec de l'indexation de « ${data.displayName} »`, {
                         description: data.errorMessage,
@@ -316,6 +347,7 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                                 <th className="px-4 py-2">Fichier</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Type</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Taille</th>
+                                <th className="w-[10%] px-4 py-2 hidden md:table-cell">Langue</th>
                                 <th className="w-[12.5%] px-4 py-2">Statut</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Dernière indexation</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden md:table-cell">Dernière modification</th>
@@ -359,8 +391,11 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                                         <td className="hidden lg:table-cell text-center text-muted-foreground">
                                             {doc.fileSize ? sizeMB : "—"} MB
                                         </td>
+                                        <td className="hidden md:table-cell text-center text-muted-foreground">
+                                            {doc.language ? languageLabels[doc.language] ?? doc.language : "—"}
+                                        </td>
                                         <td className="text-center">
-                                            <DocumentStatusBadge status={doc.indexingStatus} error={doc.indexingError} />
+                                            <DocumentStatusBadge status={doc.indexingStatus} error={doc.indexingError} progress={progressByDocument[doc.id]} />
                                         </td>
                                         <td className="hidden lg:table-cell text-muted-foreground text-center">
                                             {doc.indexedAt

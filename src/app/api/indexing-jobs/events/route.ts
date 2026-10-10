@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { createQueueConnection } from "@/lib/queue/redis";
+import { indexingQueue } from "@/lib/queue/indexing";
 
 const FINISHED_STATUSES = ["COMPLETED", "FAILED", "CANCELLED"];
 
@@ -104,12 +105,15 @@ export async function GET(request: NextRequest) {
         send("progress", { jobId, documentId: documentIds.get(jobId), data });
       };
 
-      const onCompleted = ({ jobId }: { jobId: string }) => {
+      // returnvalue is what the worker returned, deserialized by BullMQ.
+      const onCompleted = ({ jobId, returnvalue }: { jobId: string; returnvalue: unknown }) => {
         if (!pendingJobIds.has(jobId)) {
           return;
         }
 
-        send("status", { jobId, documentId: documentIds.get(jobId), status: "COMPLETED" });
+        const language = (returnvalue as { language?: string | null } | null)?.language ?? null;
+
+        send("status", { jobId, documentId: documentIds.get(jobId), status: "COMPLETED", language });
         finish(jobId);
       };
 
@@ -140,6 +144,16 @@ export async function GET(request: NextRequest) {
       try {
         await queueEvents.waitUntilReady();
 
+        // Last progress of the unfinished jobs: the page may open in the middle of an indexing. Read before
+        // subscribing so a progress event that follows is never overwritten by an older snapshot.
+        const progressSnapshots = new Map(
+          await Promise.all(
+            jobs
+              .filter((job) => !FINISHED_STATUSES.includes(job.status))
+              .map(async (job) => [job.id, (await indexingQueue.getJob(job.id))?.progress] as const),
+          ),
+        );
+
         if (closed) {
           return;
         }
@@ -150,6 +164,13 @@ export async function GET(request: NextRequest) {
 
         for (const job of jobs) {
           send("status", { jobId: job.id, documentId: job.documentId, displayName: job.document.displayName, status: job.status, errorMessage: job.errorMessage ?? undefined });
+
+          const progress = progressSnapshots.get(job.id);
+
+          // 0 until the worker reports its first stage.
+          if (progress && typeof progress === "object") {
+            send("progress", { jobId: job.id, documentId: job.documentId, data: progress });
+          }
 
           if (FINISHED_STATUSES.includes(job.status)) {
             finish(job.id);

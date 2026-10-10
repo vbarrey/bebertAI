@@ -20,7 +20,6 @@ describe("PipelineParametersSchema extraction", () => {
             ocrEnabled: true,
             ocrMinCharsPerPage: 50,
             ocrLanguages: ["fra", "eng"],
-            fallbackLanguage: "french",
         });
     });
 
@@ -32,7 +31,7 @@ describe("PipelineParametersSchema extraction", () => {
     });
 
     it("accepts any well-formed Tesseract language code", () => {
-        const extraction = { ocrEnabled: true, ocrMinCharsPerPage: 50, ocrLanguages: ["deu", "rus", "deu_latf"], fallbackLanguage: "german" };
+        const extraction = { ocrEnabled: true, ocrMinCharsPerPage: 50, ocrLanguages: ["deu", "rus", "deu_latf"] };
 
         assert.deepEqual(
             PipelineParametersSchema.parse({ ...defaultPipelineParameters, extraction }).extraction,
@@ -59,7 +58,6 @@ describe("PipelineParametersSchema extraction", () => {
 describe("PipelineParametersSchema hybrid search", () => {
     it("fills the BM25 and hybrid fields of parameters stored before they existed", () => {
         const stored = JSON.parse(JSON.stringify(defaultPipelineParameters));
-        delete stored.extraction.fallbackLanguage;
         delete stored.embedding.sparse;
         delete stored.retrieval.hybrid;
 
@@ -90,11 +88,10 @@ describe("PipelineParametersSchema hybrid search", () => {
         });
     });
 
-    it("rejects an unknown fallback language and out of range BM25 or RRF values", () => {
+    it("rejects out of range BM25 or RRF values", () => {
         const defaults = defaultPipelineParameters;
 
         for (const parameters of [
-            { ...defaults, extraction: { ...defaults.extraction, fallbackLanguage: "spanish" } },
             { ...defaults, embedding: { ...defaults.embedding, sparse: { ...defaults.embedding.sparse, b: 1.5 } } },
             { ...defaults, embedding: { ...defaults.embedding, sparse: { ...defaults.embedding.sparse, k: 0 } } },
             { ...defaults, retrieval: { ...defaults.retrieval, hybrid: { ...defaults.retrieval.hybrid, rrfK: 0 } } },
@@ -121,7 +118,7 @@ describe("requiresReindex", () => {
     it("is true when extraction, chunking or embedding changes", () => {
         for (const change of [
             (p: typeof defaultPipelineParameters) => { p.extraction.ocrEnabled = true; },
-            (p: typeof defaultPipelineParameters) => { p.extraction.fallbackLanguage = "german"; },
+            (p: typeof defaultPipelineParameters) => { p.extraction.ocrMinCharsPerPage = 10; },
             (p: typeof defaultPipelineParameters) => { p.chunking.chunkSize = 500; },
             (p: typeof defaultPipelineParameters) => { p.embedding.modelName = "bge-m3"; },
             (p: typeof defaultPipelineParameters) => { p.embedding.sparse.asciiFolding = false; },

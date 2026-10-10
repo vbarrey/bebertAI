@@ -94,6 +94,8 @@ model Chunk {
   text       String
 
   pageNumber Int?
+  // BM25 language of the chunk, else of its document; null: neither could be detected, BM25 without stemmer.
+  language   String?
   x          Float?
   y          Float?
   width      Float?
