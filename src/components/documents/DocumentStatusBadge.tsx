@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, CheckCircle2, Info, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, History, Info, RefreshCw } from "lucide-react";
 import { IndexingStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ const statusMap: Record<IndexingStatus, { label: string; icon: typeof AlertCircl
   PROCESSED: { label: "Indexé", icon: CheckCircle2, variant: "default", customClassName: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"},
   FAILED: { label: "Erreur", icon: AlertCircle, variant: "destructive" },
   CANCELLED: { label: "Annulé", icon: AlertCircle, variant: "destructive" },
+  NEEDREINDEX: { label: "À réindexer", icon: History, variant: "outline", customClassName: "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300" },
 };
 
 export function DocumentStatusBadge({ status, error }: { status: IndexingStatus; error?: string | null }) {

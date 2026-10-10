@@ -13,6 +13,7 @@ export const defaultPipelineParameters: PipelineParameters = {
         ocrEnabled: false,
         ocrMinCharsPerPage: 50,
         ocrLanguages: ["fra", "eng"],
+        fallbackLanguage: "french",
     },
     chunking: {
         chunkSize: 300,
@@ -21,11 +22,27 @@ export const defaultPipelineParameters: PipelineParameters = {
     embedding: {
         providerId: "...",
         modelName: "...",
+        sparse: {
+            k: 1.2,
+            b: 0.75,
+            asciiFolding: true,
+        },
     },
     retrieval: {
         topK: 5,
         scoreThreshold: 0.7,
         neighborChunks: 1,
+        hybrid: {
+            enabled: true,
+            denseLimit: 20,
+            sparseLimit: 20,
+            rrfK: 60,
+            sparseWeight: 1,
+            translation: {
+                providerId: "",
+                modelName: "",
+            },
+        },
     },
     generation: {
         providerId: "...",

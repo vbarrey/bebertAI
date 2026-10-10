@@ -216,6 +216,8 @@ enum IndexingStatus {
   PROCESSED
   FAILED
   CANCELLED
+  // Indexed with pipeline parameters changed since: its vectors were deleted.
+  NEEDREINDEX
 }
 
 enum MessageStatus {

@@ -1,4 +1,5 @@
 import { DocumentFormat } from "../documents/format";
+import { BM25_LANGUAGES, Bm25Language } from "./parameters";
 
 export type PipelineCapabilities = {
   import: ImportCapabilities;
@@ -17,7 +18,7 @@ export const pipelineCapabilities: PipelineCapabilities = {
   },
   chunking: { strategies: ["recursive"] },
   embedding: {},
-  retrieval: {},
+  retrieval: { bm25Languages: BM25_LANGUAGES },
   generation: {},
 };
 
@@ -36,5 +37,7 @@ type ChunkingCapabilities = {
 };
 
 type EmbeddingCapabilities = unknown;
-type RetrievalCapabilities = unknown;
+type RetrievalCapabilities = {
+  bm25Languages: readonly Bm25Language[];
+};
 type GenerationCapabilities = unknown;

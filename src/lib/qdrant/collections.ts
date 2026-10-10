@@ -2,6 +2,12 @@ import { qdrant } from "./client";
 
 export const CHUNKS_COLLECTION = "document_chunks";
 
+export async function deleteChunksCollection(): Promise<void> {
+  if ((await qdrant.collectionExists(CHUNKS_COLLECTION)).exists) {
+    await qdrant.deleteCollection(CHUNKS_COLLECTION);
+  }
+}
+
 export async function ensureChunksCollection(
   vectorSize: number,
 ): Promise<void> {

@@ -64,6 +64,7 @@ export function EmbeddingPipelineForm({
     );
 
     setValues({
+      ...values,
       providerId,
       modelName: currentModelExists ? values.modelName : "",
     });

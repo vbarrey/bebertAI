@@ -67,6 +67,11 @@ export class DocumentRetriever {
             neighborChunks = 0,
         } = options;
 
+        // Deleted when pipeline parameters requiring a reindex change, until the next indexing.
+        if (!(await qdrant.collectionExists(CHUNKS_COLLECTION)).exists) {
+            return [];
+        }
+
         const results = await qdrant.query(
             CHUNKS_COLLECTION,
             {

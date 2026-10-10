@@ -1,8 +1,10 @@
 import { PipelineConfig } from "./config";
 import { defaultPipelineParameters } from "./default";
 import { pipelineCapabilities } from "./capabilities";
-import { PipelineParametersSchema, PipelineParameters } from "./parameters";
+import { PipelineParametersSchema, PipelineParameters, requiresReindex } from "./parameters";
 import { prisma } from "@/lib/prisma";
+import { deleteChunksCollection } from "@/lib/qdrant/collections";
+import { IndexingStatus } from "@prisma/client";
 import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
 import { z } from "zod";
 
@@ -64,12 +66,37 @@ class PipelineRuntime {
       }
     }
 
-    await prisma.pipelineParameters.update({
-      where: { id: 1 },
-      data: {
-        parameters: JSON.stringify(validatedParameters),
-      },
-    });
+    const reindex = requiresReindex(this.config!.parameters, validatedParameters);
+
+    if (reindex) {
+      // A running job uses the parameters it was enqueued with and would end up indexed with the old ones.
+      const indexing = await prisma.document.count({
+        where: { indexingStatus: { in: [IndexingStatus.PENDING, IndexingStatus.PROCESSING] } },
+      });
+
+      if (indexing > 0) {
+        throw new Error(`${indexing} document(s) en cours d'indexation : attendez la fin avant de modifier ces paramètres.`);
+      }
+
+      // Every vector is stale, including leftovers of failed runs; the worker recreates the collection
+      // with the new embedding dimension.
+      await deleteChunksCollection();
+    }
+
+    await prisma.$transaction([
+      prisma.pipelineParameters.update({
+        where: { id: 1 },
+        data: {
+          parameters: JSON.stringify(validatedParameters),
+        },
+      }),
+      ...(reindex
+        ? [prisma.document.updateMany({
+          where: { indexingStatus: IndexingStatus.PROCESSED },
+          data: { indexingStatus: IndexingStatus.NEEDREINDEX },
+        })]
+        : []),
+    ]);
 
     this.config = {
       ...(await this.getConfig()),

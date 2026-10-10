@@ -8,6 +8,7 @@ import {
   Pickaxe,
   Radar,
   Scissors,
+  TriangleAlert,
 } from "lucide-react";
 
 import { PipelineCardList } from "./PipelineCardList";
@@ -21,8 +22,20 @@ import { EmbeddingPipelineForm } from "./forms/EmbeddingPipelineForm";
 import { RetrievalPipelineForm } from "./forms/RetrievalPipelineForm";
 import { GenerationPipelineForm } from "./forms/GenerationPipelineForm";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 import type { PipelineConfig } from "@/lib/pipeline/config";
-import type { PipelineParameters } from "@/lib/pipeline/parameters";
+import { requiresReindex, type PipelineParameters } from "@/lib/pipeline/parameters";
 
 import type { PipelineItem } from "./types";
 import { cn } from "@/lib/utils";
@@ -48,6 +61,9 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
 
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
 
+  // Resolves the pending save with the answer of the reindex confirmation dialog.
+  const [confirmReindex, setConfirmReindex] = useState<((confirmed: boolean) => void) | null>(null);
+
   const someExpanded = expandedCardId !== null;
 
   async function updateStep<K extends keyof PipelineParameters>(
@@ -58,6 +74,15 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
       ...parameters,
       [step]: values,
     } as PipelineParameters;
+
+    if (requiresReindex(parameters, nextParameters)) {
+      const confirmed = await new Promise<boolean>((resolve) => setConfirmReindex(() => resolve));
+      setConfirmReindex(null);
+
+      if (!confirmed) {
+        throw new Error("Enregistrement annulé.");
+      }
+    }
 
     const response = await fetch("/api/pipeline", {
       method: "PUT",
@@ -81,6 +106,14 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
 
     if ("parameters" in payload) setParameters(payload.parameters);
   }
+
+  // Shown under the forms of the steps listed in REINDEX_STEPS.
+  const reindexNotice = (
+    <p className="flex items-start gap-2 rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+      Modifier les paramètres de cette étape nécessite de réindexer tous les documents.
+    </p>
+  );
 
   const items: PipelineItem[] = [
     {
@@ -133,6 +166,8 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
             />
           </section>
 
+          {reindexNotice}
+
           <PipelineCapabilities
             capabilities={[
               {
@@ -168,6 +203,8 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
             />
           </section>
 
+          {reindexNotice}
+
           <PipelineCapabilities
             capabilities={[
               {
@@ -191,12 +228,14 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
         y: 50,
       },
       content: (
-        <div>
+        <div className="space-y-6">
           <EmbeddingPipelineForm
             initialValues={parameters.embedding}
             providers={providers}
             onSave={(values) => updateStep("embedding", values)}
           />
+
+          {reindexNotice}
         </div>
       ),
     },
@@ -263,6 +302,39 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
           setExpandedCardId={setExpandedCardId}
         />
       </div>
+
+      <AlertDialog
+        open={confirmReindex !== null}
+        onOpenChange={(open) => !open && confirmReindex?.(false)}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400">
+              <TriangleAlert />
+            </AlertDialogMedia>
+
+            <AlertDialogTitle>
+              Réindexation nécessaire
+            </AlertDialogTitle>
+
+            <AlertDialogDescription>
+              Les documents indexés passeront « À réindexer » et ne seront plus utilisés
+              par le chat avant leur réindexation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Annuler
+            </AlertDialogCancel>
+
+            {/* Its onClick runs before the dialog closes, so the save resolves as confirmed. */}
+            <AlertDialogAction onClick={() => confirmReindex?.(true)}>
+              Enregistrer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

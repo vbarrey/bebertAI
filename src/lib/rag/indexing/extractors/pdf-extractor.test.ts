@@ -10,6 +10,7 @@ const params: ExtractionParameters = {
     ocrEnabled: true,
     ocrMinCharsPerPage: 50,
     ocrLanguages: ["fra", "eng"],
+    fallbackLanguage: "french",
 };
 
 const nativeText = "Cette page contient largement assez de texte natif pour être conservée telle quelle.";

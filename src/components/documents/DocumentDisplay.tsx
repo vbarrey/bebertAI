@@ -31,6 +31,8 @@ const toIndexingStatus = (status: string): IndexingStatus | "ALL" => {
             return IndexingStatus.FAILED;
         case "CANCELLED":
             return IndexingStatus.CANCELLED;
+        case "NEEDREINDEX":
+            return IndexingStatus.NEEDREINDEX;
         case "ALL":
             return "ALL";
         default: // case "UNPLANNED":
@@ -46,6 +48,7 @@ const statusOptions = [
     { label: "En cours", value: IndexingStatus.PROCESSING },
     { label: "Erreur", value: IndexingStatus.FAILED },
     { label: "Annulé", value: IndexingStatus.CANCELLED },
+    { label: "À réindexer", value: IndexingStatus.NEEDREINDEX },
     { label: "Jamais indexé", value: IndexingStatus.UNPLANNED },
 ];
 
