@@ -29,7 +29,11 @@ export function toAppChatChunk(ollamaChatChunk: OllamaChatChunk): ChatChunk {
 }
 
 export function toOllamaEmbedRequest(appInput: EmbedRequest): OllamaEmbedRequest{
-    return {model: appInput.model, input: appInput.input};
+    return {
+        model: appInput.model,
+        input: appInput.input,
+        ...(appInput.contextLength ? { options: { num_ctx: appInput.contextLength } } : {}),
+    };
 }
 
 export function toAppEmbeddings(ollamaResponse: OllamaEmbedResponse): Embedding[]{

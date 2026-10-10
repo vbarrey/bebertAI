@@ -3,7 +3,8 @@ import { DocumentRetriever } from "./retriever";
 
 export async function getDocumentRetriever(
     provider: AIProviderClient,
-    modelName: string
+    modelName: string,
+    contextLength?: number,
 ): Promise<DocumentRetriever> {
     const modelInfo = await provider.models();
     const model = modelInfo.find(m => m.name === modelName);
@@ -12,5 +13,5 @@ export async function getDocumentRetriever(
         throw new Error(`Model ${modelName} not found in provider ${provider.name}`);
     }
 
-    return new DocumentRetriever(provider, modelName);
+    return new DocumentRetriever(provider, modelName, contextLength);
 }

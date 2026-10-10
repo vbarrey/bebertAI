@@ -3,12 +3,13 @@ import { DocumentEmbedder } from "./embedder";
 
 export async function getDocumentEmbedder(
     provider: AIProviderClient,
-    modelName: string
+    modelName: string,
+    contextLength?: number,
 ): Promise<DocumentEmbedder> {
     const hasModel = await provider.hasModel(modelName);
 
     if(!hasModel) {
         throw new Error(`Model ${modelName} not found in provider ${provider.name}`);
     }
-    return new DocumentEmbedder(provider, modelName);
+    return new DocumentEmbedder(provider, modelName, { contextLength });
 }

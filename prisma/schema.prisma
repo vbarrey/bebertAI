@@ -106,6 +106,15 @@ model Chunk {
   @@index([documentId, position])
 }
 
+// Embeddings by sha256 of model name and chunk text: a reindex that keeps the text skips the embedding model.
+// Entries of texts no longer indexed stay: about 10 KB each.
+model EmbeddingCache {
+  key       String   @id
+  // Float32 little-endian.
+  embedding Bytes
+  createdAt DateTime @default(now())
+}
+
 model IndexingJob {
   id         String   @id @default(cuid())
   documentId String

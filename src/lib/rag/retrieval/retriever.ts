@@ -31,6 +31,8 @@ export class DocumentRetriever {
     constructor(
         private readonly embeddingProvider: AIProviderClient,
         private readonly embeddingModelName: string,
+        // Same as the indexing requests, or Ollama reloads the model.
+        private readonly contextLength?: number,
     ) { }
 
     async retrieve(
@@ -44,6 +46,7 @@ export class DocumentRetriever {
         const embeddings = await this.embeddingProvider.embed({
             model: this.embeddingModelName,
             input: [query],
+            contextLength: this.contextLength,
         });
 
         const queryEmbedding = embeddings[0];

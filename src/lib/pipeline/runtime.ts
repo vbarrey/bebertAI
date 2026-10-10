@@ -4,6 +4,7 @@ import { pipelineCapabilities } from "./capabilities";
 import { PipelineParametersSchema, PipelineParameters, requiresReindex } from "./parameters";
 import { prisma } from "@/lib/prisma";
 import { deleteChunksCollection } from "@/lib/qdrant/collections";
+import { flagIndexedDocumentsForReindex } from "@/lib/mutations/document";
 import { IndexingStatus } from "@prisma/client";
 import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
 import { z } from "zod";
@@ -91,10 +92,7 @@ class PipelineRuntime {
         },
       }),
       ...(reindex
-        ? [prisma.document.updateMany({
-          where: { indexingStatus: IndexingStatus.PROCESSED },
-          data: { indexingStatus: IndexingStatus.NEEDREINDEX },
-        })]
+        ? [flagIndexedDocumentsForReindex()]
         : []),
     ]);
 

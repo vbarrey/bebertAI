@@ -147,4 +147,10 @@ describe("OCR with real Tesseract", { skip: !hasOcrTools && "tesseract / pdftopp
 
         assert.match(blocks.map((block) => block.text).join("\n"), /Second paragraphe du document/);
     });
+
+    it("OCRs a page scanned upside down", async () => {
+        const blocks = await ocrImage(path.resolve("src/lib/rag/indexing/__fixtures__/scan-upside-down.png"), "fra+eng");
+
+        assert.match(blocks.map((block) => block.text).join("\n"), /Second paragraphe du document/);
+    });
 });

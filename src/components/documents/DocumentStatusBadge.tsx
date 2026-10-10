@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Progress } from "@/components/ui/progress";
-import { INDEXING_STAGE_LABELS, indexingProgressPercent, type IndexingSteps } from "@/lib/queue/types";
+import { INDEXING_STAGE_LABELS, IndexingStage, indexingProgressPercent, type IndexingSteps } from "@/lib/queue/types";
 import { AlertCircle, CheckCircle2, History, Info, RefreshCw } from "lucide-react";
 import { IndexingStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -69,7 +69,7 @@ function IndexingProgressCard({ progress, children }: { progress?: IndexingSteps
         <Progress value={percent} aria-label="Progression de l'indexation" />
         {progress?.total ? (
           <p className="text-muted-foreground tabular-nums">
-            Page {progress.current ?? 0} / {progress.total}
+            {progress.stage === IndexingStage.EMBEDDING ? "Chunk" : "Page"} {progress.current ?? 0} / {progress.total}
           </p>
         ) : null}
       </HoverCardContent>

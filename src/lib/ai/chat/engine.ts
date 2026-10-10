@@ -2,6 +2,7 @@ import type { Message as PrismaMessage } from "@prisma/client";
 import { ChatRequestInput, ChatStreamEvent, Message } from "../types";
 import { messageRoleToString } from "@/lib/utils";
 import { getDocumentRetriever } from "@/lib/rag/retrieval/retriever-factory";
+import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
 import { buildExcerpts, buildRagContext } from "@/lib/rag/context";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
 import { getPipelineProvider } from "@/lib/pipeline/config";
@@ -26,7 +27,7 @@ export async function* generateAssistantResponse({
   yield { type: "step", step: "ANALYZING" };
 
   const config = await pipelineRuntime.getConfig();
-  const { embedding, retrieval, generation } = config.parameters;
+  const { chunking, embedding, retrieval, generation } = config.parameters;
 
   // The conversation keeps the model it was started with; the pipeline model is only the default.
   const conversationModel = (await getConversationModel(conversationId))?.model;
@@ -40,6 +41,7 @@ export async function* generateAssistantResponse({
   const retriever = await getDocumentRetriever(
     embeddingProvider,
     embedding.modelName,
+    embeddingContextLength(chunking.chunkSize),
   );
 
   // Same Unicode form as the indexed chunks, normalized after extraction.

@@ -1,4 +1,5 @@
 import { qdrant } from "./client";
+import { SPARSE_VECTOR_NAMES } from "./bm25";
 
 export const CHUNKS_COLLECTION = "document_chunks";
 
@@ -6,6 +7,18 @@ export async function deleteChunksCollection(): Promise<void> {
   if ((await qdrant.collectionExists(CHUNKS_COLLECTION)).exists) {
     await qdrant.deleteCollection(CHUNKS_COLLECTION);
   }
+}
+
+/** True for a collection created before the BM25 vectors existed: its points cannot answer lexical queries. */
+export async function chunksCollectionLacksSparseVectors(): Promise<boolean> {
+  if (!(await qdrant.collectionExists(CHUNKS_COLLECTION)).exists) {
+    return false;
+  }
+
+  const { config } = await qdrant.getCollection(CHUNKS_COLLECTION);
+  const sparseVectors = config.params.sparse_vectors ?? {};
+
+  return SPARSE_VECTOR_NAMES.some((name) => !(name in sparseVectors));
 }
 
 export async function ensureChunksCollection(
@@ -37,5 +50,9 @@ export async function ensureChunksCollection(
       size: vectorSize,
       distance: "Cosine",
     },
+    // Qdrant computes the BM25 weights from the texts; the idf modifier adds the inverse document frequency.
+    sparse_vectors: Object.fromEntries(
+      SPARSE_VECTOR_NAMES.map((name) => [name, { modifier: "idf" as const }]),
+    ),
   });
 }

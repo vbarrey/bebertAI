@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { availableParallelism } from "node:os";
 import { UnrecoverableError } from "bullmq";
 import { extractTextItems } from "unpdf";
 import type { StructuredTextItem } from "unpdf";
@@ -15,6 +16,10 @@ import { Document } from "@prisma/client";
 import { getDocumentPath } from "../indexing-utils";
 import { getOcrLanguages, ocrPdfPage } from "../ocr";
 import type { ExtractionParameters } from "@/lib/pipeline/parameters";
+import { mapWithConcurrency } from "@/lib/concurrency";
+
+// Tesseract uses about one core per page: half the threads, the indexing worker running two documents at once.
+const OCR_CONCURRENCY = Math.max(1, Math.floor(availableParallelism() / 2));
 
 /**
  * Letters and digits only: whitespace, punctuation and stray glyphs do not make a page usable.
@@ -40,8 +45,9 @@ export async function applyOcrToPages(
         : [];
 
     const ocrResults = new Map<number, ExtractedBlock[]>();
+    let done = 0;
 
-    for (const [index, page] of pagesToOcr.entries()) {
+    await mapWithConcurrency(pagesToOcr, OCR_CONCURRENCY, async (page) => {
         const pageNumber = page.pageNumber!;
 
         try {
@@ -54,8 +60,9 @@ export async function applyOcrToPages(
                 : new Error(message, { cause: error });
         }
 
-        await onProgress?.(index + 1, pagesToOcr.length);
-    }
+        // Pages finish out of order: the count of done pages still only goes up.
+        await onProgress?.(++done, pagesToOcr.length);
+    });
 
     return nativePages.flatMap((page) => {
         const ocrBlocks = ocrResults.get(page.pageNumber!);

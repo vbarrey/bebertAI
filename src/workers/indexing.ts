@@ -11,19 +11,24 @@ import { getIndexingJobById } from "@/lib/queries/indexing-job";
 import { getDocumentExtractor } from "@/lib/rag/indexing/extractor-factory";
 import { getDocumentChunker } from "@/lib/rag/indexing/chunker-factory";
 import { replaceDocumentChunks } from "@/lib/mutations/chunk";
-import { setDocumentLanguage } from "@/lib/mutations/document";
+import { flagIndexedDocumentsForReindex, setDocumentLanguage } from "@/lib/mutations/document";
 import { detectLanguage } from "@/lib/rag/indexing/language";
 import { getDocumentById } from "@/lib/queries/document";
 import { getDocumentEmbedder } from "@/lib/rag/embedding/embedder-factory";
+import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
 
 import { aiProviderRegistry } from "@/lib/ai/registry";
 import { initializeAI } from "@/lib/startup/initialize-ai";
 import { deleteDocumentEmbeddings, upsertChunkEmbeddings } from "@/lib/qdrant/points";
-import { ensureChunksCollection } from "@/lib/qdrant/collections";
+import {
+  chunksCollectionLacksSparseVectors,
+  deleteChunksCollection,
+  ensureChunksCollection,
+} from "@/lib/qdrant/collections";
 
 import { INDEXING_STAGE_LABELS, IndexingStage } from "@/lib/queue/types";
 import { getPipelineProvider, PipelineConfig } from "@/lib/pipeline/config";
-import { ExtractionParametersSchema } from "@/lib/pipeline/parameters";
+import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 
 export type IndexingJobData = {
@@ -32,6 +37,21 @@ export type IndexingJobData = {
 };
 
 const NAME = "Document-Indexing-Worker";
+
+// One document OCRs on the CPU while the other one is embedded on the GPU.
+const CONCURRENCY = 2;
+
+let collectionWrites: Promise<unknown> = Promise.resolve();
+
+/**
+ * Runs the collection writes of one job at a time: the first job after the BM25 upgrade deletes and recreates
+ * the collection, which must not happen while the other job upserts. In-process: run a single worker process.
+ */
+function serializeCollectionWrites<T>(write: () => Promise<T>): Promise<T> {
+  const run = collectionWrites.then(write);
+  collectionWrites = run.catch(() => undefined);
+  return run;
+}
 
 async function initialize() {
   /*
@@ -84,8 +104,9 @@ async function initialize() {
           );
         }
 
-        // Re-parsed so jobs enqueued before the OCR fields existed get their defaults.
-        const extractionParameters = ExtractionParametersSchema.parse(pipelineConfig.parameters.extraction);
+        // Re-parsed so jobs enqueued before the OCR and BM25 fields existed get their defaults.
+        const parameters = PipelineParametersSchema.parse(pipelineConfig.parameters);
+        const extractionParameters = parameters.extraction;
 
         const extractor = getDocumentExtractor(
           DocumentFormatSchema.parse(document.format),
@@ -140,13 +161,15 @@ async function initialize() {
 
         const embedder = await getDocumentEmbedder(
           embeddingProvider,
-          pipelineConfig.parameters.embedding.modelName,
+          parameters.embedding.modelName,
+          embeddingContextLength(parameters.chunking.chunkSize),
         );
 
         await updateProgress(IndexingStage.EMBEDDING);
 
         const embeddings = await embedder.embed(
           persistedChunks,
+          (current, total) => job.updateProgress({ stage: IndexingStage.EMBEDDING, current, total }),
         );
 
         if (embeddings.length === 0) {
@@ -165,10 +188,23 @@ async function initialize() {
           );
         }
 
-        await ensureChunksCollection(vectorSize);
-        // Chunks are recreated with new ids on each run: drop the previous points of the document first.
-        await deleteDocumentEmbeddings(document.id);
-        await upsertChunkEmbeddings(embeddings);
+        await serializeCollectionWrites(async () => {
+          // Created before the BM25 vectors: every point is stale, the other indexed documents need a reindex too.
+          if (await chunksCollectionLacksSparseVectors()) {
+            await deleteChunksCollection();
+            await flagIndexedDocumentsForReindex();
+          }
+
+          await ensureChunksCollection(vectorSize);
+          // Chunks are recreated with new ids on each run: drop the previous points of the document first.
+          await deleteDocumentEmbeddings(document.id);
+          await upsertChunkEmbeddings(
+            persistedChunks,
+            embeddings,
+            parameters.embedding.sparse,
+            parameters.chunking.chunkSize,
+          );
+        });
 
         await completeIndexingJob(indexingJob.id);
 
@@ -208,7 +244,7 @@ async function initialize() {
     },
     {
       connection: createWorkerConnection(),
-      concurrency: 1,
+      concurrency: CONCURRENCY,
     },
   );
 

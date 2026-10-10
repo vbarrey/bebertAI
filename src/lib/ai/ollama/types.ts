@@ -80,6 +80,9 @@ export interface OllamaChatChunk {
 export interface OllamaEmbedRequest {
   model: string;
   input: string[];
+  options?: {
+    num_ctx?: number;
+  };
 }
 
 export interface OllamaEmbedResponse {

@@ -51,6 +51,8 @@ export type GenerateAssistantResponseInput = {
 export type EmbedRequest = {
   model: string;
   input: string[];
+  // Tokens reserved per request; the model default when unset.
+  contextLength?: number;
 }
 
 export type Embedding = number[];
