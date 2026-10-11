@@ -115,6 +115,17 @@ model EmbeddingCache {
   createdAt DateTime @default(now())
 }
 
+// The Google account connected for the Drive import, a single one. Tokens are encrypted (GOOGLE_TOKEN_ENCRYPTION_KEY).
+model GoogleDriveConnection {
+  id           Int      @id @default(1)
+  email        String
+  refreshToken String
+  accessToken  String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model IndexingJob {
   id         String   @id @default(cuid())
   documentId String
