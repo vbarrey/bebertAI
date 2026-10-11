@@ -2,6 +2,9 @@ import { AIProviderClient } from "@/lib/ai/provider";
 import { qdrant } from "@/lib/qdrant/client";
 import { CHUNKS_COLLECTION } from "@/lib/qdrant/collections";
 import { getChunksByIds, getChunksInRanges } from "@/lib/queries/chunk";
+import type { PipelineParameters } from "@/lib/pipeline/parameters";
+import { buildHybridQuery } from "./hybrid-query";
+import type { QueryTranslations } from "./query-translator";
 
 export type RetrievedChunk = {
     chunkId: string;
@@ -17,9 +20,12 @@ export type RetrievedChunk = {
 };
 
 export type RetrievalOptions = {
-    limit?: number;
-    scoreThreshold?: number;
-    neighborChunks?: number;
+    // The query as typed, NFC.
+    query: string;
+    translations: QueryTranslations;
+    retrieval: PipelineParameters["retrieval"];
+    sparse: PipelineParameters["embedding"]["sparse"];
+    chunkSize: number;
 };
 
 type PointPayload = {
@@ -35,18 +41,14 @@ export class DocumentRetriever {
         private readonly contextLength?: number,
     ) { }
 
-    async retrieve(
-        query: string,
-        options: RetrievalOptions = {},
-    ): Promise<RetrievedChunk[]> {
-        return this.search(await this.embedQuery(query), options);
-    }
-
     async embedQuery(query: string): Promise<number[]> {
         const embeddings = await this.embeddingProvider.embed({
             model: this.embeddingModelName,
             input: [query],
             contextLength: this.contextLength,
+            // A query embeds in 0.15 s on the CPU. On the GPU, Ollama evicts the chat model when it does not leave
+            // room for the embedding model, then reloads it for the answer (25 s for a 36B model).
+            cpuOnly: true,
         });
 
         const queryEmbedding = embeddings[0];
@@ -62,13 +64,9 @@ export class DocumentRetriever {
 
     async search(
         queryEmbedding: number[],
-        options: RetrievalOptions = {},
+        { retrieval, ...lexical }: RetrievalOptions,
     ): Promise<RetrievedChunk[]> {
-        const {
-            limit = 20,
-            scoreThreshold = 0.55,
-            neighborChunks = 0,
-        } = options;
+        const { neighborChunks } = retrieval;
 
         // Deleted when pipeline parameters requiring a reindex change, until the next indexing.
         if (!(await qdrant.collectionExists(CHUNKS_COLLECTION)).exists) {
@@ -77,17 +75,12 @@ export class DocumentRetriever {
 
         const results = await qdrant.query(
             CHUNKS_COLLECTION,
-            {
-                query: queryEmbedding,
-                limit,
-                with_payload: true,
-            },
+            buildHybridQuery({ vector: queryEmbedding, retrieval, ...lexical }),
         );
 
+        // The semantic threshold is applied by the query: in hybrid search, scores are RRF ranks.
         const scoreById = new Map(
-            results.points
-                .filter((point) => point.score >= scoreThreshold)
-                .map((point) => [(point.payload as PointPayload).chunkId, point.score]),
+            results.points.map((point) => [(point.payload as PointPayload).chunkId, point.score]),
         );
 
         // Points whose chunk no longer exists in the database are dropped here.

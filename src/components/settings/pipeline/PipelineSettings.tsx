@@ -254,6 +254,7 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
         <div>
           <RetrievalPipelineForm
             initialValues={parameters.retrieval}
+            providers={providers}
             onSave={(values) => updateStep("retrieval", values)}
           />
         </div>

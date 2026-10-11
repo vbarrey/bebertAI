@@ -3,6 +3,8 @@ import { ChatRequestInput, ChatStreamEvent, Message } from "../types";
 import { messageRoleToString } from "@/lib/utils";
 import { getDocumentRetriever } from "@/lib/rag/retrieval/retriever-factory";
 import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
+import { usesLexicalSearch } from "@/lib/rag/retrieval/hybrid-query";
+import { translateQuery, untranslatedQuery } from "@/lib/rag/retrieval/query-translator";
 import { buildExcerpts, buildRagContext } from "@/lib/rag/context";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
 import { getPipelineProvider } from "@/lib/pipeline/config";
@@ -47,14 +49,26 @@ export async function* generateAssistantResponse({
   // Same Unicode form as the indexed chunks, normalized after extraction.
   const query = message.normalize("NFC");
 
-  const queryEmbedding = await retriever.embedQuery(query);
+  const { translation } = retrieval.hybrid;
+  // No translation model set: the model answering the conversation, already loaded.
+  const translationModel = translation.providerId && translation.modelName ? translation : generationModel;
+
+  // Different models: the translation runs while the query is embedded.
+  const [queryEmbedding, translations] = await Promise.all([
+    retriever.embedQuery(query),
+    usesLexicalSearch(retrieval.hybrid)
+      ? translateQuery(getPipelineProvider(translationModel, "traduction"), translationModel.modelName, query)
+      : untranslatedQuery(query),
+  ]);
 
   yield { type: "step", step: "RETRIEVING" };
 
   const retrievedChunks = await retriever.search(queryEmbedding, {
-    limit: retrieval.topK,
-    scoreThreshold: retrieval.scoreThreshold,
-    neighborChunks: retrieval.neighborChunks,
+    query,
+    translations,
+    retrieval,
+    sparse: embedding.sparse,
+    chunkSize: chunking.chunkSize,
   });
 
   const excerpts = buildExcerpts(retrievedChunks);

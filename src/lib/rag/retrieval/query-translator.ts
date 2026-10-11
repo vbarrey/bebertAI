@@ -18,6 +18,11 @@ const FORMAT = {
 // A query is a sentence or two: this only stops a runaway answer.
 const MAX_TOKENS = 1024;
 
+/** The query as typed in every language: what is searched without translation. */
+export function untranslatedQuery(query: string): QueryTranslations {
+    return Object.fromEntries(BM25_LANGUAGES.map((language) => [language, query])) as QueryTranslations;
+}
+
 /**
  * The query in each BM25 language, for the lexical search of each language. Never fails: a language the model
  * did not translate, or every language when the model fails, keeps the query as it was typed.
@@ -49,6 +54,7 @@ export async function translateQuery(
     }
 
     let translations: Record<string, unknown> = {};
+    const fallback = untranslatedQuery(query);
 
     try {
         const parsed: unknown = JSON.parse(answer);
@@ -68,7 +74,7 @@ export async function translateQuery(
         // NFC like the indexed chunks: BM25 only matches identical forms.
         return [
             language,
-            typeof translation === "string" && translation.trim() ? translation.trim().normalize("NFC") : query,
+            typeof translation === "string" && translation.trim() ? translation.trim().normalize("NFC") : fallback[language],
         ];
     })) as QueryTranslations;
 }

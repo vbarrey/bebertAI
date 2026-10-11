@@ -55,6 +55,8 @@ export type EmbedRequest = {
   input: string[];
   // Tokens reserved per request; the model default when unset.
   contextLength?: number;
+  // Runs the model on the CPU, leaving the VRAM to the chat model.
+  cpuOnly?: boolean;
 }
 
 export type Embedding = number[];

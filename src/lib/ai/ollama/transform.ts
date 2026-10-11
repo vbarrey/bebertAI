@@ -33,7 +33,10 @@ export function toOllamaEmbedRequest(appInput: EmbedRequest): OllamaEmbedRequest
     return {
         model: appInput.model,
         input: appInput.input,
-        ...(appInput.contextLength ? { options: { num_ctx: appInput.contextLength } } : {}),
+        options: {
+            ...(appInput.contextLength ? { num_ctx: appInput.contextLength } : {}),
+            ...(appInput.cpuOnly ? { num_gpu: 0 } : {}),
+        },
     };
 }
 

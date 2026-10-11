@@ -84,6 +84,8 @@ export interface OllamaEmbedRequest {
   input: string[];
   options?: {
     num_ctx?: number;
+    // Layers offloaded to the GPU: 0 runs on the CPU.
+    num_gpu?: number;
   };
 }
 

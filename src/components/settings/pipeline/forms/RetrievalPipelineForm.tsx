@@ -7,24 +7,65 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState } from "react";
 
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
 
 type RetrievalParameters = PipelineParameters["retrieval"];
 
+type Provider = {
+  id: string;
+  name: string;
+  models: {
+    id: string;
+    name: string;
+    displayName: string | null;
+  }[];
+};
+
 type Props = {
   initialValues: RetrievalParameters;
+  providers: readonly Provider[];
   onSave: (values: RetrievalParameters) => Promise<void>;
 };
 
+// Select value of the default: an empty translation model means the conversation model.
+const CONVERSATION_MODEL = "conversation";
+const SEPARATOR = "|";
+
 export function RetrievalPipelineForm({
   initialValues,
+  providers,
   onSave,
 }: Props) {
   const [values, setValues] = useState(initialValues);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const { translation } = values.hybrid;
+  const translationValue = translation.providerId && translation.modelName
+    ? `${translation.providerId}${SEPARATOR}${translation.modelName}`
+    : CONVERSATION_MODEL;
+
+  function setTranslation(value: string) {
+    // Provider ids never hold the separator, model names (qwen3:0.6b) may hold other punctuation.
+    const index = value.indexOf(SEPARATOR);
+    const next = value === CONVERSATION_MODEL
+      ? { providerId: "", modelName: "" }
+      : { providerId: value.slice(0, index), modelName: value.slice(index + SEPARATOR.length) };
+
+    setValues({ ...values, hybrid: { ...values.hybrid, translation: next } });
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -115,6 +156,41 @@ export function RetrievalPipelineForm({
         <FieldDescription>
           Nombre de chunks ajoutés avant et après chaque résultat, pour que le
           modèle lise la suite d&apos;une liste ou d&apos;un paragraphe coupé.
+        </FieldDescription>
+      </Field>
+
+      <Field>
+        <FieldLabel>Modèle de traduction</FieldLabel>
+
+        <Select value={translationValue} onValueChange={setTranslation}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value={CONVERSATION_MODEL}>
+              Modèle de la conversation
+            </SelectItem>
+
+            {providers.map((provider) => (
+              <SelectGroup key={provider.id}>
+                <SelectSeparator />
+                <SelectLabel>{provider.name}</SelectLabel>
+
+                {provider.models.map((model) => (
+                  <SelectItem key={model.id} value={`${provider.id}${SEPARATOR}${model.name}`}>
+                    {model.displayName ?? model.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <FieldDescription>
+          Traduit la question en français, anglais, russe et allemand pour la recherche lexicale. Un petit
+          modèle multilingue suffit, mais s&apos;il ne tient pas en mémoire à côté du modèle de conversation,
+          Ollama recharge ce dernier à chaque question.
         </FieldDescription>
       </Field>
 

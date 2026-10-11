@@ -16,6 +16,11 @@ type HybridQueryInput = {
     chunkSize: number;
 };
 
+/** Lexical search runs, and the query is translated, only when it can weigh in the fusion. */
+export function usesLexicalSearch(hybrid: PipelineParameters["retrieval"]["hybrid"]): boolean {
+    return hybrid.enabled && hybrid.sparseWeight > 0;
+}
+
 /**
  * Body of the Qdrant query: the semantic results and the BM25 results of all the languages, fused by RRF.
  * The semantic threshold filters the dense prefetch only: fused RRF scores are ranks, not similarities.
@@ -31,7 +36,7 @@ export function buildHybridQuery({
 }: HybridQueryInput): Schemas["QueryRequest"] {
     const { topK, scoreThreshold, hybrid } = retrieval;
 
-    if (!hybrid.enabled || hybrid.sparseWeight === 0) {
+    if (!usesLexicalSearch(hybrid)) {
         return { query: vector, limit: topK, score_threshold: scoreThreshold, with_payload: true };
     }
 
