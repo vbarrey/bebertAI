@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 
-import { Document, JobStatus } from "@prisma/client";
+import { Document } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { pipelineCapabilities } from "@/lib/pipeline/capabilities";
-import { pipelineRuntime } from "@/lib/pipeline/runtime";
 
 import { getDocumentFormat, DocumentFormat } from "@/lib/documents/format";
 import {
@@ -15,14 +14,15 @@ import {
     storeDocumentFile,
     deleteDocumentFile,
 } from "@/lib/documents/storage";
-import { deleteDocumentEmbeddings } from "@/lib/qdrant/points";
-
-import { enqueueIndexingJob } from "@/lib/queue/indexing";
+import {
+    DocumentToImport,
+    getImportDecisionKey,
+    importDocuments,
+} from "@/lib/documents/import";
 
 import type {
     DocumentImportConflictAction,
 } from "@/types/document-import";
-import { createDocument } from "@/lib/mutations/document";
 
 type ImportedFile = {
     file: File;
@@ -30,22 +30,9 @@ type ImportedFile = {
     checksum: string;
 };
 
-type PreparedFile = {
-    id: string;
+type PreparedFile = DocumentToImport & {
     storagePath: string;
-    displayName: string;
-    format: DocumentFormat;
-    checksum: string;
-    fileSize: number;
     data: Buffer;
-};
-
-type ImportResult = {
-    documents: Document[];
-    createdJobIds: string[];
-    replacedStoragePaths: string[];
-    replacedDocumentIds: string[];
-    skippedStoragePaths: string[];
 };
 
 type ImportResponse =
@@ -138,8 +125,9 @@ async function prepareImportedFiles(
             continue;
         }
 
-        const key = `${checksum}:${file.name}`;
-        const action = decisions.get(key);
+        const action = decisions.get(
+            getImportDecisionKey(checksum, file.name),
+        );
 
         if (!action) {
             throw new ImportConflictError(
@@ -175,6 +163,8 @@ async function prepareFiles(
                 format,
                 checksum,
                 fileSize: file.size,
+                sourceType: "LOCAL" as const,
+                sourceRef: null,
                 data: Buffer.from(
                     await file.arrayBuffer(),
                 ),
@@ -208,99 +198,6 @@ async function storePreparedFiles(
 
         throw error;
     }
-}
-
-async function persistDocuments(
-    files: PreparedFile[],
-    decisions: Map<string, DocumentImportConflictAction>,
-    indexImmediately: boolean,
-): Promise<ImportResult> {
-    return prisma.$transaction(async (tx) => {
-        const documents: Document[] = [];
-        const createdJobIds: string[] = [];
-        const replacedStoragePaths: string[] = [];
-        const replacedDocumentIds: string[] = [];
-        const skippedStoragePaths: string[] = [];
-
-        for (const file of files) {
-            const existing = await tx.document.findUnique({
-                where: {
-                    checksum: file.checksum,
-                },
-                select: {
-                    id: true,
-                    storagePath: true,
-                },
-            });
-
-            if (existing) {
-                const key =
-                    `${file.checksum}:${file.displayName}`;
-
-                const action = decisions.get(key);
-
-                if (action !== "REPLACE") {
-                    skippedStoragePaths.push(
-                        file.storagePath,
-                    );
-
-                    continue;
-                }
-
-                await tx.document.delete({
-                    where: {
-                        id: existing.id,
-                    },
-                });
-
-                replacedDocumentIds.push(existing.id);
-
-                if (existing.storagePath) {
-                    replacedStoragePaths.push(
-                        existing.storagePath,
-                    );
-                }
-            }
-
-            const document = await createDocument({
-                id: file.id,
-                storagePath: file.storagePath,
-                displayName: file.displayName,
-                format: file.format,
-                fileSize: file.fileSize,
-                checksum: file.checksum,
-                sourceType: "LOCAL",
-                sourceRef: null,
-                indexingStatus: indexImmediately
-                    ? "PENDING"
-                    : "UNPLANNED",
-            }, tx);
-
-            documents.push(document);
-
-            if (!indexImmediately) {
-                continue;
-            }
-
-            const indexingJob =
-                await tx.indexingJob.create({
-                    data: {
-                        documentId: document.id,
-                        status: JobStatus.QUEUED,
-                    },
-                });
-
-            createdJobIds.push(indexingJob.id);
-        }
-
-        return {
-            documents,
-            createdJobIds,
-            replacedStoragePaths,
-            replacedDocumentIds,
-            skippedStoragePaths,
-        };
-    });
 }
 
 class ImportConflictError extends Error {
@@ -392,79 +289,11 @@ export async function POST(
 
         await storePreparedFiles(preparedFiles);
 
-        let importResult: ImportResult;
-
-        try {
-            importResult = await persistDocuments(
-                preparedFiles,
-                decisions,
-                indexImmediately,
-            );
-        } catch (error) {
-            await Promise.allSettled(
-                preparedFiles.map((file) =>
-                    deleteDocumentFile(
-                        file.storagePath,
-                    ),
-                ),
-            );
-
-            throw error;
-        }
-
-        /*
-         * Files that were stored before the transaction but were
-         * skipped because another request imported the same checksum
-         * in the meantime are no longer needed.
-         */
-        if (
-            importResult.skippedStoragePaths.length > 0
-        ) {
-            await Promise.allSettled(
-                importResult.skippedStoragePaths.map(
-                    (storagePath) =>
-                        deleteDocumentFile(storagePath),
-                ),
-            );
-        }
-
-        /*
-         * The old file is no longer referenced by the database after
-         * a replacement. It can therefore be deleted only after the
-         * transaction has successfully committed.
-         */
-        if (
-            importResult.replacedStoragePaths.length > 0
-        ) {
-            await Promise.allSettled(
-                importResult.replacedStoragePaths.map(
-                    (storagePath) =>
-                        deleteDocumentFile(storagePath),
-                ),
-            );
-        }
-
-        await Promise.allSettled(
-            importResult.replacedDocumentIds.map(
-                (documentId) =>
-                    deleteDocumentEmbeddings(documentId),
-            ),
+        const importResult = await importDocuments(
+            preparedFiles,
+            decisions,
+            indexImmediately,
         );
-
-        if (importResult.createdJobIds.length > 0) {
-            const pipelineConfig =
-                await pipelineRuntime.getConfig();
-
-            await Promise.all(
-                importResult.createdJobIds.map(
-                    (jobId) =>
-                        enqueueIndexingJob(
-                            jobId,
-                            pipelineConfig,
-                        ),
-                ),
-            );
-        }
 
         return NextResponse.json({
             importedDocuments: importResult.documents,
