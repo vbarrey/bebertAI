@@ -9,7 +9,10 @@
     "build": "next build",
     "start": "next start",
     "start:worker": "tsx src/workers/indexing.ts",
-    "test": "tsx --test \"src/**/*.test.ts\""
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "eval:questions": "tsx scripts/eval-retrieval/generate-questions.ts",
+    "eval:retrieval": "tsx scripts/eval-retrieval/evaluate.ts",
+    "bench:indexing": "tsx scripts/bench-indexing.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
