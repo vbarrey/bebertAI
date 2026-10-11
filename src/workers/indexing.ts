@@ -13,6 +13,7 @@ import { getDocumentChunker } from "@/lib/rag/indexing/chunker-factory";
 import { replaceDocumentChunks } from "@/lib/mutations/chunk";
 import { flagIndexedDocumentsForReindex, setDocumentLanguage } from "@/lib/mutations/document";
 import { detectLanguage } from "@/lib/rag/indexing/language";
+import { normalizeExtractedText } from "@/lib/rag/indexing/text";
 import { getDocumentById } from "@/lib/queries/document";
 import { getDocumentEmbedder } from "@/lib/rag/embedding/embedder-factory";
 import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
@@ -121,11 +122,10 @@ async function initialize() {
           (current, total) => job.updateProgress({ stage: IndexingStage.EXTRACTING, current, total }),
         );
 
-        // PDF and OCR text may hold decomposed accents (e + combining acute): Qdrant BM25 does not match them
-        // with the composed form the questions are typed in, so every later step works on NFC text.
+        // Every later step works on the same text: NFC, part numbers in Latin letters.
         const extraction = {
           ...extracted,
-          blocks: extracted.blocks.map((block) => ({ ...block, text: block.text.normalize("NFC") })),
+          blocks: extracted.blocks.map((block) => ({ ...block, text: normalizeExtractedText(block.text) })),
         };
 
         const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);

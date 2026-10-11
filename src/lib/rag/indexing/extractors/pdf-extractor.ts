@@ -17,16 +17,10 @@ import { getDocumentPath } from "../indexing-utils";
 import { getOcrLanguages, ocrPdfPage } from "../ocr";
 import type { ExtractionParameters } from "@/lib/pipeline/parameters";
 import { mapWithConcurrency } from "@/lib/concurrency";
+import { countMeaningfulChars } from "../text";
 
 // Tesseract uses about one core per page: half the threads, the indexing worker running two documents at once.
 const OCR_CONCURRENCY = Math.max(1, Math.floor(availableParallelism() / 2));
-
-/**
- * Letters and digits only: whitespace, punctuation and stray glyphs do not make a page usable.
- */
-export function countMeaningfulChars(text: string): number {
-    return text.match(/[\p{L}\p{N}]/gu)?.length ?? 0;
-}
 
 /**
  * Keeps the native text of each page and OCRs only the pages below the threshold.

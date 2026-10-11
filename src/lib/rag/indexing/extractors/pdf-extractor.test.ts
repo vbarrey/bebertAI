@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { UnrecoverableError } from "bullmq";
 
-import { applyOcrToPages, countMeaningfulChars } from "./pdf-extractor";
+import { applyOcrToPages } from "./pdf-extractor";
+import { countMeaningfulChars } from "../text";
 import type { ExtractedBlock } from "../../types";
 import type { ExtractionParameters } from "@/lib/pipeline/parameters";
 

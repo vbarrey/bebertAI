@@ -29,7 +29,9 @@ export const defaultPipelineParameters: PipelineParameters = {
     },
     retrieval: {
         topK: 5,
-        scoreThreshold: 0.7,
+        // Measured with qwen3-embedding: a vague question scores about 0.55 with its passage, so 0.55 kept
+        // 1 result out of 5 and 0.35 doubles the pages found without losing any on precise questions.
+        scoreThreshold: 0.35,
         neighborChunks: 1,
         hybrid: {
             enabled: true,
