@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronRight, FileIcon, Folder } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronRight, FileIcon, Folder, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -29,9 +30,11 @@ type Connection =
   | { connected: false }
   | { connected: true; email: string };
 
+// A folder, or the results of a search when `search` is set (always the first step then).
 type FolderStep = {
   id: string;
   name: string;
+  search?: string;
 };
 
 type Props = {
@@ -42,11 +45,15 @@ type Props = {
 };
 
 const ROOT: FolderStep = { id: "root", name: "Mon Drive" };
+const SHARED: FolderStep = { id: "sharedWithMe", name: "Partagés avec moi" };
+
+// Delay after the last key before the search runs.
+const SEARCH_DELAY_MS = 300;
 
 class NotConnectedError extends Error { }
 
-async function fetchFolder(folderId: string, pageToken?: string): Promise<DriveFolderPage> {
-  const params = new URLSearchParams({ folderId });
+async function fetchFolder(step: FolderStep, pageToken?: string): Promise<DriveFolderPage> {
+  const params = new URLSearchParams(step.search ? { search: step.search } : { folderId: step.id });
 
   if (pageToken) {
     params.set("pageToken", pageToken);
@@ -99,6 +106,11 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [searchText, setSearchText] = useState("");
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Only the answer to the latest request is shown: an older search may answer last.
+  const latestRequest = useRef(0);
+
   // Kept while browsing: files and folders can be picked in several folders.
   const [selected, setSelected] = useState<Map<string, DriveItem>>(new Map());
 
@@ -111,11 +123,17 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
   const [importError, setImportError] = useState<string | null>(null);
 
   async function loadFolder(nextPath: FolderStep[], pageToken?: string) {
+    const request = ++latestRequest.current;
+
     setLoading(true);
     setError(null);
 
     try {
-      const page = await fetchFolder(nextPath[nextPath.length - 1].id, pageToken);
+      const page = await fetchFolder(nextPath[nextPath.length - 1], pageToken);
+
+      if (request !== latestRequest.current) {
+        return;
+      }
 
       setPath(nextPath);
       setItems((current) => (pageToken ? [...current, ...page.items] : page.items));
@@ -127,8 +145,28 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
         setError(error instanceof Error ? error.message : "Une erreur est survenue.");
       }
     } finally {
-      setLoading(false);
+      if (request === latestRequest.current) {
+        setLoading(false);
+      }
     }
+  }
+
+  function handleSearchChange(value: string) {
+    const text = value.trim();
+
+    setSearchText(value);
+    clearTimeout(searchTimer.current);
+
+    searchTimer.current = setTimeout(
+      () => loadFolder(text ? [{ id: "search", name: `Résultats pour « ${text} »`, search: text }] : [ROOT]),
+      SEARCH_DELAY_MS,
+    );
+  }
+
+  function openView(view: FolderStep) {
+    clearTimeout(searchTimer.current);
+    setSearchText("");
+    loadFolder([view]);
   }
 
   useEffect(() => {
@@ -162,6 +200,8 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
 
     if (!value) {
       setConnection(undefined);
+      clearTimeout(searchTimer.current);
+      setSearchText("");
       setPath([ROOT]);
       setItems([]);
       setNextPageToken(null);
@@ -258,6 +298,7 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
     }
 
     setConnection({ connected: false });
+    setSearchText("");
     setPath([ROOT]);
     setItems([]);
     setSelected(new Map());
@@ -324,6 +365,33 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
                 <Button variant="ghost" size="sm" onClick={disconnect}>
                   Se déconnecter
                 </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {[ROOT, SHARED].map((view) => (
+                  <Button
+                    key={view.id}
+                    variant={path[0].id === view.id ? "secondary" : "ghost"}
+                    size="sm"
+                    disabled={loading && path[0].id === view.id}
+                    onClick={() => openView(view)}
+                  >
+                    {view.name}
+                  </Button>
+                ))}
+
+                <div className="relative min-w-48 flex-1">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+                  <Input
+                    type="search"
+                    aria-label="Rechercher dans Google Drive"
+                    placeholder="Rechercher un fichier ou un dossier"
+                    className="pl-8"
+                    value={searchText}
+                    onChange={(event) => handleSearchChange(event.target.value)}
+                  />
+                </div>
               </div>
 
               <nav aria-label="Dossier courant" className="flex min-w-0 flex-wrap items-center gap-1 text-sm">
@@ -393,7 +461,7 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
 
                 {!loading && items.length === 0 && !error && (
                   <p className="py-6 text-center text-sm text-muted-foreground">
-                    Ce dossier est vide.
+                    {path[0].search ? "Aucun résultat." : "Ce dossier est vide."}
                   </p>
                 )}
 

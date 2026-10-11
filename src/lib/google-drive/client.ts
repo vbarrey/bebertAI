@@ -89,14 +89,36 @@ function toDriveItem(file: DriveFile): DriveItem {
     };
 }
 
+// Pseudo folder id of the items shared with the user: they are not in My Drive ("root").
+export const SHARED_WITH_ME = "sharedWithMe";
+
 /**
- * One page of the content of a folder ("root" for My Drive), folders first, then by name.
+ * One page of the content of a folder ("root" for My Drive, SHARED_WITH_ME), folders first, then by name.
  */
 export async function listDriveFolder(folderId: string, pageToken?: string): Promise<DriveFolderPage> {
     checkDriveId(folderId);
 
+    return listDriveFiles(
+        folderId === SHARED_WITH_ME
+            ? "sharedWithMe = true and trashed = false"
+            : `'${folderId}' in parents and trashed = false`,
+        pageToken,
+    );
+}
+
+/**
+ * Files and folders whose name contains `text`, in every folder of My Drive and of the shared items.
+ */
+export async function searchDrive(text: string, pageToken?: string): Promise<DriveFolderPage> {
+    // Drive query strings escape \ and ' with a backslash.
+    const escaped = text.replace(/[\\']/g, "\\$&");
+
+    return listDriveFiles(`name contains '${escaped}' and trashed = false`, pageToken);
+}
+
+async function listDriveFiles(q: string, pageToken?: string): Promise<DriveFolderPage> {
     const page = await driveFetch<{ files: DriveFile[]; nextPageToken?: string }>("/files", {
-        q: `'${folderId}' in parents and trashed = false`,
+        q,
         fields: `nextPageToken, files(${FILE_FIELDS})`,
         orderBy: "folder, name",
         pageSize: "100",
