@@ -20,6 +20,8 @@ export interface ChatRequestInput {
   temperature?: number;
   maxTokens?: number;
   think?: boolean;
+  // JSON schema the answer must follow.
+  format?: Record<string, unknown>;
 }
 
 export interface ChatChunk {

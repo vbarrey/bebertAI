@@ -17,6 +17,7 @@ export async function toOlllamaChatRequest(appChatRequest: ChatRequestInput): Pr
         messages: appChatRequest.messages,
         model: appChatRequest.modelName,
         think: appChatRequest.think,
+        format: appChatRequest.format,
         options: {
             temperature: appChatRequest.temperature,
             num_predict: appChatRequest.maxTokens,

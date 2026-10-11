@@ -22,6 +22,8 @@ export interface OllamaChatRequest {
   }[];
   // Ignored by models that cannot disable thinking (gpt-oss); true is refused by models without thinking.
   think?: boolean;
+  // JSON schema: Ollama constrains the answer to it (structured outputs).
+  format?: Record<string, unknown>;
   options?: {
     temperature?: number;
     num_predict?: number;
