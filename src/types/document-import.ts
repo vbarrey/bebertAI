@@ -5,6 +5,8 @@ export type DocumentImportFile = {
   fileSize: number;
   checksum: string;
   relativePath?: string;
+  // Id of the file at its source (Google Drive), sent back to import it.
+  sourceRef?: string;
   conflict: {
     documentId: string;
     displayName: string;

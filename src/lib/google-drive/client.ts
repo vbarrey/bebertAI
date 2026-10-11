@@ -45,7 +45,7 @@ export function isDriveId(value: string) {
     return DRIVE_ID.test(value);
 }
 
-async function driveFetch<T>(path: string, parameters: Record<string, string>): Promise<T> {
+async function driveRequest(path: string, parameters: Record<string, string>): Promise<Response> {
     const response = await fetch(`${DRIVE_API_URL}${path}?${new URLSearchParams(parameters)}`, {
         headers: { Authorization: `Bearer ${await getGoogleDriveAccessToken()}` },
     });
@@ -59,7 +59,19 @@ async function driveFetch<T>(path: string, parameters: Record<string, string>): 
         );
     }
 
-    return response.json();
+    return response;
+}
+
+async function driveFetch<T>(path: string, parameters: Record<string, string>): Promise<T> {
+    return (await driveRequest(path, parameters)).json();
+}
+
+const FILE_FIELDS = "id, name, mimeType, size, modifiedTime";
+
+function checkDriveId(id: string) {
+    if (!isDriveId(id)) {
+        throw new GoogleDriveApiError(400, `Identifiant Google Drive invalide : ${id}`);
+    }
 }
 
 function toDriveItem(file: DriveFile): DriveItem {
@@ -81,13 +93,11 @@ function toDriveItem(file: DriveFile): DriveItem {
  * One page of the content of a folder ("root" for My Drive), folders first, then by name.
  */
 export async function listDriveFolder(folderId: string, pageToken?: string): Promise<DriveFolderPage> {
-    if (!isDriveId(folderId)) {
-        throw new GoogleDriveApiError(400, `Identifiant de dossier invalide : ${folderId}`);
-    }
+    checkDriveId(folderId);
 
     const page = await driveFetch<{ files: DriveFile[]; nextPageToken?: string }>("/files", {
         q: `'${folderId}' in parents and trashed = false`,
-        fields: "nextPageToken, files(id, name, mimeType, size, modifiedTime)",
+        fields: `nextPageToken, files(${FILE_FIELDS})`,
         orderBy: "folder, name",
         pageSize: "100",
         supportsAllDrives: "true",
@@ -99,4 +109,54 @@ export async function listDriveFolder(folderId: string, pageToken?: string): Pro
         items: page.files.map(toDriveItem),
         nextPageToken: page.nextPageToken ?? null,
     };
+}
+
+export async function getDriveItem(id: string): Promise<DriveItem> {
+    checkDriveId(id);
+
+    return toDriveItem(await driveFetch<DriveFile>(`/files/${id}`, {
+        fields: FILE_FIELDS,
+        supportsAllDrives: "true",
+    }));
+}
+
+/**
+ * Every file under a folder, its subfolders included, with its path from that folder ("Folder/Sub/name.pdf").
+ */
+export async function listDriveFilesRecursive(
+    folder: Pick<DriveItem, "id" | "name">,
+): Promise<(DriveItem & { relativePath: string })[]> {
+    const files: (DriveItem & { relativePath: string })[] = [];
+    let pageToken: string | undefined;
+
+    do {
+        const page = await listDriveFolder(folder.id, pageToken);
+
+        for (const item of page.items) {
+            if (item.isFolder) {
+                const children = await listDriveFilesRecursive(item);
+
+                files.push(...children.map((child) => ({ ...child, relativePath: `${folder.name}/${child.relativePath}` })));
+            } else {
+                files.push({ ...item, relativePath: `${folder.name}/${item.name}` });
+            }
+        }
+
+        pageToken = page.nextPageToken ?? undefined;
+    } while (pageToken);
+
+    return files;
+}
+
+// Content of a file, streamed from Drive.
+export async function downloadDriveFile(id: string): Promise<ReadableStream<Uint8Array>> {
+    checkDriveId(id);
+
+    const response = await driveRequest(`/files/${id}`, { alt: "media", supportsAllDrives: "true" });
+
+    if (!response.body) {
+        throw new GoogleDriveApiError(502, `Google Drive : contenu vide pour ${id}`);
+    }
+
+    return response.body;
 }

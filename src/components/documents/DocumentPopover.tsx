@@ -6,6 +6,7 @@ import {
     Plus,
 } from "lucide-react";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,20 +37,23 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
     const [driveImportOpen, setDriveImportOpen] =
         useState(googleDriveResult === "connected");
 
-    // The result is shown once: dropped from the URL so a reload does not show it again.
+    const router = useRouter();
+    const pathname = usePathname();
+
+    // The result is shown once: dropped from the URL through the router (history.replaceState
+    // alone is undone by Next.js), so a reload does not show it again.
     useEffect(() => {
         if (!googleDriveResult) {
             return;
         }
 
-        const url = new URL(window.location.href);
-        url.searchParams.delete("googleDrive");
-        window.history.replaceState(null, "", url);
+        router.replace(pathname, { scroll: false });
 
         if (googleDriveResult !== "connected") {
-            toast.error("La connexion à Google Drive a échoué.");
+            // The id keeps a single toast when the effect runs twice in development.
+            toast.error("La connexion à Google Drive a échoué.", { id: "google-drive-connection" });
         }
-    }, [googleDriveResult]);
+    }, [googleDriveResult, pathname, router]);
 
     return (
         <>
@@ -110,6 +114,8 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
             <GoogleDriveImportDialog
                 open={driveImportOpen}
                 onOpenChange={setDriveImportOpen}
+                addDocuments={addDocuments}
+                onIndexingStarted={onIndexingStarted}
             />
         </>
     );
