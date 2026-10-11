@@ -80,6 +80,9 @@ src/
 │   └── queue/           # Files BullMQ
 ├── types/               # Types partagés
 └── workers/             # Workers BullMQ
+scripts/
+├── eval-retrieval/      # Évaluation de la recherche (npm run eval:retrieval), voir son README
+└── bench-indexing.ts    # Chronométrage de l'OCR et de l'embedding (npm run bench:indexing)
 ```
 
 ## Prérequis
