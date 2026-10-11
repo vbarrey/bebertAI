@@ -77,10 +77,11 @@ type DocumentRow = Document & { indexingError?: string | null; activeJobId?: str
 
 type Props = {
     initialDocuments: DocumentRow[]
+    googleDriveResult?: string
 }
 
 // ----- Page ----
-export function DocumentsDisplay({ initialDocuments }: Props) {
+export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props) {
     const [documents, setDocuments] = useState<DocumentRow[]>(initialDocuments);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | IndexingStatus>("ALL");
@@ -251,7 +252,7 @@ export function DocumentsDisplay({ initialDocuments }: Props) {
                     <p className="text-muted-foreground mt-1">Gestion et suivi de vos documents indexés.</p>
                 </div>
                 <div className="mt-4 lg:mt-0">
-                    <DocumentImportPopover addDocuments={addDocuments} onIndexingStarted={onIndexingStarted} />
+                    <DocumentImportPopover addDocuments={addDocuments} onIndexingStarted={onIndexingStarted} googleDriveResult={googleDriveResult} />
                 </div>
             </div>
 

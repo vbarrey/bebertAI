@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     HardDrive,
     Plus,
 } from "lucide-react";
 import Image from "next/image";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,19 +16,40 @@ import {
 } from "@/components/ui/popover";
 
 import { LocalDocumentImportDialog } from "./LocalDocumentImportDialog";
+import { GoogleDriveImportDialog } from "./GoogleDriveImportDialog";
 import { Document } from "@prisma/client";
 
 type Props = {
     addDocuments: (documents: Document[]) => void;
     onIndexingStarted: (jobId: string) => void;
+    // Back from the Google consent screen: "connected" reopens the Drive import.
+    googleDriveResult?: string;
 }
 
-export function DocumentImportPopover({ addDocuments, onIndexingStarted }: Props) {
+export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleDriveResult }: Props) {
     const [popoverOpen, setPopoverOpen] =
         useState(false);
 
     const [localImportOpen, setLocalImportOpen] =
         useState(false);
+
+    const [driveImportOpen, setDriveImportOpen] =
+        useState(googleDriveResult === "connected");
+
+    // The result is shown once: dropped from the URL so a reload does not show it again.
+    useEffect(() => {
+        if (!googleDriveResult) {
+            return;
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete("googleDrive");
+        window.history.replaceState(null, "", url);
+
+        if (googleDriveResult !== "connected") {
+            toast.error("La connexion à Google Drive a échoué.");
+        }
+    }, [googleDriveResult]);
 
     return (
         <>
@@ -63,7 +85,7 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted }: Props
                         className="w-full justify-start"
                         onClick={() => {
                             setPopoverOpen(false);
-                            // Google Drive plus tard.
+                            setDriveImportOpen(true);
                         }}
                     >
                         <Image
@@ -83,6 +105,11 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted }: Props
                 onOpenChange={setLocalImportOpen}
                 addDocuments={addDocuments}
                 onIndexingStarted={onIndexingStarted}
+            />
+
+            <GoogleDriveImportDialog
+                open={driveImportOpen}
+                onOpenChange={setDriveImportOpen}
             />
         </>
     );
