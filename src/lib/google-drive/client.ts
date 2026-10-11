@@ -1,7 +1,7 @@
 import { pipelineCapabilities } from "@/lib/pipeline/capabilities";
 import { DocumentFormat, getDocumentFormat } from "@/lib/documents/format";
 
-import { getGoogleDriveAccessToken } from "./auth";
+import { getGoogleDriveAccessToken, GoogleDriveAuthError } from "./auth";
 
 const DRIVE_API_URL = "https://www.googleapis.com/drive/v3";
 
@@ -152,11 +152,20 @@ export async function listDriveFilesRecursive(
 export async function downloadDriveFile(id: string): Promise<ReadableStream<Uint8Array>> {
     checkDriveId(id);
 
-    const response = await driveRequest(`/files/${id}`, { alt: "media", supportsAllDrives: "true" });
+    const response = await driveRequest(`/files/${id}`, { alt: "media", supportsAllDrives: "true" }).catch((error) => {
+        throw error instanceof GoogleDriveApiError && error.status === 404
+            ? new GoogleDriveApiError(404, "Fichier supprimé ou inaccessible dans Google Drive.")
+            : error;
+    });
 
     if (!response.body) {
         throw new GoogleDriveApiError(502, `Google Drive : contenu vide pour ${id}`);
     }
 
     return response.body;
+}
+
+// Retrying cannot help: the account has to be connected again, or the file is gone from Drive.
+export function isPermanentDriveError(error: unknown) {
+    return error instanceof GoogleDriveAuthError || (error instanceof GoogleDriveApiError && error.status === 404);
 }

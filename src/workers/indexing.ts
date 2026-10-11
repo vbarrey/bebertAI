@@ -32,6 +32,7 @@ import { getPipelineProvider, PipelineConfig } from "@/lib/pipeline/config";
 import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 import { withDocumentFile } from "@/lib/documents/storage";
+import { isPermanentDriveError } from "@/lib/google-drive/client";
 
 export type IndexingJobData = {
   indexingJobId: string;
@@ -226,9 +227,11 @@ async function initialize() {
             : "Erreur d'indexation inconnue"
         }`;
 
+        const unrecoverable = error instanceof UnrecoverableError || isPermanentDriveError(error);
+
         // BullMQ will retry the job: only the last attempt marks the job and the document as FAILED.
         const isLastAttempt =
-          error instanceof UnrecoverableError ||
+          unrecoverable ||
           job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
 
         if (isLastAttempt) {
@@ -239,7 +242,7 @@ async function initialize() {
         }
 
         // Rethrown with the stage so BullMQ's failedReason (sent over SSE) matches the DB message.
-        throw error instanceof UnrecoverableError
+        throw unrecoverable
           ? new UnrecoverableError(message)
           : new Error(message, { cause: error });
       }

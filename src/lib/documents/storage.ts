@@ -1,6 +1,13 @@
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdir, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import type { Document } from "@prisma/client";
+
+import { downloadDriveFile } from "@/lib/google-drive/client";
 
 const DOCUMENTS_STORAGE_PATH =
   process.env.DOCUMENTS_STORAGE_PATH ?? "./data/documents";
@@ -41,14 +48,32 @@ export async function deleteDocumentFile(
 }
 
 /**
- * Runs `use` with a local path to the document's file: the stored copy of a local document.
+ * Runs `run` with a local path to the document's file: the stored copy of a local document,
+ * a temporary download of a Google Drive one, deleted once `run` is done.
  */
 export async function withDocumentFile<T>(
-  document: Pick<Document, "id" | "sourceType" | "storagePath">,
-  use: (filePath: string) => Promise<T>,
+  document: Pick<Document, "id" | "sourceType" | "storagePath" | "sourceRef">,
+  run: (filePath: string) => Promise<T>,
 ): Promise<T> {
   if (document.sourceType === "LOCAL" && document.storagePath) {
-    return use(getDocumentFilePath(document.storagePath));
+    return run(getDocumentFilePath(document.storagePath));
+  }
+
+  if (document.sourceType === "GOOGLE_DRIVE" && document.sourceRef) {
+    const directory = await mkdtemp(path.join(tmpdir(), "bebert-drive-"));
+
+    try {
+      const filePath = path.join(directory, document.id);
+
+      await pipeline(
+        Readable.fromWeb((await downloadDriveFile(document.sourceRef)) as NodeReadableStream<Uint8Array>),
+        createWriteStream(filePath),
+      );
+
+      return await run(filePath);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 
   throw new Error(
