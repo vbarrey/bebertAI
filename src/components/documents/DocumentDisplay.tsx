@@ -10,6 +10,7 @@ import { DocumentStatusBadge } from "@/components/documents/DocumentStatusBadge"
 import { DocumentActions } from "@/components/documents/DocumentActions";
 import { DocumentBulkActions } from "@/components/documents/DocumentBulkActions";
 import { File, ListChecks } from "lucide-react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
 import { formatDistanceToNow } from "date-fns";
@@ -377,7 +378,17 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
                                                     <div className="flex items-center gap-2 min-w-0">
-                                                        <File className="size-4 shrink-0" />
+                                                        {doc.sourceType === "GOOGLE_DRIVE" ? (
+                                                            <Image
+                                                                src="/icons/google-drive.svg"
+                                                                alt="Google Drive"
+                                                                width={16}
+                                                                height={16}
+                                                                className="size-4 shrink-0"
+                                                            />
+                                                        ) : (
+                                                            <File className="size-4 shrink-0" />
+                                                        )}
                                                         <div className="truncate cursor-default min-w-0">
                                                             {doc.displayName}
                                                         </div>

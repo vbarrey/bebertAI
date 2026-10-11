@@ -9,6 +9,7 @@ L’application est conçue pour fonctionner principalement en local, avec une i
 ## Fonctionnalités
 
 - Import de documents locaux par fichiers, dossiers ou drag & drop
+- Import depuis Google Drive (fichiers et dossiers), sans copie locale des fichiers
 - Détection des formats et calcul de checksum SHA-256
 - Détection et gestion des doublons
 - Gestion des conflits avec remplacement ou ignore
@@ -227,15 +228,40 @@ Le modèle prévoit actuellement trois types de sources :
 - `GOOGLE_DRIVE`
 - `DROPBOX`
 
-L’import local est actuellement fonctionnel.
+L’import local et l’import Google Drive sont fonctionnels. Dropbox est prévu.
 
-Google Drive et Dropbox sont prévus mais leur intégration réelle n’est pas encore implémentée.
+### Google Drive
+
+Les fichiers Drive ne sont pas copiés : seuls l’identifiant du fichier (`Document.sourceRef`), ses chunks et ses embeddings sont conservés (`storagePath` reste vide).
+
+- **Import** : le dialogue « Google Drive » parcourt le Drive du compte connecté. Les fichiers et dossiers (récursivement) sélectionnés sont téléchargés en streaming pour calculer leur SHA-256, ce qui détecte les doublons, y compris avec les fichiers locaux.
+- **Indexation** : le worker télécharge le fichier dans un dossier temporaire, l’indexe puis le supprime.
+- **Visualisation** : « Visualiser » et les sources du chat ouvrent le fichier dans Google Drive.
+- **Limites** : les Google Docs, Sheets et Slides natifs ne sont pas supportés ; un dossier importé n’est pas synchronisé (les fichiers ajoutés ensuite ne sont pas suivis) ; un seul compte Google à la fois.
+
+Configuration (une fois) dans la [console Google Cloud](https://console.cloud.google.com) :
+
+1. Créer un projet et activer **Google Drive API**.
+2. **Google Auth Platform** : audience Externe (compte Gmail) avec son compte en utilisateur test, niveaux d’accès `openid`, `userinfo.email` et `drive.readonly`.
+3. Créer un client OAuth **Application Web** avec l’URI de redirection `http://localhost:3000/api/google-drive/callback` et noter son secret (affiché une seule fois).
+4. Renseigner les variables d’environnement :
+
+```env
+GOOGLE_CLIENT_ID="xxxx.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="GOCSPX-xxxx"
+GOOGLE_REDIRECT_URI="http://localhost:3000/api/google-drive/callback"
+# Chiffrement des tokens en base : node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+GOOGLE_TOKEN_ENCRYPTION_KEY="..."
+```
+
+Tant que l’application Google est en mode Test, Google invalide la connexion au bout de 7 jours : il faut se reconnecter depuis le dialogue. Publier l’application (sans validation, pour un usage personnel) lève cette limite.
 
 ## État du projet
 
 ### Fonctionnel
 
 - Import local
+- Import et indexation Google Drive
 - Stockage persistant
 - Gestion des doublons et conflits
 - Extraction PDF / TXT / DOCX
@@ -253,7 +279,6 @@ Google Drive et Dropbox sont prévus mais leur intégration réelle n’est pas 
 
 ### À venir
 
-- Intégration Google Drive
 - Intégration Dropbox
 - Nettoyage des anciens vecteurs Qdrant lors des suppressions/réindexations
 - Finalisation de certains paramètres de retrieval et génération

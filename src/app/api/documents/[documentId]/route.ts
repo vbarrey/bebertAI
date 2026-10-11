@@ -33,6 +33,7 @@ export async function GET(
             displayName: true,
             format: true,
             sourceType: true,
+            sourceRef: true,
         },
     });
 
@@ -44,6 +45,16 @@ export async function GET(
             {
                 status: 404,
             },
+        );
+    }
+
+    // The file stays in Drive: opened in its viewer, with the access rights of the Google account in the browser.
+    if (
+        document.sourceType === "GOOGLE_DRIVE" &&
+        document.sourceRef
+    ) {
+        return NextResponse.redirect(
+            `https://drive.google.com/file/d/${encodeURIComponent(document.sourceRef)}/view`,
         );
     }
 
