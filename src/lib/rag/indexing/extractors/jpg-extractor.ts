@@ -5,7 +5,7 @@ import type {
   DocumentExtractor,
   ExtractedDocument,
 } from "../../types";
-import { buildImageBlocks, getDocumentPath, type ImageMetadata } from "../indexing-utils";
+import { buildImageBlocks, type ImageMetadata } from "../indexing-utils";
 
 // EXIF IFD0 tags written by people (Windows Explorer for the XP* ones). Camera, dates and GPS are left out.
 const EXIF_LABELS: Record<number, string> = {
@@ -87,9 +87,10 @@ export function readJpgMetadata(buffer: Buffer): ImageMetadata {
 
 export class JpgExtractor implements DocumentExtractor {
   async extract(
+    filePath: string,
     document: Document,
   ): Promise<ExtractedDocument> {
-    const metadata = readJpgMetadata(await readFile(getDocumentPath(document)));
+    const metadata = readJpgMetadata(await readFile(filePath));
 
     return {
       blocks: buildImageBlocks(document.displayName, metadata),

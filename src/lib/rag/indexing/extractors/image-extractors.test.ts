@@ -141,27 +141,21 @@ describe("readJpgMetadata", () => {
 });
 
 describe("image extractors", () => {
-    const STORAGE = process.env.DOCUMENTS_STORAGE_PATH ?? "./data/documents";
     const directory = mkdtemp(path.join(tmpdir(), "bebert-images-"));
 
     after(async () => rm(await directory, { recursive: true, force: true }));
 
-    // getDocumentPath() resolves storagePath against the storage folder.
-    async function document(name: string, content: Buffer): Promise<Document> {
+    // The extractor arguments: the file written to disk and its document.
+    async function file(name: string, content: Buffer): Promise<[string, Document]> {
         const filePath = path.join(await directory, name);
         await writeFile(filePath, content);
 
-        return {
-            id: name,
-            displayName: name,
-            storagePath: path.relative(STORAGE, filePath),
-            language: null,
-        } as Document;
+        return [filePath, { id: name, displayName: name, language: null } as Document];
     }
 
     it("indexes a PNG as one chunk without page or bounds", async () => {
         const extraction = await new PngExtractor().extract(
-            await document("plan_moteur_celtaquatre.png", png([["tEXt", latin1("Title\0Moteur Celtaquatre")]])),
+            ...await file("plan_moteur_celtaquatre.png", png([["tEXt", latin1("Title\0Moteur Celtaquatre")]])),
         );
 
         const chunks = await new RecursiveCharacterChunker({ chunkSize: 1000, chunkOverlap: 200 }).chunk(extraction);
@@ -174,7 +168,7 @@ describe("image extractors", () => {
     });
 
     it("indexes a JPEG from its name when it has no metadata", async () => {
-        const { blocks } = await new JpgExtractor().extract(await document("IMG_0042.jpeg", jpg([])));
+        const { blocks } = await new JpgExtractor().extract(...await file("IMG_0042.jpeg", jpg([])));
 
         assert.deepEqual(blocks, [{ text: "Image : IMG 0042\nFichier : IMG_0042.jpeg" }]);
     });

@@ -6,7 +6,7 @@ import type {
   DocumentExtractor,
   ExtractedDocument,
 } from "../../types";
-import { buildImageBlocks, getDocumentPath, type ImageMetadata } from "../indexing-utils";
+import { buildImageBlocks, type ImageMetadata } from "../indexing-utils";
 
 // PNG text keywords written by people (not by the encoder).
 const LABELS: Record<string, string> = {
@@ -71,9 +71,10 @@ export function readPngMetadata(buffer: Buffer): ImageMetadata {
 
 export class PngExtractor implements DocumentExtractor {
   async extract(
+    filePath: string,
     document: Document,
   ): Promise<ExtractedDocument> {
-    const metadata = readPngMetadata(await readFile(getDocumentPath(document)));
+    const metadata = readPngMetadata(await readFile(filePath));
 
     return {
       blocks: buildImageBlocks(document.displayName, metadata),

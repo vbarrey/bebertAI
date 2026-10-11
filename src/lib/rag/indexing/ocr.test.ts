@@ -75,16 +75,8 @@ const hasOcrTools = (() => {
     }
 })();
 
-const STORAGE = process.env.DOCUMENTS_STORAGE_PATH ?? "./data/documents";
-
-// getDocumentPath() resolves storagePath against the storage folder.
-function fixtureDocument(name: string): Document {
-    return {
-        id: name,
-        storagePath: path.relative(STORAGE, path.resolve("src/lib/rag/indexing/__fixtures__", name)),
-        language: null,
-    } as Document;
-}
+const MIXED_PDF = path.resolve("src/lib/rag/indexing/__fixtures__/mixed.pdf");
+const mixedDocument = { id: "mixed.pdf", language: null } as Document;
 
 const ocrParameters = { ...defaultPipelineParameters.extraction, ocrEnabled: true };
 
@@ -100,7 +92,8 @@ describe("OCR with real Tesseract", { skip: !hasOcrTools && "tesseract / pdftopp
         const progress: [number, number][] = [];
 
         const { blocks } = await new PdfExtractor(ocrParameters).extract(
-            fixtureDocument("mixed.pdf"),
+            MIXED_PDF,
+            mixedDocument,
             (current, total) => { progress.push([current, total]); },
         );
 
@@ -137,7 +130,7 @@ describe("OCR with real Tesseract", { skip: !hasOcrTools && "tesseract / pdftopp
 
     it("does not run OCR when it is disabled", async () => {
         const { blocks } = await new PdfExtractor({ ...ocrParameters, ocrEnabled: false })
-            .extract(fixtureDocument("mixed.pdf"));
+            .extract(MIXED_PDF, mixedDocument);
 
         assert.deepEqual(blocks.map((block) => block.pageNumber), [1]);
     });

@@ -1,5 +1,6 @@
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import type { Document } from "@prisma/client";
 
 const DOCUMENTS_STORAGE_PATH =
   process.env.DOCUMENTS_STORAGE_PATH ?? "./data/documents";
@@ -37,4 +38,20 @@ export async function deleteDocumentFile(
   const filePath = getDocumentFilePath(storagePath);
 
   await unlink(filePath).catch(() => undefined);
+}
+
+/**
+ * Runs `use` with a local path to the document's file: the stored copy of a local document.
+ */
+export async function withDocumentFile<T>(
+  document: Pick<Document, "id" | "sourceType" | "storagePath">,
+  use: (filePath: string) => Promise<T>,
+): Promise<T> {
+  if (document.sourceType === "LOCAL" && document.storagePath) {
+    return use(getDocumentFilePath(document.storagePath));
+  }
+
+  throw new Error(
+    `Document ${document.id} has no file (source ${document.sourceType}).`,
+  );
 }

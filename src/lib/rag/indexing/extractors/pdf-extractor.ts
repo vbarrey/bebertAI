@@ -13,7 +13,6 @@ import type {
 
 import { Document } from "@prisma/client";
 
-import { getDocumentPath } from "../indexing-utils";
 import { getOcrLanguages, ocrPdfPage } from "../ocr";
 import type { ExtractionParameters } from "@/lib/pipeline/parameters";
 import { mapWithConcurrency } from "@/lib/concurrency";
@@ -80,10 +79,10 @@ export class PdfExtractor implements DocumentExtractor {
     ) {}
 
     async extract(
+        filePath: string,
         document: Document,
         onProgress?: ExtractionProgress,
     ): Promise<ExtractedDocument> {
-        const filePath = getDocumentPath(document);
         const buffer = await readFile(filePath);
 
         const { items } = await extractTextItems(

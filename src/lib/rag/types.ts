@@ -39,8 +39,9 @@ export type ChunkingConfiguration = {
 // Reports long extraction work (OCR pages), current out of total.
 export type ExtractionProgress = (current: number, total: number) => Promise<void> | void;
 
+// `filePath` is a local copy of the document's file, whatever its source.
 export interface DocumentExtractor {
-  extract(document: Document, onProgress?: ExtractionProgress): Promise<ExtractedDocument>;
+  extract(filePath: string, document: Document, onProgress?: ExtractionProgress): Promise<ExtractedDocument>;
 }
 
 export interface DocumentChunker {

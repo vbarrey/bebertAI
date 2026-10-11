@@ -10,6 +10,7 @@
 import type { Chunk } from "@prisma/client";
 
 import { OllamaProvider } from "@/lib/ai/ollama/provider";
+import { withDocumentFile } from "@/lib/documents/storage";
 import { prisma } from "@/lib/prisma";
 import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
 import { DocumentEmbedder, embeddingContextLength, type EmbeddingCache } from "@/lib/rag/embedding/embedder";
@@ -50,7 +51,8 @@ async function main() {
     let pages = 0;
 
     await timed(`OCR « ${scan.displayName.slice(0, 30)} » (${extraction.ocrLanguages.join("+")})`, () =>
-        new PdfExtractor(extraction).extract(scan, (_, total) => { pages = total; }));
+        withDocumentFile(scan, (filePath) =>
+            new PdfExtractor(extraction).extract(filePath, scan, (_, total) => { pages = total; })));
     console.log(`  ${pages} pages OCR`);
 
     // Embedding: the model is loaded first so the timing is the embedding alone.

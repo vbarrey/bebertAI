@@ -31,6 +31,7 @@ import { INDEXING_STAGE_LABELS, IndexingStage } from "@/lib/queue/types";
 import { getPipelineProvider, PipelineConfig } from "@/lib/pipeline/config";
 import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
 import { DocumentFormatSchema } from "@/lib/documents/format";
+import { withDocumentFile } from "@/lib/documents/storage";
 
 export type IndexingJobData = {
   indexingJobId: string;
@@ -117,10 +118,11 @@ async function initialize() {
         await updateProgress(IndexingStage.EXTRACTING);
 
         // OCR runs inside this stage: progress stays on EXTRACTING with the pages done so far.
-        const extracted = await extractor.extract(
+        const extracted = await withDocumentFile(document, (filePath) => extractor.extract(
+          filePath,
           document,
           (current, total) => job.updateProgress({ stage: IndexingStage.EXTRACTING, current, total }),
-        );
+        ));
 
         // Every later step works on the same text: NFC, part numbers in Latin letters.
         const extraction = {
