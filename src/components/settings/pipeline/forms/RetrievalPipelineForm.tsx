@@ -3,10 +3,12 @@
 import { SaveButton, type SaveStatus } from "@/components/settings/pipeline/SaveButton";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -52,7 +54,12 @@ export function RetrievalPipelineForm({
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const { translation } = values.hybrid;
+  const { hybrid } = values;
+  const { translation } = hybrid;
+
+  function setHybrid(patch: Partial<RetrievalParameters["hybrid"]>) {
+    setValues({ ...values, hybrid: { ...hybrid, ...patch } });
+  }
   const translationValue = translation.providerId && translation.modelName
     ? `${translation.providerId}${SEPARATOR}${translation.modelName}`
     : CONVERSATION_MODEL;
@@ -64,7 +71,7 @@ export function RetrievalPipelineForm({
       ? { providerId: "", modelName: "" }
       : { providerId: value.slice(0, index), modelName: value.slice(index + SEPARATOR.length) };
 
-    setValues({ ...values, hybrid: { ...values.hybrid, translation: next } });
+    setHybrid({ translation: next });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -110,7 +117,7 @@ export function RetrievalPipelineForm({
 
       <Field>
         <FieldLabel htmlFor="pipeline-score-threshold">
-          Seuil de score
+          Seuil sémantique
         </FieldLabel>
 
         <Input
@@ -129,7 +136,8 @@ export function RetrievalPipelineForm({
         />
 
         <FieldDescription>
-          Score minimal requis pour conserver un résultat.
+          Similarité minimale d&apos;un résultat de la recherche sémantique. Les résultats de la recherche
+          lexicale n&apos;y sont pas soumis.
         </FieldDescription>
       </Field>
 
@@ -159,10 +167,106 @@ export function RetrievalPipelineForm({
         </FieldDescription>
       </Field>
 
+      <Field orientation="horizontal">
+        <FieldContent>
+          <FieldLabel htmlFor="pipeline-hybrid">
+            Recherche hybride
+          </FieldLabel>
+
+          <FieldDescription>
+            Ajoute à la recherche sémantique une recherche lexicale (BM25) sur les mots de la question,
+            traduite dans chaque langue des documents. Retrouve les références, noms et termes exacts.
+          </FieldDescription>
+        </FieldContent>
+
+        <Switch
+          id="pipeline-hybrid"
+          checked={hybrid.enabled}
+          onCheckedChange={(enabled) => setHybrid({ enabled })}
+        />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field>
+          <FieldLabel htmlFor="pipeline-dense-limit">
+            Candidats sémantiques
+          </FieldLabel>
+
+          <Input
+            id="pipeline-dense-limit"
+            type="number"
+            min={1}
+            step={1}
+            disabled={!hybrid.enabled}
+            value={hybrid.denseLimit}
+            onChange={(event) => setHybrid({ denseLimit: event.target.valueAsNumber })}
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="pipeline-sparse-limit">
+            Candidats lexicaux
+          </FieldLabel>
+
+          <Input
+            id="pipeline-sparse-limit"
+            type="number"
+            min={1}
+            step={1}
+            disabled={!hybrid.enabled}
+            value={hybrid.sparseLimit}
+            onChange={(event) => setHybrid({ sparseLimit: event.target.valueAsNumber })}
+          />
+        </Field>
+      </div>
+
+      <FieldDescription>
+        Résultats de chaque recherche avant la fusion, qui garde les meilleurs selon le nombre de résultats.
+      </FieldDescription>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field>
+          <FieldLabel htmlFor="pipeline-sparse-weight">
+            Poids lexical
+          </FieldLabel>
+
+          <Input
+            id="pipeline-sparse-weight"
+            type="number"
+            min={0}
+            step={0.1}
+            disabled={!hybrid.enabled}
+            value={hybrid.sparseWeight}
+            onChange={(event) => setHybrid({ sparseWeight: event.target.valueAsNumber })}
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="pipeline-rrf-k">
+            Constante RRF (k)
+          </FieldLabel>
+
+          <Input
+            id="pipeline-rrf-k"
+            type="number"
+            min={1}
+            step={1}
+            disabled={!hybrid.enabled}
+            value={hybrid.rrfK}
+            onChange={(event) => setHybrid({ rrfK: event.target.valueAsNumber })}
+          />
+        </Field>
+      </div>
+
+      <FieldDescription>
+        Poids de la recherche lexicale dans la fusion, la recherche sémantique pesant 1 (0 la désactive).
+        Plus k est petit, plus les premiers résultats de chaque recherche l&apos;emportent.
+      </FieldDescription>
+
       <Field>
         <FieldLabel>Modèle de traduction</FieldLabel>
 
-        <Select value={translationValue} onValueChange={setTranslation}>
+        <Select value={translationValue} onValueChange={setTranslation} disabled={!hybrid.enabled}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
