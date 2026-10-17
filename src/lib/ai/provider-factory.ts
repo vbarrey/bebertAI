@@ -28,7 +28,8 @@ export function createProviderClient(provider: AIProvider): AIProviderClient {
 
 /**
  * Stores the models listed by the provider, keeping the models already stored as they are,
- * with whether they need usage credits when the provider tells (one request per model).
+ * with whether they need usage credits when the provider tells (one request per model),
+ * and deletes the ones it no longer lists.
  */
 export async function syncProviderModels(provider: AIProvider, client: AIProviderClient): Promise<void> {
   const models = await client.models();
@@ -62,6 +63,14 @@ export async function syncProviderModels(provider: AIProvider, client: AIProvide
         data: { defaultModelId: pModel.id },
       });
     }
+  }
+
+  // Gone from the provider: the conversations that used it go on with the pipeline model.
+  // An empty list is rather a provider in trouble than every model removed: nothing is deleted then.
+  if (models.length > 0) {
+    await prisma.aIModel.deleteMany({
+      where: { providerId: provider.id, name: { notIn: models.map((model) => model.name) } },
+    });
   }
 }
 
