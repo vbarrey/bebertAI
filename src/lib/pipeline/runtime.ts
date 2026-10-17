@@ -1,11 +1,11 @@
 import { PipelineConfig } from "./config";
-import { defaultPipelineParameters } from "./default";
+import { defaultPipelineParameters, withDefaultModels } from "./default";
 import { pipelineCapabilities } from "./capabilities";
 import { PipelineParametersSchema, PipelineParameters, requiresReindex } from "./parameters";
 import { prisma } from "@/lib/prisma";
 import { deleteChunksCollection } from "@/lib/qdrant/collections";
 import { flagIndexedDocumentsForReindex } from "@/lib/mutations/document";
-import { IndexingStatus } from "@prisma/client";
+import { AIProviderType, IndexingStatus } from "@prisma/client";
 import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
 import { z } from "zod";
 
@@ -19,21 +19,19 @@ class PipelineRuntime {
       where: { id: 1 },
     });
 
-    let pipelineParameters: PipelineParameters;
-
     if (!storedParameters) {
       console.log("No parameters stored in database - using default parameters");
+    }
 
-      pipelineParameters = this.parseParameters(defaultPipelineParameters);
+    const parsedParameters = this.parseParameters(storedParameters?.parameters ?? defaultPipelineParameters);
+    const pipelineParameters = await this.withLocalDefaultModels(parsedParameters);
 
-      await prisma.pipelineParameters.create({
-        data: {
-          id: 1,
-          parameters: JSON.stringify(pipelineParameters),
-        },
+    if (!storedParameters || pipelineParameters !== parsedParameters) {
+      await prisma.pipelineParameters.upsert({
+        where: { id: 1 },
+        create: { id: 1, parameters: JSON.stringify(pipelineParameters) },
+        update: { parameters: JSON.stringify(pipelineParameters) },
       });
-    } else {
-      pipelineParameters = this.parseParameters(storedParameters.parameters);
     }
 
     this.config = {
@@ -100,6 +98,29 @@ class PipelineRuntime {
       ...(await this.getConfig()),
       parameters: validatedParameters,
     };
+  }
+
+  /**
+   * Steps never configured use the local Ollama models when synchronized: the default model of the provider
+   * for the generation, OLLAMA_EMBEDDING_MODEL for the embedding (both downloaded by docker compose).
+   */
+  private async withLocalDefaultModels(parameters: PipelineParameters): Promise<PipelineParameters> {
+    const provider = await prisma.aIProvider.findFirst({
+      where: { type: AIProviderType.OLLAMA_LOCAL },
+      select: { id: true, defaultModel: { select: { name: true } }, models: { select: { name: true } } },
+    });
+
+    if (!provider) {
+      return parameters;
+    }
+
+    const embeddingModel = process.env.OLLAMA_EMBEDDING_MODEL;
+
+    return withDefaultModels(parameters, {
+      providerId: provider.id,
+      generationModel: provider.defaultModel?.name,
+      embeddingModel: provider.models.some((model) => model.name === embeddingModel) ? embeddingModel : undefined,
+    });
   }
 
   private parseParameters(parameters: unknown): PipelineParameters {
