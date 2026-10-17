@@ -46,6 +46,9 @@ export function ProviderTypeSelector({
             <SelectItem value="OLLAMA_CLOUD">
               Ollama Cloud
             </SelectItem>
+            <SelectItem value="ANTHROPIC">
+              Anthropic
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>

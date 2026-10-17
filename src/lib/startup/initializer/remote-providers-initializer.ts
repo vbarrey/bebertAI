@@ -5,7 +5,7 @@ import { aiProviderRegistry } from "@/lib/ai/registry";
 import { createProviderClient, syncProviderModels } from "@/lib/ai/provider-factory";
 
 // Providers created from the settings, unlike Ollama local which comes from the .env.
-const REMOTE_PROVIDER_TYPES: AIProviderType[] = [AIProviderType.OLLAMA_CLOUD];
+const REMOTE_PROVIDER_TYPES: AIProviderType[] = [AIProviderType.OLLAMA_CLOUD, AIProviderType.ANTHROPIC];
 
 export class RemoteProvidersInitializer implements AIInitializer {
   name: string = "REMOTE PROVIDERS INIT";

@@ -6,6 +6,8 @@ import { OllamaLocalProvider } from "./ollama-local/provider";
 import { parseOllamaLocalConfig } from "./ollama-local/config";
 import { OllamaCloudProvider } from "./ollama-cloud/provider";
 import { parseOllamaCloudConfig } from "./ollama-cloud/config";
+import { AnthropicProvider } from "./anthropic/provider";
+import { parseAnthropicConfig } from "./anthropic/config";
 
 export function createProviderClient(provider: AIProvider): AIProviderClient {
   switch (provider.type) {
@@ -13,6 +15,8 @@ export function createProviderClient(provider: AIProvider): AIProviderClient {
       return new OllamaLocalProvider(provider.id, provider.name, parseOllamaLocalConfig(provider.configuration));
     case AIProviderType.OLLAMA_CLOUD:
       return new OllamaCloudProvider(provider.id, provider.name, parseOllamaCloudConfig(provider.configuration));
+    case AIProviderType.ANTHROPIC:
+      return new AnthropicProvider(provider.id, provider.name, parseAnthropicConfig(provider.configuration));
     default:
       throw new Error(`Type de fournisseur non supporté : ${provider.type}`);
   }

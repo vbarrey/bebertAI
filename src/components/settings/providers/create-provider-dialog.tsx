@@ -17,7 +17,7 @@ import { AIProviderType } from "@prisma/client";
 
 import { ProviderTypeSelector } from "./provider-type-selector";
 import { OllamaLocalProviderForm } from "./provider-form/ollama-local";
-import { OllamaCloudProviderForm } from "./provider-form/ollama-cloud";
+import { ApiKeyProviderForm } from "./provider-form/api-key-provider";
 
 export function CreateProviderDialog() {
   const [open, setOpen] = useState(false);
@@ -57,8 +57,9 @@ export function CreateProviderDialog() {
 
         {selectedType === null ? (
           <ProviderTypeSelector onSelect={setSelectedType} />
-        ) : selectedType === "OLLAMA_CLOUD" ? (
-          <OllamaCloudProviderForm
+        ) : selectedType === "OLLAMA_CLOUD" || selectedType === "ANTHROPIC" ? (
+          <ApiKeyProviderForm
+            type={selectedType}
             onBack={() => setSelectedType(null)}
             onSuccess={() => setOpen(false)}
           />

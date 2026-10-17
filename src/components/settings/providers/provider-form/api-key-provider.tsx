@@ -14,19 +14,29 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-import { createOllamaCloudProvider } from "@/lib/mutations/aiProvider";
+import { ApiKeyProviderType, createApiKeyProvider } from "@/lib/mutations/aiProvider";
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 
-type OllamaCloudProviderFormProps = {
+// What differs between the providers reached with an API key.
+const providerForms: Record<ApiKeyProviderType, { name: string; apiKeyUrl: string; modelPlaceholder: string; hasHost: boolean }> = {
+  OLLAMA_CLOUD: { name: "Ollama Cloud", apiKeyUrl: "ollama.com/settings/keys", modelPlaceholder: "gpt-oss:120b", hasHost: true },
+  ANTHROPIC: { name: "Anthropic", apiKeyUrl: "platform.claude.com/settings/keys", modelPlaceholder: "claude-opus-5-5", hasHost: false },
+};
+
+type ApiKeyProviderFormProps = {
+  type: ApiKeyProviderType;
   onBack: () => void;
   onSuccess: () => void;
 };
 
-export function OllamaCloudProviderForm({
+export function ApiKeyProviderForm({
+  type,
   onBack,
   onSuccess,
-}: OllamaCloudProviderFormProps) {
-  const [name, setName] = useState("Ollama Cloud");
+}: ApiKeyProviderFormProps) {
+  const form = providerForms[type];
+
+  const [name, setName] = useState(form.name);
   const [host, setHost] = useState(OLLAMA_CLOUD_HOST);
   const [apiKey, setApiKey] = useState("");
   const [defaultModel, setDefaultModel] = useState("");
@@ -41,7 +51,7 @@ export function OllamaCloudProviderForm({
     setLoading(true);
 
     try {
-      const result = await createOllamaCloudProvider({ name, host, apiKey, defaultModel });
+      const result = await createApiKeyProvider(type, { name, host, apiKey, defaultModel });
 
       if (result?.error) {
         setError(result.error);
@@ -75,17 +85,19 @@ export function OllamaCloudProviderForm({
           </FieldDescription>
         </Field>
 
-        <Field>
-          <FieldLabel htmlFor="host">Adresse de l&apos;API</FieldLabel>
+        {form.hasHost && (
+          <Field>
+            <FieldLabel htmlFor="host">Adresse de l&apos;API</FieldLabel>
 
-          <Input
-            id="host"
-            type="url"
-            value={host}
-            onChange={(event) => setHost(event.target.value)}
-            required
-          />
-        </Field>
+            <Input
+              id="host"
+              type="url"
+              value={host}
+              onChange={(event) => setHost(event.target.value)}
+              required
+            />
+          </Field>
+        )}
 
         <Field>
           <FieldLabel htmlFor="api-key">Clé API</FieldLabel>
@@ -100,7 +112,7 @@ export function OllamaCloudProviderForm({
           />
 
           <FieldDescription>
-            À créer sur ollama.com/settings/keys. Elle est vérifiée avant
+            À créer sur {form.apiKeyUrl}. Elle est vérifiée avant
             l&apos;ajout du fournisseur.
           </FieldDescription>
         </Field>
@@ -112,7 +124,7 @@ export function OllamaCloudProviderForm({
             id="default-model"
             value={defaultModel}
             onChange={(event) => setDefaultModel(event.target.value)}
-            placeholder="glm-5.3"
+            placeholder={form.modelPlaceholder}
           />
         </Field>
       </FieldGroup>
