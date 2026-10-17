@@ -1,4 +1,4 @@
-import { AIProvider, AIProviderType } from "@prisma/client";
+import { AIProvider, AIProviderType, Capability } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AIProviderClient } from "./provider";
 import { aiProviderRegistry } from "./registry";
@@ -37,14 +37,23 @@ export async function syncProviderModels(provider: AIProvider, client: AIProvide
     : [];
   const configuration = provider.configuration as { defaultModel?: string } | null;
 
-  for (const [index, model] of models.entries()) {
+  // The capability rows are shared: created first, a synchronization running alongside cannot create them twice.
+  await Promise.all(
+    Object.values(Capability).map((name) =>
+      prisma.aIModelCapability.upsert({ where: { name }, create: { name }, update: {} }),
+    ),
+  );
+
+  for (const [index, { capabilities = [], ...model }] of models.entries()) {
     // An unknown answer (rate limited...) keeps what the last synchronization found.
     const access = requiresCredits[index] === undefined ? {} : { requiresCredits: requiresCredits[index] };
+    // Added to the capabilities of the model: the ones set by hand stay.
+    const reported = { capabilities: { connect: capabilities.map((name) => ({ name })) } };
 
     const pModel = await prisma.aIModel.upsert({
       where: { providerId_name: { providerId: provider.id, name: model.name } },
-      create: { ...model, ...access, providerId: provider.id },
-      update: access,
+      create: { ...model, ...access, ...reported, providerId: provider.id },
+      update: { ...access, ...reported },
     });
 
     if (configuration?.defaultModel === model.name) {

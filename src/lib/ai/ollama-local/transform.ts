@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Capability } from "@prisma/client";
 import { AIModelInfo, ChatRequestInput, ChatChunk, EmbedRequest, Embedding } from "../types";
 import { OllamaModel, OllamaChatRequest, OllamaChatChunk, OllamaEmbedRequest, OllamaEmbedResponse} from "./types";
 
@@ -8,8 +9,19 @@ export function toAppModel(ollamaModel: OllamaModel): AIModelInfo {
         displayName: ollamaModel.model,
         family: ollamaModel.details.family,
         parameterSize: ollamaModel.details.parameter_size,
-        sizeBytes: ollamaModel.size
+        sizeBytes: ollamaModel.size,
+        capabilities: toAppCapabilities(ollamaModel.capabilities),
     }
+}
+
+// Ollama has no reranking capability; the others ("tools", "thinking", "vision"...) are no app capability.
+const OLLAMA_CAPABILITIES: Record<string, Capability> = {
+    completion: Capability.GENERATION,
+    embedding: Capability.EMBEDDING,
+};
+
+export function toAppCapabilities(ollamaCapabilities: string[] = []): Capability[] {
+    return ollamaCapabilities.flatMap((capability) => OLLAMA_CAPABILITIES[capability] ?? []);
 }
 
 export async function toOlllamaChatRequest(appChatRequest: ChatRequestInput): Promise<OllamaChatRequest> {

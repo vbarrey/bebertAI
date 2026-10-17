@@ -1,3 +1,5 @@
+import { Capability } from "@prisma/client";
+
 // BebertAI types
 import { AIModelInfo, ChatChunk, Embedding, EmbedRequest } from "../types";
 import { AIProviderClient } from "../provider";
@@ -9,9 +11,9 @@ const VOYAGE_HOST = "https://api.voyageai.com";
 
 // Voyage has no API listing its models: its general purpose text models, 200M free tokens each.
 const VOYAGE_MODELS: AIModelInfo[] = [
-  { name: "voyage-4-large", displayName: "Voyage 4 Large", family: "voyage-4" },
-  { name: "voyage-4", displayName: "Voyage 4", family: "voyage-4" },
-  { name: "voyage-4-lite", displayName: "Voyage 4 Lite", family: "voyage-4" },
+  { name: "voyage-4-large", displayName: "Voyage 4 Large", family: "voyage-4", capabilities: [Capability.EMBEDDING] },
+  { name: "voyage-4", displayName: "Voyage 4", family: "voyage-4", capabilities: [Capability.EMBEDDING] },
+  { name: "voyage-4-lite", displayName: "Voyage 4 Lite", family: "voyage-4", capabilities: [Capability.EMBEDDING] },
 ];
 
 // Voyage advises an exponential backoff on 429: 1, 2, 4... 32 s, for the low limits of an account without payment method.

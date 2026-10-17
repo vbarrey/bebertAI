@@ -4,6 +4,7 @@ import { AIInitializer } from "../../AIInitializer";
 import { aiProviderRegistry } from "@/lib/ai/registry";
 import { parseOllamaLocalConfig } from "@/lib/ai/ollama-local/config";
 import { OllamaLocalProvider } from "@/lib/ai/ollama-local/provider";
+import { syncProviderModels } from "@/lib/ai/provider-factory";
 
 export class OllamaLocalInitializer implements AIInitializer {
   name: string = "OLLAMA LOCAL INIT";
@@ -47,54 +48,9 @@ export class OllamaLocalInitializer implements AIInitializer {
       );
     }
 
-    const ollamaProviderClient = aiProviderRegistry.get(this.providerId)!;
-    const models = await ollamaProviderClient.models();
-
-    if (!models) {
-      console.log(
-        "No models found from Ollama. Skipping model synchronization."
-      );
-      return; // TODO : Add fallback (There should be at least one model)
-    }
-
-    const ollamaProvider = await prisma.aIProvider.findFirst({
-      where: {
-        type: AIProviderType.OLLAMA_LOCAL,
-      },
-    });
-
-    if (!ollamaProvider) {
-      console.error(
-        "Ollama provider not found in database. Cannot synchronize models."
-      );
-      return; // TODO : Add fallback (Ollama provider should exist)
-    }
-
-    for (const model of models) {
-      let pModel = await prisma.aIModel.findFirst({
-        where: {
-          name: model.name,
-          provider: {
-            type: AIProviderType.OLLAMA_LOCAL,
-          },
-        },
-      });
-
-      if (!pModel) {
-        pModel = await prisma.aIModel.create({
-          data: { ...model, providerId: ollamaProvider.id },
-        });
-      }
-
-      if (process.env["OLLAMA_DEFAULT_MODEL"] === model.name) {
-        await prisma.aIProvider.update({
-          where: { id: ollamaProvider.id },
-          data: {
-            defaultModelId: pModel.id,
-          },
-          include: { defaultModel: true },
-        });
-      }
-    }
+    // The same synchronization as the other providers: the default model is the one of its configuration,
+    // set from OLLAMA_DEFAULT_MODEL when the provider was created.
+    const provider = await prisma.aIProvider.findUniqueOrThrow({ where: { id: this.providerId } });
+    await syncProviderModels(provider, aiProviderRegistry.get(this.providerId)!);
   }
 }

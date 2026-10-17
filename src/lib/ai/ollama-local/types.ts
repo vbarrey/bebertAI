@@ -12,6 +12,8 @@ export interface OllamaModel {
     parameter_size: string;
     quantization_level: string;
   };
+  // "completion", "embedding", "tools", "thinking"... (Ollama local and Ollama Cloud alike).
+  capabilities?: string[];
 }
 
 export interface OllamaChatRequest {

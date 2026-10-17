@@ -1,3 +1,4 @@
+import type { Capability } from "@prisma/client";
 import type { ChatStep } from "./chat/steps";
 
 export interface AIModelInfo {
@@ -7,6 +8,8 @@ export interface AIModelInfo {
   family?: string;
   parameterSize?: string;
   sizeBytes?: bigint | number;
+  // What the provider says the model can do; added to the capabilities set by hand at each synchronization.
+  capabilities?: Capability[];
 }
 
 export interface Message {

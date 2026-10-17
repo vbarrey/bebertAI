@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { Capability } from "@prisma/client";
 import { AIModelInfo, ChatRequestInput } from "../types";
 
 // No response length in the pipeline: room for the answer and the model thinking.
@@ -8,6 +9,8 @@ export function toAppModel(model: Anthropic.ModelInfo): AIModelInfo {
   return {
     name: model.id,
     displayName: model.display_name,
+    // Claude models only generate: Anthropic has no embedding API.
+    capabilities: [Capability.GENERATION],
   };
 }
 
