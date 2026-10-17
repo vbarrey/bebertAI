@@ -68,7 +68,7 @@ export class AnthropicProvider implements AIProviderClient {
     if (!hasContent) {
       throw new AnthropicError(
         message.stop_reason === "max_tokens"
-          ? `Réponse vide : la limite de ${message.usage.output_tokens} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens dans Paramètres > Pipeline.`
+          ? `Réponse vide : la limite de ${message.usage.output_tokens} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens dans Réglages > Pipeline.`
           : `Réponse vide du modèle (stop_reason: ${message.stop_reason}).`,
       );
     }
@@ -83,7 +83,7 @@ export class AnthropicProvider implements AIProviderClient {
   }
 
   async embed(): Promise<Embedding[]> {
-    throw new AnthropicError("Anthropic ne propose pas d'API d'embedding. Choisissez Ollama local pour l'embedding dans Paramètres > Pipeline.");
+    throw new AnthropicError("Anthropic ne propose pas d'API d'embedding. Choisissez Ollama local pour l'embedding dans Réglages > Pipeline.");
   }
 }
 

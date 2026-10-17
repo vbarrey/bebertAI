@@ -23,7 +23,7 @@ export async function getPipelineProvider(
     if (!provider) {
         throw new Error(
             `Pipeline non configuré pour l'étape « ${step} » : provider "${providerId}" inconnu (modèle "${modelName}"). ` +
-            `Configurez-le dans Paramètres > Pipeline. Providers connus : [${aiProviderRegistry.getProviderIdList().join(", ")}]`,
+            `Configurez-le dans Réglages > Pipeline. Providers connus : [${aiProviderRegistry.getProviderIdList().join(", ")}]`,
         );
     }
 

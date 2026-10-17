@@ -51,6 +51,6 @@ export class OllamaCloudProvider implements AIProviderClient {
 
   // Ollama Cloud has no embedding model (none listed by /api/tags): embeddings stay on Ollama local.
   async embed(): Promise<Embedding[]> {
-    throw new OllamaError("Ollama Cloud ne propose pas de modèle d'embedding. Choisissez Ollama local pour l'embedding dans Paramètres > Pipeline.");
+    throw new OllamaError("Ollama Cloud ne propose pas de modèle d'embedding. Choisissez Ollama local pour l'embedding dans Réglages > Pipeline.");
   }
 }

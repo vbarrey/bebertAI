@@ -142,7 +142,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
           ref={cardRef}
         >
           <CardHeader className="p-4">
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-4">
               <div
                 className={cn(
                   "flex size-9 shrink-0 items-center justify-center rounded-md",
@@ -154,7 +154,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
 
               <div className="min-w-0 flex-1">
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <span className="truncate">{displayName || model.name}</span>
+                  <span className="min-w-0 truncate" title={displayName || model.name}>{displayName || model.name}</span>
 
                   {model.requiresCredits === true && (
                     <Badge variant="outline" className="border-amber-500/40 text-amber-600">
@@ -172,7 +172,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                 <CardDescription className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                   {model.parameterSize && <span>{model.parameterSize}</span>}
 
-                  {model.name && <span>{model.name}</span>}
+                  {model.name && <span className="min-w-0 max-w-full truncate" title={model.name}>{model.name}</span>}
                 </CardDescription>
               </div>
 
@@ -290,8 +290,8 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+          <DialogHeader className="min-w-0">
+            <DialogTitle className="truncate" title={model.displayName ?? model.name}>
               Modifier {model.displayName ?? model.name}
             </DialogTitle>
 
@@ -374,15 +374,15 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent size="sm">
-          <AlertDialogHeader>
+          <AlertDialogHeader className="min-w-0">
             <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
               <Trash2Icon />
             </AlertDialogMedia>
             <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
 
-            <AlertDialogDescription>
+            <AlertDialogDescription className="w-full min-w-0">
               Cette action est irréversible. Le modèle{" "}
-              <strong>{model.displayName ?? model.name}</strong> sera
+              <strong className="block truncate" title={model.displayName ?? model.name}>{model.displayName ?? model.name}</strong> sera
               définitivement supprimé du fournisseur et de l&apos;application.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -407,10 +407,10 @@ type InfoItemProps = {
 
 function InfoItem({ label, value }: InfoItemProps) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <dt className="text-xs text-muted-foreground">{label}</dt>
 
-      <dd className="font-medium">{value}</dd>
+      <dd className="truncate font-medium" title={value}>{value}</dd>
     </div>
   );
 }

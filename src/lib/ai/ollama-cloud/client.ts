@@ -41,7 +41,7 @@ export class OllamaCloudClient {
         if (chunk.done && !hasContent && !chunk.message.content) {
           throw new OllamaError(
             chunk.done_reason === "length"
-              ? `Réponse vide : la limite de ${chunk.eval_count} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens ou désactivez la réflexion dans Paramètres > Pipeline.`
+              ? `Réponse vide : la limite de ${chunk.eval_count} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens ou désactivez la réflexion dans Réglages > Pipeline.`
               : `Réponse vide du modèle (done_reason: ${chunk.done_reason}).`,
           );
         }
@@ -108,7 +108,7 @@ export class OllamaCloudClient {
     }
 
     if (res.status === 401) {
-      throw new OllamaError("Clé API Ollama Cloud refusée. Vérifiez-la dans Paramètres > Fournisseurs.");
+      throw new OllamaError("Clé API Ollama Cloud refusée. Vérifiez-la dans Réglages > Fournisseurs.");
     }
 
     if (!res.ok) {

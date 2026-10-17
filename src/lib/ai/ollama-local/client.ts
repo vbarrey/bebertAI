@@ -51,7 +51,7 @@ export class OllamaLocalClient {
         if (chunk.done && !hasContent && !chunk.message.content) {
           throw new OllamaError(
             chunk.done_reason === "length"
-              ? `Réponse vide : la limite de ${chunk.eval_count} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens ou désactivez la réflexion dans Paramètres > Pipeline.`
+              ? `Réponse vide : la limite de ${chunk.eval_count} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens ou désactivez la réflexion dans Réglages > Pipeline.`
               : `Réponse vide du modèle (done_reason: ${chunk.done_reason}).`,
           );
         }

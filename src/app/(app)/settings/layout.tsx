@@ -13,7 +13,7 @@ export default function SettingsLayout({
       <ResizablePanelGroup orientation="horizontal">
         <ResizablePanel defaultSize="15%" className="p-4">
           <div className="mb-6 px-2">
-            <h2 className="font-semibold">Paramètres</h2>
+            <h2 className="font-semibold">Réglages</h2>
           </div>
 
           <nav className="space-y-1">

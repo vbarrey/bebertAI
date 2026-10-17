@@ -72,7 +72,7 @@ export async function deleteModel(modelId: string): Promise<{ error: string } | 
     .map(([name]) => name);
 
   if (usedBy.length > 0) {
-    return { error: `Ce modèle est utilisé par le pipeline (${usedBy.join(", ")}) : choisissez-en un autre dans Paramètres > Pipeline avant de le supprimer.` };
+    return { error: `Ce modèle est utilisé par le pipeline (${usedBy.join(", ")}) : choisissez-en un autre dans Réglages > Pipeline avant de le supprimer.` };
   }
 
   try {

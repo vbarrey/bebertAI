@@ -98,7 +98,7 @@ Les services Redis, Qdrant et Ollama peuvent être exécutés localement ou via 
 
 ### OCR (optionnel)
 
-L’OCR (activable dans Paramètres > Pipeline > Extraction) appelle deux exécutables qui doivent être dans le `PATH` du worker :
+L’OCR (activable dans Réglages > Pipeline > Extraction) appelle deux exécutables qui doivent être dans le `PATH` du worker :
 
 - `tesseract` avec les données des langues utilisées (`fra`, `eng`, `deu`, `rus`)
 - `pdftoppm` (Poppler)
