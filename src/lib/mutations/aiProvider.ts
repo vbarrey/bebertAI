@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { AIProviderType } from "@prisma/client";
+import { AIProviderSource, AIProviderType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { aiProviderRegistry } from "@/lib/ai/registry";
@@ -50,7 +50,8 @@ export async function createApiKeyProvider(
   }
 
   const provider = await prisma.aIProvider.create({
-    data: { type, name, configuration },
+    // Every provider reached with an API key runs its models remotely.
+    data: { type, source: AIProviderSource.REMOTE, name, configuration },
   });
 
   const client = createProviderClient(provider);

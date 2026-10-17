@@ -1,5 +1,3 @@
-
-
 import { Model } from "@/types/augmented-prisma";
 
 import { ModelListItem } from "./model-list-item";

@@ -35,7 +35,6 @@ export async function syncProviderModels(provider: AIProvider, client: AIProvide
   const requiresCredits = client.requiresCredits
     ? await checkModelsAccess(client.requiresCredits.bind(client), models.map((model) => model.name))
     : [];
-  const source = provider.type === AIProviderType.OLLAMA_LOCAL ? "LOCAL" : "REMOTE";
   const configuration = provider.configuration as { defaultModel?: string } | null;
 
   for (const [index, model] of models.entries()) {
@@ -44,7 +43,7 @@ export async function syncProviderModels(provider: AIProvider, client: AIProvide
 
     const pModel = await prisma.aIModel.upsert({
       where: { providerId_name: { providerId: provider.id, name: model.name } },
-      create: { ...model, ...access, source, providerId: provider.id },
+      create: { ...model, ...access, providerId: provider.id },
       update: access,
     });
 

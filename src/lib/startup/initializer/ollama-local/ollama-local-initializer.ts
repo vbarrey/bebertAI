@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { AIProviderType } from "@prisma/client";
+import { AIProviderSource, AIProviderType } from "@prisma/client";
 import { AIInitializer } from "../../AIInitializer";
 import { aiProviderRegistry } from "@/lib/ai/registry";
 import { parseOllamaLocalConfig } from "@/lib/ai/ollama-local/config";
@@ -20,6 +20,7 @@ export class OllamaLocalInitializer implements AIInitializer {
       pProvider = await prisma.aIProvider.create({
         data: {
           type: AIProviderType.OLLAMA_LOCAL,
+          source: AIProviderSource.LOCAL,
           name: "OLLAMA LOCAL",
           configuration: {
             host: process.env["OLLAMA_HOST"],
@@ -81,7 +82,7 @@ export class OllamaLocalInitializer implements AIInitializer {
 
       if (!pModel) {
         pModel = await prisma.aIModel.create({
-          data: { ...model, source: "LOCAL", providerId: ollamaProvider.id },
+          data: { ...model, providerId: ollamaProvider.id },
         });
       }
 
