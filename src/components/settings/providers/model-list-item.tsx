@@ -44,7 +44,7 @@ import { toast } from "sonner";
 
 import { deleteModel, setModelFavorite, updateModel } from "@/lib/mutations/aiModel";
 
-const capabilityLabels: Record<Capability, string> = {
+export const capabilityLabels: Record<Capability, string> = {
   GENERATION: "Génération",
   EMBEDDING: "Embeddings",
   RERANKING: "Reranking",
