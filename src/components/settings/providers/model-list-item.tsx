@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Model, Capability } from "@/types/augmented-prisma";
-import { Bot, Check, Pencil, Star, Trash2Icon, X } from "lucide-react";
+import { Bot, Pencil, Star, Trash2Icon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -39,11 +39,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
-import { deleteModel, setModelFavorite, updateModel } from "@/lib/mutations/aiModel";
+import { deleteModel, setModelEnabled, setModelFavorite, updateModel } from "@/lib/mutations/aiModel";
 
 export const capabilityLabels: Record<Capability, string> = {
   GENERATION: "Génération",
@@ -67,6 +68,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
   const [description, setDescription] = useState(model.description ?? "");
   const [capabilities, setCapabilities] = useState<Capability[]>(model.capabilities?.map((capability) => capability.name) ?? []);
   const [favorite, setFavorite] = useState(model.favorite);
+  const [enabled, setEnabled] = useState(model.enabled);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -105,6 +107,17 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
     } catch {
       setFavorite(!next);
       toast.error("Impossible de modifier les favoris.");
+    }
+  }
+
+  async function handleToggleEnabled() {
+    const next = !enabled;
+    setEnabled(next);
+    try {
+      await setModelEnabled(model.id, next);
+    } catch {
+      setEnabled(!next);
+      toast.error("Impossible de modifier l'activation du modèle.");
     }
   }
 
@@ -148,7 +161,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
               <div
                 className={cn(
                   "flex size-9 shrink-0 items-center justify-center rounded-md",
-                  model.enabled ? "bg-primary/10" : "bg-muted",
+                  enabled ? "bg-primary/10" : "bg-muted",
                 )}
               >
                 <Bot className="size-4 text-muted-foreground" />
@@ -187,20 +200,12 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                 />
               </Button>
 
-              <div
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full",
-                  model.enabled
-                    ? "bg-green-500/10 text-green-600"
-                    : "bg-destructive/10 text-destructive",
-                )}
-              >
-                {model.enabled ? (
-                  <Check className="size-4" />
-                ) : (
-                  <X className="size-4" />
-                )}
-              </div>
+              <Switch
+                checked={enabled}
+                aria-label={enabled ? "Désactiver le modèle" : "Activer le modèle"}
+                onClick={(event) => event.stopPropagation()}
+                onCheckedChange={handleToggleEnabled}
+              />
             </div>
           </CardHeader>
 

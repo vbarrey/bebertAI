@@ -1,6 +1,7 @@
 import { AIProviderClient } from "@/lib/ai/provider";
 import { aiProviderRegistry } from "@/lib/ai/registry";
 import { loadProvider } from "@/lib/ai/provider-factory";
+import { prisma } from "@/lib/prisma";
 import { PipelineCapabilities } from "./capabilities";
 import { PipelineParameters } from "./parameters"
 
@@ -18,6 +19,20 @@ export async function getPipelineProvider(
     { providerId, modelName }: { providerId: string; modelName: string },
     step: string,
 ): Promise<AIProviderClient> {
+    // Disabled in the settings: kept by the pipeline or a conversation that picked it before.
+    const stored = await prisma.aIProvider.findUnique({
+        where: { id: providerId },
+        select: { enabled: true, name: true, models: { where: { name: modelName }, select: { enabled: true } } },
+    });
+
+    if (stored && !stored.enabled) {
+        throw new Error(`Le fournisseur « ${stored.name} » (étape « ${step} ») est désactivé : activez-le dans Réglages > Fournisseurs, ou choisissez-en un autre.`);
+    }
+
+    if (stored?.models[0] && !stored.models[0].enabled) {
+        throw new Error(`Le modèle « ${modelName} » (étape « ${step} ») est désactivé : activez-le dans Réglages > Fournisseurs, ou choisissez-en un autre.`);
+    }
+
     const provider = aiProviderRegistry.get(providerId) ?? await loadProvider(providerId);
 
     if (!provider) {

@@ -45,6 +45,12 @@ export async function setModelFavorite(modelId: string, favorite: boolean): Prom
   revalidatePath("/settings", "layout");
 }
 
+// Same as a disabled provider, for one of its models.
+export async function setModelEnabled(modelId: string, enabled: boolean): Promise<void> {
+  await prisma.aIModel.update({ where: { id: modelId }, data: { enabled } });
+  revalidatePath("/", "layout");
+}
+
 /**
  * Deletes a model of a local provider from the provider itself, then from the app: a model only removed from
  * the app would come back with the next synchronization. The conversations that used it keep going with the

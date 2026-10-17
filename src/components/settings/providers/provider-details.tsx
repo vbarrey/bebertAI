@@ -23,7 +23,7 @@ import { Prisma } from "@prisma/client";
 
 import { toast } from "sonner";
 
-import { synchronizeProviderModels } from "@/lib/mutations/aiProvider";
+import { setProviderEnabled, synchronizeProviderModels } from "@/lib/mutations/aiProvider";
 
 import { ProviderConfigurationCard } from "./provider-config-card";
 import { ProviderSourceIcon } from "./provider-source-icon";
@@ -52,8 +52,17 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
     }
   };
 
-  const handleEnableSwitchChange = async (enabled: boolean) => {
-    console.log("Provider enbaled =>", enabled); // TODO : make api fetch
+  const [enabled, setEnabled] = useState(provider.enabled);
+
+  // Shown at once, put back when the change fails.
+  const handleEnableSwitchChange = async (next: boolean) => {
+    setEnabled(next);
+    try {
+      await setProviderEnabled(provider.id, next);
+    } catch {
+      setEnabled(!next);
+      toast.error("Impossible de modifier l'activation du fournisseur.");
+    }
   };
 
   return (
@@ -86,7 +95,7 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
                 </div>
 
                 <Switch
-                  checked={provider.enabled}
+                  checked={enabled}
                   onCheckedChange={handleEnableSwitchChange}
                 />
               </div>

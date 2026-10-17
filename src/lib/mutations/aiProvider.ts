@@ -79,3 +79,12 @@ export async function synchronizeProviderModels(providerId: string): Promise<{ e
 
   revalidatePath("/settings", "layout");
 }
+
+/**
+ * A disabled provider is no longer offered by the pipeline settings and the chat model selector, and the
+ * steps still set on it fail with a message saying so.
+ */
+export async function setProviderEnabled(providerId: string, enabled: boolean): Promise<void> {
+  await prisma.aIProvider.update({ where: { id: providerId }, data: { enabled } });
+  revalidatePath("/", "layout");
+}
