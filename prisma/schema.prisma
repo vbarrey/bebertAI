@@ -208,6 +208,7 @@ enum Capability {
 
 enum AIProviderType {
   OLLAMA_LOCAL
+  OLLAMA_CLOUD
   OPENAI
   ANTHROPIC
 }
