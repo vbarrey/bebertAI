@@ -52,16 +52,32 @@ export async function createApiKeyProvider(
     return { error: error instanceof Error ? error.message : "Impossible de joindre le fournisseur." };
   }
 
-  const provider = await prisma.aIProvider.create({
-    // Every provider reached with an API key runs its models remotely.
-    data: { type, source: AIProviderSource.REMOTE, name, configuration },
-  });
+  // The causes shown in the form: a thrown error only reaches it as a generic failure.
+  let provider;
+  try {
+    provider = await prisma.aIProvider.create({
+      // Every provider reached with an API key runs its models remotely.
+      data: { type, source: AIProviderSource.REMOTE, name, configuration },
+    });
+  } catch (error) {
+    console.error("Provider creation failed:", error);
+    return { error: `Création impossible : ${errorMessage(error)}` };
+  }
 
-  const client = createProviderClient(provider);
-  aiProviderRegistry.register(client);
-  await syncProviderModels(provider, client);
+  try {
+    const client = createProviderClient(provider);
+    aiProviderRegistry.register(client);
+    await syncProviderModels(provider, client);
+  } catch (error) {
+    console.error("Provider model synchronization failed:", error);
+    return { error: `Fournisseur créé, mais ses modèles n'ont pas pu être synchronisés : ${errorMessage(error)}. Réessayez avec « Synchroniser ».` };
+  } finally {
+    revalidatePath("/settings", "layout");
+  }
+}
 
-  revalidatePath("/settings", "layout");
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /**
