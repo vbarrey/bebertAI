@@ -16,6 +16,7 @@ export const providerTypes = [
   { type: "OLLAMA_CLOUD", name: "Ollama Cloud", description: "Modèles Ollama hébergés sur ollama.com.", icon: "/icons/ollama.svg", source: "REMOTE" },
   { type: "ANTHROPIC", name: "Anthropic", description: "Modèles Claude, pour la génération.", icon: "/icons/anthropic.svg", source: "REMOTE" },
   { type: "VOYAGE", name: "Voyage AI", description: "Modèles d'embedding.", icon: "/icons/voyage.svg", source: "REMOTE" },
+  { type: "GOOGLE", name: "Google Gemini", description: "Embedding Gemini, gratuit sur l'offre gratuite.", icon: "/icons/gemini.svg", source: "REMOTE" },
 ] as const;
 
 export function ProviderTypeSelector({ onSelect }: Props) {

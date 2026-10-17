@@ -22,6 +22,7 @@ const providerForms: Record<ApiKeyProviderType, { name: string; apiKeyUrl: strin
   OLLAMA_CLOUD: { name: "Ollama Cloud", apiKeyUrl: "ollama.com/settings/keys", modelPlaceholder: "gpt-oss:120b", hasHost: true },
   ANTHROPIC: { name: "Anthropic", apiKeyUrl: "platform.claude.com/settings/keys", modelPlaceholder: "claude-opus-5-5", hasHost: false },
   VOYAGE: { name: "Voyage AI", apiKeyUrl: "dashboard.voyageai.com", modelPlaceholder: "voyage-4", hasHost: false },
+  GOOGLE: { name: "Google Gemini", apiKeyUrl: "aistudio.google.com/apikey", modelPlaceholder: "gemini-embedding-2", hasHost: false },
 };
 
 type ApiKeyProviderFormProps = {

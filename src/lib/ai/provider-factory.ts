@@ -10,6 +10,8 @@ import { AnthropicProvider } from "./anthropic/provider";
 import { parseAnthropicConfig } from "./anthropic/config";
 import { VoyageProvider } from "./voyage/provider";
 import { parseVoyageConfig } from "./voyage/config";
+import { GoogleProvider } from "./google/provider";
+import { parseGoogleConfig } from "./google/config";
 
 export function createProviderClient(provider: AIProvider): AIProviderClient {
   switch (provider.type) {
@@ -21,6 +23,8 @@ export function createProviderClient(provider: AIProvider): AIProviderClient {
       return new AnthropicProvider(provider.id, provider.name, parseAnthropicConfig(provider.configuration));
     case AIProviderType.VOYAGE:
       return new VoyageProvider(provider.id, provider.name, parseVoyageConfig(provider.configuration));
+    case AIProviderType.GOOGLE:
+      return new GoogleProvider(provider.id, provider.name, parseGoogleConfig(provider.configuration));
     default:
       throw new Error(`Type de fournisseur non supporté : ${provider.type}`);
   }

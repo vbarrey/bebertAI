@@ -9,6 +9,7 @@ import { aiProviderRegistry } from "@/lib/ai/registry";
 import { OllamaCloudProvider } from "@/lib/ai/ollama-cloud/provider";
 import { AnthropicProvider } from "@/lib/ai/anthropic/provider";
 import { VoyageProvider } from "@/lib/ai/voyage/provider";
+import { GoogleProvider } from "@/lib/ai/google/provider";
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 import { createProviderClient, loadProvider, syncProviderModels } from "@/lib/ai/provider-factory";
 
@@ -20,7 +21,7 @@ const ApiKeyProviderSchema = z.object({
   defaultModel: z.string().trim().optional().transform((model) => model || undefined),
 });
 
-export type ApiKeyProviderType = typeof AIProviderType.OLLAMA_CLOUD | typeof AIProviderType.ANTHROPIC | typeof AIProviderType.VOYAGE;
+export type ApiKeyProviderType = typeof AIProviderType.OLLAMA_CLOUD | typeof AIProviderType.ANTHROPIC | typeof AIProviderType.VOYAGE | typeof AIProviderType.GOOGLE;
 export type CreateApiKeyProviderInput = z.input<typeof ApiKeyProviderSchema>;
 
 /**
@@ -43,7 +44,9 @@ export async function createApiKeyProvider(
       ? new OllamaCloudProvider("", name, { host, ...credentials })
       : type === AIProviderType.ANTHROPIC
         ? new AnthropicProvider("", name, credentials)
-        : new VoyageProvider("", name, credentials);
+        : type === AIProviderType.VOYAGE
+          ? new VoyageProvider("", name, credentials)
+          : new GoogleProvider("", name, credentials);
     await client.checkApiKey();
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Impossible de joindre le fournisseur." };
