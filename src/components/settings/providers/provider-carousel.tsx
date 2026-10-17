@@ -2,6 +2,7 @@
 
 import { Provider } from "@/types/augmented-prisma";
 import { cn } from "@/lib/utils";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 import { CreateProviderDialog } from "./create-provider-dialog";
 import { ProviderSourceIcon } from "./provider-source-icon";
@@ -48,7 +49,7 @@ export function ProviderCarousel({
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium">{provider.name}</span>
+                  <TruncatedText className="text-sm font-medium">{provider.name}</TruncatedText>
 
                   <ProviderSourceIcon source={provider.source} focusable={false} />
                 </div>

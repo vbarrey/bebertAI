@@ -39,6 +39,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { toast } from "sonner";
 
 import { deleteModel, setModelFavorite, updateModel } from "@/lib/mutations/aiModel";
@@ -154,7 +155,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
 
               <div className="min-w-0 flex-1">
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <span className="min-w-0 truncate" title={displayName || model.name}>{displayName || model.name}</span>
+                  <TruncatedText>{displayName || model.name}</TruncatedText>
 
                   {model.requiresCredits === true && (
                     <Badge variant="outline" className="border-amber-500/40 text-amber-600">
@@ -172,7 +173,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                 <CardDescription className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                   {model.parameterSize && <span>{model.parameterSize}</span>}
 
-                  {model.name && <span className="min-w-0 max-w-full truncate" title={model.name}>{model.name}</span>}
+                  {model.name && <TruncatedText className="max-w-full">{model.name}</TruncatedText>}
                 </CardDescription>
               </div>
 
@@ -291,8 +292,8 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader className="min-w-0">
-            <DialogTitle className="truncate" title={model.displayName ?? model.name}>
-              Modifier {model.displayName ?? model.name}
+            <DialogTitle className="min-w-0">
+              <TruncatedText>{`Modifier ${model.displayName ?? model.name}`}</TruncatedText>
             </DialogTitle>
 
             <DialogDescription>
@@ -382,7 +383,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
 
             <AlertDialogDescription className="w-full min-w-0">
               Cette action est irréversible. Le modèle{" "}
-              <strong className="block truncate" title={model.displayName ?? model.name}>{model.displayName ?? model.name}</strong> sera
+              <TruncatedText className="font-semibold">{model.displayName ?? model.name}</TruncatedText> sera
               définitivement supprimé du fournisseur et de l&apos;application.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -410,7 +411,9 @@ function InfoItem({ label, value }: InfoItemProps) {
     <div className="min-w-0 space-y-1">
       <dt className="text-xs text-muted-foreground">{label}</dt>
 
-      <dd className="truncate font-medium" title={value}>{value}</dd>
+      <dd className="font-medium">
+        <TruncatedText>{value}</TruncatedText>
+      </dd>
     </div>
   );
 }
