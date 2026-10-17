@@ -87,7 +87,7 @@ async function initialize() {
           );
         }
 
-        const embeddingProvider = getPipelineProvider(pipelineConfig.parameters.embedding, "embedding");
+        const embeddingProvider = await getPipelineProvider(pipelineConfig.parameters.embedding, "embedding");
 
         await startIndexingJob(indexingJob.id);
 

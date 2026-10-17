@@ -1,11 +1,13 @@
 import { AIInitializer } from "./AIInitializer";
 
 import { OllamaLocalInitializer } from "./initializer/ollama-local/ollama-local-initializer";
+import { RemoteProvidersInitializer } from "./initializer/remote-providers-initializer";
 
 export async function initializeAI() {
   const initializers: AIInitializer[] = [
     // Add your AI provider initializers here
     new OllamaLocalInitializer(),
+    new RemoteProvidersInitializer(),
   ];
 
   // Run all initializers in parallel and handle errors

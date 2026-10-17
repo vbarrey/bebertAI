@@ -1,5 +1,6 @@
 import { AIProviderClient } from "@/lib/ai/provider";
 import { aiProviderRegistry } from "@/lib/ai/registry";
+import { loadProvider } from "@/lib/ai/provider-factory";
 import { PipelineCapabilities } from "./capabilities";
 import { PipelineParameters } from "./parameters"
 
@@ -10,13 +11,14 @@ export type PipelineConfig = {
 
 /**
  * Resolves the provider configured for a pipeline step, with an explicit error
- * when the pipeline was never configured (default "..." placeholders) or points to an unknown provider.
+ * loaded from database when missing from this process registry (created since its start),
+ * with an explicit error when the pipeline was never configured (default "..." placeholders) or points to an unknown provider.
  */
-export function getPipelineProvider(
+export async function getPipelineProvider(
     { providerId, modelName }: { providerId: string; modelName: string },
     step: string,
-): AIProviderClient {
-    const provider = aiProviderRegistry.get(providerId);
+): Promise<AIProviderClient> {
+    const provider = aiProviderRegistry.get(providerId) ?? await loadProvider(providerId);
 
     if (!provider) {
         throw new Error(

@@ -37,8 +37,8 @@ export async function* generateAssistantResponse({
     ? { providerId: conversationModel.providerId, modelName: conversationModel.name }
     : generation;
 
-  const generationProvider = getPipelineProvider(generationModel, "génération");
-  const embeddingProvider = getPipelineProvider(embedding, "embedding");
+  const generationProvider = await getPipelineProvider(generationModel, "génération");
+  const embeddingProvider = await getPipelineProvider(embedding, "embedding");
 
   const retriever = await getDocumentRetriever(
     embeddingProvider,
@@ -57,7 +57,7 @@ export async function* generateAssistantResponse({
   const [queryEmbedding, translations] = await Promise.all([
     retriever.embedQuery(query),
     usesLexicalSearch(retrieval.hybrid)
-      ? translateQuery(getPipelineProvider(translationModel, "traduction"), translationModel.modelName, query)
+      ? getPipelineProvider(translationModel, "traduction").then((provider) => translateQuery(provider, translationModel.modelName, query))
       : untranslatedQuery(query),
   ]);
 
