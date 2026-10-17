@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-mkdir -p /app/data
+mkdir -p /app/data/database
 
 echo "Applying Prisma migrations..."
 npx prisma migrate deploy

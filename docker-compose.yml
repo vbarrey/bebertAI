@@ -2,25 +2,75 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
 
-    environment:
-      OLLAMA_BASE_URL: http://ollama:11434
+    # Google Drive keys and OLLAMA_DEFAULT_MODEL; the addresses below override the localhost ones of the .env.
+    env_file:
+      - path: .env
+        required: false
+
+    environment: &services-env
+      DATABASE_URL: file:/app/data/database/bebertai.db
+      DOCUMENTS_STORAGE_PATH: /app/data/documents
+      OLLAMA_HOST: http://ollama:11434
+      REDIS_URL: redis://redis:6379
+      QDRANT_URL: http://qdrant:6333
 
     volumes:
-      - ./data:/app/data
-      - ./documents:/documents
+      - data:/app/data
 
     depends_on:
+      - redis
+      - qdrant
       - ollama
+
+    # Ready once the migrations ran and the AI providers were initialized.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/projects"]
+      interval: 10s
+      start_period: 60s
+
+  worker:
+    build: .
+    command: ["npm", "run", "start:worker"]
+
+    env_file:
+      - path: .env
+        required: false
+
+    environment: *services-env
+
+    volumes:
+      - data:/app/data
+
+    # Started after the app so that it finds the database migrated and the providers created.
+    depends_on:
+      app:
+        condition: service_healthy
+
+  redis:
+    image: redis:alpine
+
+  qdrant:
+    image: qdrant/qdrant
+    volumes:
+      - qdrant:/qdrant/storage
 
   ollama:
     image: ollama/ollama
-    ports:
-      - "11434:11434"
-
     volumes:
       - ollama:/root/.ollama
 
+    # NVIDIA GPU; remove this block on a machine without one, Ollama then runs on the CPU.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
 volumes:
+  data:
+  qdrant:
   ollama:

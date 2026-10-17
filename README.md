@@ -142,10 +142,10 @@ DATABASE_URL="file:./data/database/myDB.db"
 
 DOCUMENTS_STORAGE_PATH="./data/documents"
 
-REDIS_HOST="localhost"
-REDIS_PORT="6379"
+REDIS_URL="redis://localhost:6379"
+QDRANT_URL="http://localhost:6333"
 
-OLLAMA_BASE_URL="http://localhost:11434"
+OLLAMA_HOST="http://localhost:11434"
 ```
 
 Initialiser Prisma :
@@ -170,6 +170,20 @@ bun run test
 ```
 
 Les tests utilisant le vrai moteur OCR sont ignorés si `tesseract` ou `pdftoppm` est absent.
+
+## Docker
+
+`docker-compose.yml` lance toute l’application : l’app Next.js, le worker d’indexation, Redis, Qdrant et Ollama. Les clés Google Drive et `OLLAMA_DEFAULT_MODEL` sont lues dans le `.env` s’il existe, les adresses des services sont fixées par le compose.
+
+```bash
+docker compose up -d --build
+# Modèles Ollama, à télécharger une fois (conservés dans le volume ollama)
+docker compose exec ollama ollama pull qwen3-embedding:0.6b
+docker compose exec ollama ollama pull qwen3:0.6b
+docker compose restart app # synchronise les modèles téléchargés
+```
+
+L’application est sur `http://localhost:3000` (`APP_PORT=3001 docker compose up -d` pour un autre port), à configurer ensuite dans Réglages > Pipeline. La base et les documents sont dans le volume `data`, séparé du dossier `data/` local. Ollama utilise le GPU NVIDIA (Docker Desktop avec WSL 2, ou le NVIDIA Container Toolkit sous Linux) : sur une machine sans GPU NVIDIA, retirer le bloc `deploy` du service `ollama`, il tourne alors sur le CPU.
 
 ## Stockage des documents
 

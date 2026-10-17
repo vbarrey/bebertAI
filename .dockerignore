@@ -1,5 +1,9 @@
 node_modules
 .next
 .git
-./data/bebertai.db
 coverage
+.env*
+data
+graphify-out
+.claude
+.playwright-mcp
