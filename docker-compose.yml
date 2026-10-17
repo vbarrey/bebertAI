@@ -4,7 +4,7 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
 
-    # Google Drive keys and OLLAMA_DEFAULT_MODEL; the addresses below override the localhost ones of the .env.
+    # Google Drive keys; the values below override the localhost addresses of the .env.
     env_file:
       - path: .env
         required: false
@@ -15,14 +15,20 @@ services:
       OLLAMA_HOST: http://ollama:11434
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
+      OLLAMA_DEFAULT_MODEL: ${OLLAMA_DEFAULT_MODEL:-qwen3:0.6b}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
 
     volumes:
       - data:/app/data
 
+    # The models are synchronized at start-up: the default ones must be downloaded first.
     depends_on:
-      - redis
-      - qdrant
-      - ollama
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+      ollama-pull:
+        condition: service_completed_successfully
 
     # Ready once the migrations ran and the AI providers were initialized.
     healthcheck:
@@ -69,6 +75,27 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+
+  # Downloads the default generation and embedding models when missing, then exits.
+  ollama-pull:
+    image: ollama/ollama
+    entrypoint:
+      - sh
+      - -c
+      - for model in "$$GENERATION_MODEL" "$$EMBEDDING_MODEL"; do ollama show "$$model" > /dev/null 2>&1 || ollama pull "$$model" || exit 1; done
+
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      GENERATION_MODEL: ${OLLAMA_DEFAULT_MODEL:-qwen3:0.6b}
+      EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+
+    depends_on:
+      ollama:
+        condition: service_healthy
 
 volumes:
   data:

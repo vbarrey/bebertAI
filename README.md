@@ -177,11 +177,9 @@ Les tests utilisant le vrai moteur OCR sont ignorés si `tesseract` ou `pdftoppm
 
 ```bash
 docker compose up -d --build
-# Modèles Ollama, à télécharger une fois (conservés dans le volume ollama)
-docker compose exec ollama ollama pull qwen3-embedding:0.6b
-docker compose exec ollama ollama pull qwen3:0.6b
-docker compose restart app # synchronise les modèles téléchargés
 ```
+
+Au démarrage, le service `ollama-pull` télécharge le modèle de génération (`OLLAMA_DEFAULT_MODEL`, `qwen3:0.6b` par défaut) et le modèle d’embedding (`OLLAMA_EMBEDDING_MODEL`, `qwen3-embedding:0.6b` par défaut) s’ils manquent, avant de lancer l’app : le premier démarrage attend la fin du téléchargement. Tant que les étapes Vectorisation et Génération n’ont pas été configurées dans Réglages > Pipeline, l’app les règle sur ces deux modèles. Les modèles restent dans le volume `ollama`. D’autres modèles se téléchargent avec `docker compose exec ollama ollama pull <modèle>`, puis `docker compose restart app` pour les synchroniser.
 
 L’application est sur `http://localhost:3000` (`APP_PORT=3001 docker compose up -d` pour un autre port), à configurer ensuite dans Réglages > Pipeline. La base et les documents sont dans le volume `data`, séparé du dossier `data/` local. Ollama utilise le GPU NVIDIA (Docker Desktop avec WSL 2, ou le NVIDIA Container Toolkit sous Linux) : sur une machine sans GPU NVIDIA, retirer le bloc `deploy` du service `ollama`, il tourne alors sur le CPU.
 

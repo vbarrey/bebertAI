@@ -2,6 +2,9 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
+# To compile better-sqlite3 when its prebuilt binary cannot be downloaded from GitHub.
+RUN apk add --no-cache python3 make g++
+
 COPY package*.json ./
 RUN npm ci
 
