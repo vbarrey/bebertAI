@@ -4,15 +4,9 @@ import { useState } from "react";
 
 import { Provider } from "@/types/augmented-prisma";
 
-import { ProviderList } from "./provider-list";
+import { ProviderCarousel } from "./provider-carousel";
 import { ProviderDetails } from "./provider-details";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 
 type AISettingsProps = {
   providers: Provider[];
@@ -27,25 +21,22 @@ export function ProvidersSettings({ providers }: AISettingsProps) {
     providers.find((provider) => provider.id === selectedProviderId) ?? null;
 
   return (
-    <ResizablePanelGroup>
-      <ResizablePanel className="flex" defaultSize="20%">
-        <ProviderList
-          providers={providers}
-          selectedProviderId={selectedProviderId}
-          onSelectProvider={setSelectedProviderId}
-        />
-      </ResizablePanel>
-      <ResizableHandle withHandle={true} />
-      <ResizablePanel>
-        <ScrollArea className="min-w-0 flex-1 h-[100vh]">
-          {selectedProvider ? (
-            <ProviderDetails provider={selectedProvider} />
-          ) : (
-            <EmptyProviderState />
-          )}
-        </ScrollArea>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    <div className="flex h-[100vh] min-w-0 flex-col">
+      <ProviderCarousel
+        providers={providers}
+        selectedProviderId={selectedProviderId}
+        onSelectProvider={setSelectedProviderId}
+      />
+
+      <ScrollArea className="min-h-0 flex-1">
+        {selectedProvider ? (
+          // Keyed: the details of another provider start from its own state.
+          <ProviderDetails key={selectedProvider.id} provider={selectedProvider} />
+        ) : (
+          <EmptyProviderState />
+        )}
+      </ScrollArea>
+    </div>
   );
 }
 

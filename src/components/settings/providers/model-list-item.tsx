@@ -39,6 +39,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+
+import { deleteModel, setModelFavorite, updateModel } from "@/lib/mutations/aiModel";
 
 const capabilityLabels: Record<Capability, string> = {
   GENERATION: "Génération",
@@ -48,17 +51,22 @@ const capabilityLabels: Record<Capability, string> = {
 
 type Props = {
   model: Model;
+  // Only the models of a local provider: a remote one lists the models it serves.
+  removable: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
 };
 
-export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
+export function ModelListItem({ model, removable, expanded, onExpandedChange }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [displayName, setDisplayName] = useState(model.displayName ?? "");
   const [description, setDescription] = useState(model.description ?? "");
   const [capabilities, setCapabilities] = useState<Capability[]>(model.capabilities?.map((capability) => capability.name) ?? []);
+  const [favorite, setFavorite] = useState(model.favorite);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -69,22 +77,52 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
     }, 500);
   }, [expanded]);
 
-  function handleSave() {
-    console.log({
-      modelId: model.id,
-      description,
-      capabilities,
-    });
-
-    // TODO: mutation API
-
-    setEditOpen(false);
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const result = await updateModel(model.id, { displayName, description, capabilities });
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Modèle modifié.");
+      setEditOpen(false);
+    } catch {
+      toast.error("Impossible de modifier le modèle.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function handleDelete() {
-    console.log("Delete model:", model.id);
+  // Shown at once, put back when the change fails.
+  async function handleToggleFavorite() {
+    const next = !favorite;
+    setFavorite(next);
+    try {
+      await setModelFavorite(model.id, next);
+    } catch {
+      setFavorite(!next);
+      toast.error("Impossible de modifier les favoris.");
+    }
+  }
 
-    // TODO: mutation API
+  async function handleDelete(event: React.MouseEvent) {
+    // The dialog stays open until the model is deleted.
+    event.preventDefault();
+    setDeleting(true);
+    try {
+      const result = await deleteModel(model.id);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(`Modèle « ${model.displayName ?? model.name} » supprimé.`);
+      setDeleteOpen(false);
+    } catch {
+      toast.error("Impossible de supprimer le modèle.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -116,11 +154,7 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
 
               <div className="min-w-0 flex-1">
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <span className="truncate">{displayName ?? model.name}</span>
-
-                  {model.favorite && (
-                    <Star className="size-3.5 shrink-0 fill-current text-yellow-500" />
-                  )}
+                  <span className="truncate">{displayName || model.name}</span>
 
                   {model.requiresCredits === true && (
                     <Badge variant="outline" className="border-amber-500/40 text-amber-600">
@@ -141,6 +175,25 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
                   {model.name && <span>{model.name}</span>}
                 </CardDescription>
               </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0"
+                aria-pressed={favorite}
+                aria-label={favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleToggleFavorite();
+                }}
+              >
+                <Star
+                  className={cn(
+                    "size-4",
+                    favorite ? "fill-current text-yellow-500" : "text-muted-foreground",
+                  )}
+                />
+              </Button>
 
               <div
                 className={cn(
@@ -194,7 +247,7 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
                   <dl className="mt-3 grid gap-4 text-sm sm:grid-cols-2">
                     <InfoItem label="Nom technique" value={model.name} />
 
-                    <InfoItem label="Nom affiché" value={displayName ?? "—"} />
+                    <InfoItem label="Nom affiché" value={displayName || "—"} />
 
                     <InfoItem label="Famille" value={model.family ?? "—"} />
 
@@ -218,14 +271,16 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
                     Modifier
                   </Button>
 
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteOpen(true)}
-                  >
-                    <Trash2Icon className="size-3.5" />
-                    Supprimer
-                  </Button>
+                  {removable && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteOpen(true)}
+                    >
+                      <Trash2Icon className="size-3.5" />
+                      Supprimer
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -310,7 +365,9 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
               Annuler
             </Button>
 
-            <Button onClick={handleSave}>Enregistrer</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Enregistrement..." : "Enregistrer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -326,15 +383,15 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
             <AlertDialogDescription>
               Cette action est irréversible. Le modèle{" "}
               <strong>{model.displayName ?? model.name}</strong> sera
-              définitivement supprimé.
+              définitivement supprimé du fournisseur et de l&apos;application.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
 
-            <AlertDialogAction onClick={handleDelete} variant="destructive">
-              Supprimer
+            <AlertDialogAction onClick={handleDelete} variant="destructive" disabled={deleting}>
+              {deleting ? "Suppression..." : "Supprimer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

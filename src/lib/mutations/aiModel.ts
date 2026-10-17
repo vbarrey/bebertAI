@@ -1,0 +1,91 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { AIProviderSource, Capability } from "@prisma/client";
+
+import { prisma } from "@/lib/prisma";
+import { aiProviderRegistry } from "@/lib/ai/registry";
+import { loadProvider } from "@/lib/ai/provider-factory";
+import { OllamaRequestError } from "@/lib/ai/ollama-local/errors";
+import { pipelineRuntime } from "@/lib/pipeline/runtime";
+
+const ModelUpdateSchema = z.object({
+  displayName: z.string().trim().transform((value) => value || null),
+  description: z.string().trim().transform((value) => value || null),
+  capabilities: z.array(z.enum(Capability)),
+});
+
+export type ModelUpdateInput = z.input<typeof ModelUpdateSchema>;
+
+export async function updateModel(modelId: string, input: ModelUpdateInput): Promise<{ error: string } | undefined> {
+  const parsed = ModelUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: "Modification invalide." };
+  }
+
+  const { capabilities, ...fields } = parsed.data;
+
+  await prisma.$transaction([
+    // The capability rows are shared by the models: created by the first model that has one.
+    ...capabilities.map((name) =>
+      prisma.aIModelCapability.upsert({ where: { name }, create: { name }, update: {} }),
+    ),
+    prisma.aIModel.update({
+      where: { id: modelId },
+      data: { ...fields, capabilities: { set: capabilities.map((name) => ({ name })) } },
+    }),
+  ]);
+
+  revalidatePath("/settings", "layout");
+}
+
+export async function setModelFavorite(modelId: string, favorite: boolean): Promise<void> {
+  await prisma.aIModel.update({ where: { id: modelId }, data: { favorite } });
+  revalidatePath("/settings", "layout");
+}
+
+/**
+ * Deletes a model of a local provider from the provider itself, then from the app: a model only removed from
+ * the app would come back with the next synchronization. The conversations that used it keep going with the
+ * pipeline model.
+ */
+export async function deleteModel(modelId: string): Promise<{ error: string } | undefined> {
+  const model = await prisma.aIModel.findUnique({ where: { id: modelId }, include: { provider: true } });
+  if (!model) {
+    return { error: "Modèle introuvable." };
+  }
+
+  // A remote provider lists the models it serves: they cannot be deleted.
+  if (model.provider.source === AIProviderSource.REMOTE) {
+    return { error: "Les modèles d'un fournisseur distant ne peuvent pas être supprimés." };
+  }
+
+  const { parameters } = await pipelineRuntime.getConfig();
+  const steps = [
+    ["génération", parameters.generation],
+    ["embedding", parameters.embedding],
+    ["traduction", parameters.retrieval.hybrid.translation],
+  ] as const;
+  const usedBy = steps
+    .filter(([, step]) => step.providerId === model.providerId && step.modelName === model.name)
+    .map(([name]) => name);
+
+  if (usedBy.length > 0) {
+    return { error: `Ce modèle est utilisé par le pipeline (${usedBy.join(", ")}) : choisissez-en un autre dans Paramètres > Pipeline avant de le supprimer.` };
+  }
+
+  try {
+    const client = aiProviderRegistry.get(model.providerId) ?? (await loadProvider(model.providerId));
+    await client?.remove?.(model.name);
+  } catch (error) {
+    // Already gone from Ollama: only the app still lists it.
+    if (!(error instanceof OllamaRequestError && error.status === 404)) {
+      return { error: error instanceof Error ? error.message : "Suppression impossible." };
+    }
+  }
+
+  await prisma.aIModel.delete({ where: { id: modelId } });
+
+  revalidatePath("/settings", "layout");
+}

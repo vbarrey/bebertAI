@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { synchronizeProviderModels } from "@/lib/mutations/aiProvider";
 
 import { ProviderConfigurationCard } from "./provider-config-card";
+import { ProviderSourceIcon } from "./provider-source-icon";
 
 type ProviderDetailsProps = {
   provider: Provider;
@@ -58,8 +59,10 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
   return (
     <div className="mx-auto max-w-4xl p-8">
       <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           {provider.name}
+
+          <ProviderSourceIcon source={provider.source} className="[&_svg]:size-5" />
         </h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
@@ -113,7 +116,8 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
         </div>
 
         <div className="mt-4">
-          <ModelList models={provider.models ?? []} />
+          {/* A remote provider lists the models it serves: they cannot be deleted. */}
+          <ModelList models={provider.models ?? []} removable={provider.source === "LOCAL"} />
         </div>
       </section>
     </div>

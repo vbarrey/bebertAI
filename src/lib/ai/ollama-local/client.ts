@@ -83,8 +83,14 @@ export class OllamaLocalClient {
     throw new Error("Function not implemented.");
   }
 
-  async remove(): Promise<never> {
-    throw new Error("Function not implemented.");
+  async remove(model: string): Promise<void> {
+    await this.request(() =>
+      fetch(`${this.config.host}/api/delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model }),
+      }),
+    );
   }
 
   async embed(input: OllamaEmbedRequest): Promise<OllamaEmbedResponse> {

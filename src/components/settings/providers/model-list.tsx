@@ -6,9 +6,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ModelListProps = {
   models: Model[];
+  removable: boolean;
 };
 
-export function ModelList({ models }: ModelListProps) {
+export function ModelList({ models, removable }: ModelListProps) {
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
 
   if (models.length === 0) {
@@ -27,6 +28,7 @@ export function ModelList({ models }: ModelListProps) {
         <ModelListItem
           key={model.id}
           model={model}
+          removable={removable}
           expanded={expandedModelId === model.id}
           onExpandedChange={(expanded) => {
             setExpandedModelId(expanded ? model.id : null);

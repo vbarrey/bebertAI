@@ -40,8 +40,8 @@ export class OllamaLocalProvider implements AIProviderClient {
     return this.client.pull();
   }
 
-  async remove(): Promise<void> {
-    return this.client.remove();
+  async remove(modelName: string): Promise<void> {
+    return this.client.remove(modelName);
   }
 
   async updateConfig(config: unknown): Promise<void> {
