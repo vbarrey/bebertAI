@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Star } from "lucide-react";
 
 import { Capability, Model } from "@/types/augmented-prisma";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export function ModelList({ models, removable }: ModelListProps) {
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   if (models.length === 0) {
     return (
@@ -32,11 +33,14 @@ export function ModelList({ models, removable }: ModelListProps) {
 
   const query = search.trim().toLowerCase();
   // A model shown has every capability picked, and the search in its name or its display name.
-  const shownModels = models.filter(
-    (model) =>
-      (!query || [model.name, model.displayName].some((name) => name?.toLowerCase().includes(query))) &&
-      capabilities.every((capability) => model.capabilities?.some((item) => item.name === capability)),
-  );
+  const shownModels = models
+    .filter(
+      (model) =>
+        (!favoritesOnly || model.favorite) &&
+        (!query || [model.name, model.displayName].some((name) => name?.toLowerCase().includes(query))) &&
+        capabilities.every((capability) => model.capabilities?.some((item) => item.name === capability)),
+    )
+    .sort((a, b) => costRank(a) - costRank(b) || a.name.localeCompare(b.name));
 
   function toggleCapability(capability: Capability) {
     setCapabilities((current) =>
@@ -60,6 +64,16 @@ export function ModelList({ models, removable }: ModelListProps) {
             aria-label="Rechercher un modèle par son nom"
           />
         </InputGroup>
+
+        <Button
+          variant={favoritesOnly ? "default" : "outline"}
+          size="icon-sm"
+          aria-pressed={favoritesOnly}
+          aria-label="Favoris uniquement"
+          onClick={() => setFavoritesOnly(!favoritesOnly)}
+        >
+          <Star className={favoritesOnly ? "fill-current" : undefined} />
+        </Button>
 
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer par capacité">
           {Object.values(Capability).map((capability) => {
@@ -105,4 +119,9 @@ export function ModelList({ models, removable }: ModelListProps) {
       </ScrollArea>
     </div>
   );
+}
+
+// The free models first, then the paid ones, then the ones whose cost is unknown.
+function costRank(model: Model): number {
+  return model.requiresCredits === false ? 0 : model.requiresCredits ? 1 : 2;
 }
