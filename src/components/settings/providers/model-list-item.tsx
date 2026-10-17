@@ -190,7 +190,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                 <Star
                   className={cn(
                     "size-4",
-                    favorite ? "fill-current text-yellow-500" : "text-muted-foreground",
+                    favorite ? "fill-foreground text-foreground" : "text-muted-foreground",
                   )}
                 />
               </Button>

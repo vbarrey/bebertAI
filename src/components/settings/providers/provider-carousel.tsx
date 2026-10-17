@@ -1,14 +1,11 @@
 "use client";
 
-import { useRef } from "react";
-import { Bot, ChevronLeft, ChevronRight } from "lucide-react";
-
 import { Provider } from "@/types/augmented-prisma";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { CreateProviderDialog } from "./create-provider-dialog";
 import { ProviderSourceIcon } from "./provider-source-icon";
+import { ProviderAvatar } from "./provider-avatar";
 
 type ProviderCarouselProps = {
   providers: Provider[];
@@ -21,38 +18,16 @@ export function ProviderCarousel({
   selectedProviderId,
   onSelectProvider,
 }: ProviderCarouselProps) {
-  const trackRef = useRef<HTMLDivElement | null>(null);
-
-  // Most of a screen of cards at a time, the scroll snapping lands on a card.
-  function scroll(direction: -1 | 1) {
-    const track = trackRef.current;
-    track?.scrollBy({ left: direction * track.clientWidth * 0.8, behavior: "smooth" });
-  }
-
   return (
     <section className="border-b px-8 py-6">
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-semibold">Fournisseurs</h2>
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold">Fournisseurs</h2>
 
-          <p className="text-xs text-muted-foreground">Modèles et connexions</p>
-        </div>
-
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => scroll(-1)} aria-label="Fournisseurs précédents">
-            <ChevronLeft className="size-4" />
-          </Button>
-
-          <Button variant="outline" size="icon" onClick={() => scroll(1)} aria-label="Fournisseurs suivants">
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
+        <p className="text-xs text-muted-foreground">Modèles et connexions</p>
       </div>
 
-      <div
-        ref={trackRef}
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2"
-      >
+      {/* Scrolled sideways, the scroll snapping lands on a card. */}
+      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
         {providers.map((provider) => {
           const isSelected = provider.id === selectedProviderId;
 
@@ -69,9 +44,7 @@ export function ProviderCarousel({
                   : "hover:bg-muted/50",
               )}
             >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10">
-                <Bot className="size-4 text-muted-foreground" />
-              </div>
+              <ProviderAvatar providerId={provider.id} className="shrink-0" />
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
