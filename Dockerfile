@@ -14,7 +14,7 @@ ENV DATABASE_URL=file:/app/data/database/bebertai.db
 
 RUN npx prisma generate
 
-# An empty database for the pages prerendered by the build; at run time the data volume hides it and start-docker.sh migrates the real one.
+# An empty database for the build to collect the pages (rendered per request since the app layout reads the database); at run time the data volume hides it and start-docker.sh migrates the real one.
 RUN mkdir -p /app/data/database && npx prisma migrate deploy
 
 RUN npm run build && npm prune --omit=dev
