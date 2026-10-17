@@ -19,7 +19,8 @@ export async function ensureDocumentStorage() {
 }
 
 export function getDocumentFilePath(storagePath: string) {
-  return path.join(DOCUMENTS_STORAGE_PATH, storagePath);
+  // Not traced by the build: the folder is only known at run time.
+  return path.join(/*turbopackIgnore: true*/ DOCUMENTS_STORAGE_PATH, storagePath);
 }
 
 export async function storeDocumentFile(
