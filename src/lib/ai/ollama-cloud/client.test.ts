@@ -46,6 +46,14 @@ describe("OllamaCloudClient", () => {
         await assert.rejects(client.models(), /Clé API Ollama Cloud refusée/);
     });
 
+    it("checks the API key: refused on 401, accepted when only the missing model is refused", async () => {
+        fakeFetch(['{"error":"Unauthorized"}'], 401);
+        await assert.rejects(client.checkApiKey(), /Clé API Ollama Cloud refusée/);
+
+        fakeFetch(['{"error":"model is required"}'], 400);
+        await client.checkApiKey();
+    });
+
     it("refuses a configuration without API key", () => {
         assert.throws(() => parseOllamaCloudConfig({ host: "https://ollama.com" }), /Invalid Ollama Cloud configuration/);
     });

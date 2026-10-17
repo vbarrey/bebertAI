@@ -64,6 +64,20 @@ export class OllamaCloudClient {
     return data.models;
   }
 
+  // /api/tags answers without key: a chat without model checks the key (refused before the model) and generates nothing.
+  async checkApiKey(): Promise<void> {
+    try {
+      await this.request("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ model: "", messages: [], stream: false }),
+      });
+    } catch (error) {
+      // Key accepted, then the request refused for its missing model.
+      if (error instanceof OllamaRequestError) return;
+      throw error;
+    }
+  }
+
   private async request(path: string, init: RequestInit): Promise<Response> {
     let res: Response;
     try {

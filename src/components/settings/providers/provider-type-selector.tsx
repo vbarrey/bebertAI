@@ -43,6 +43,9 @@ export function ProviderTypeSelector({
             <SelectItem value="OLLAMA_LOCAL">
               Ollama (local)
             </SelectItem>
+            <SelectItem value="OLLAMA_CLOUD">
+              Ollama Cloud
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
