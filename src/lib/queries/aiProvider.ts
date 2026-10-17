@@ -1,6 +1,7 @@
 import { cache } from "react";
-import type { AIProvider } from "@prisma/client";
+import { AIProviderType, type AIProvider } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isOllamaLocalDefaultModel } from "@/lib/ai/ollama-local/config";
 
 // These providers reach the browser: their API key is replaced, it only shows that a key is set.
 function maskApiKey<T extends AIProvider>(provider: T): T {
@@ -15,7 +16,13 @@ export const getProvidersWithModels = cache(async () => {
   return prisma.aIProvider.findMany({
     include: { models: { include: {capabilities: true}} },
     orderBy: [{isDefault: 'desc'}, {name: 'asc'}],
-  }).then((providers) => providers.map(maskApiKey));
+  }).then((providers) => providers.map((provider) => ({
+    ...maskApiKey(provider),
+    models: provider.models.map((model) => ({
+      ...model,
+      isDefault: provider.type === AIProviderType.OLLAMA_LOCAL && isOllamaLocalDefaultModel(model.name),
+    })),
+  })));
 });
 
 export const getEnableProvidersWithModels = cache(async () => {

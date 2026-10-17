@@ -13,15 +13,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { AIProviderType } from "@prisma/client";
+import type { ApiKeyProviderType } from "@/lib/mutations/aiProvider";
 
 import { ProviderTypeSelector, providerTypes } from "./provider-type-selector";
-import { OllamaLocalProviderForm } from "./provider-form/ollama-local";
 import { ApiKeyProviderForm } from "./provider-form/api-key-provider";
 
 export function CreateProviderDialog() {
   const [open, setOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState<AIProviderType | null>(null);
+  const [selectedType, setSelectedType] = useState<ApiKeyProviderType | null>(null);
 
   function handleOpenChange(open: boolean) {
     setOpen(open);
@@ -57,14 +56,9 @@ export function CreateProviderDialog() {
 
         {selectedType === null ? (
           <ProviderTypeSelector onSelect={setSelectedType} />
-        ) : selectedType === "OLLAMA_CLOUD" || selectedType === "ANTHROPIC" || selectedType === "VOYAGE" || selectedType === "GOOGLE" ? (
+        ) : (
           <ApiKeyProviderForm
             type={selectedType}
-            onBack={() => setSelectedType(null)}
-            onSuccess={() => setOpen(false)}
-          />
-        ) : (
-          <OllamaLocalProviderForm
             onBack={() => setSelectedType(null)}
             onSuccess={() => setOpen(false)}
           />

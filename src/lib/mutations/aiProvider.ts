@@ -21,7 +21,9 @@ const ApiKeyProviderSchema = z.object({
   defaultModel: z.string().trim().optional().transform((model) => model || undefined),
 });
 
-export type ApiKeyProviderType = typeof AIProviderType.OLLAMA_CLOUD | typeof AIProviderType.ANTHROPIC | typeof AIProviderType.VOYAGE | typeof AIProviderType.GOOGLE;
+const API_KEY_PROVIDER_TYPES = [AIProviderType.OLLAMA_CLOUD, AIProviderType.ANTHROPIC, AIProviderType.VOYAGE, AIProviderType.GOOGLE] as const;
+
+export type ApiKeyProviderType = (typeof API_KEY_PROVIDER_TYPES)[number];
 export type CreateApiKeyProviderInput = z.input<typeof ApiKeyProviderSchema>;
 
 /**
@@ -31,6 +33,11 @@ export async function createApiKeyProvider(
   type: ApiKeyProviderType,
   input: CreateApiKeyProviderInput,
 ): Promise<{ error: string } | undefined> {
+  // A server action takes any value: Ollama local comes from the .env and is never created here.
+  if (!API_KEY_PROVIDER_TYPES.includes(type)) {
+    return { error: "Ce type de fournisseur ne peut pas être créé." };
+  }
+
   const parsed = ApiKeyProviderSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues.map((issue) => issue.message).join(" ") };

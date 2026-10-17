@@ -2,17 +2,16 @@
 
 import Image from "next/image";
 
-import { AIProviderType } from "@prisma/client";
+import type { ApiKeyProviderType } from "@/lib/mutations/aiProvider";
 
 import { ProviderSourceIcon } from "./provider-source-icon";
 
 type Props = {
-  onSelect: (type: AIProviderType) => void;
+  onSelect: (type: ApiKeyProviderType) => void;
 };
 
-// The types a provider can be created with (OpenAI has no client yet).
+// The types a provider can be created with: Ollama local comes from the .env, OpenAI has no client yet.
 export const providerTypes = [
-  { type: "OLLAMA_LOCAL", name: "Ollama (local)", description: "Modèles exécutés sur cette machine.", icon: "/icons/ollama.svg", source: "LOCAL" },
   { type: "OLLAMA_CLOUD", name: "Ollama Cloud", description: "Modèles Ollama hébergés sur ollama.com.", icon: "/icons/ollama.svg", source: "REMOTE" },
   { type: "ANTHROPIC", name: "Anthropic", description: "Modèles Claude, pour la génération.", icon: "/icons/anthropic.svg", source: "REMOTE" },
   { type: "VOYAGE", name: "Voyage AI", description: "Modèles d'embedding.", icon: "/icons/voyage.svg", source: "REMOTE" },

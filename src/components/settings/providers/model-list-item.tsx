@@ -265,7 +265,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                     Modifier
                   </Button>
 
-                  {removable && (
+                  {removable && !model.isDefault && (
                     <Button
                       variant="destructive"
                       size="sm"

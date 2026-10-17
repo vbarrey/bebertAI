@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { AIProviderSource, Capability } from "@prisma/client";
+import { AIProviderSource, AIProviderType, Capability } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { aiProviderRegistry } from "@/lib/ai/registry";
 import { loadProvider } from "@/lib/ai/provider-factory";
 import { OllamaRequestError } from "@/lib/ai/ollama-local/errors";
+import { isOllamaLocalDefaultModel } from "@/lib/ai/ollama-local/config";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
 
 const ModelUpdateSchema = z.object({
@@ -65,6 +66,10 @@ export async function deleteModel(modelId: string): Promise<{ error: string } | 
   // A remote provider lists the models it serves: they cannot be deleted.
   if (model.provider.source === AIProviderSource.REMOTE) {
     return { error: "Les modèles d'un fournisseur distant ne peuvent pas être supprimés." };
+  }
+
+  if (model.provider.type === AIProviderType.OLLAMA_LOCAL && isOllamaLocalDefaultModel(model.name)) {
+    return { error: "Ce modèle est un modèle par défaut défini dans le .env (génération ou embedding) : il ne peut pas être supprimé." };
   }
 
   const { parameters } = await pipelineRuntime.getConfig();
