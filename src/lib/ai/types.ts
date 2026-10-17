@@ -10,6 +10,8 @@ export interface AIModelInfo {
   sizeBytes?: bigint | number;
   // What the provider says the model can do; added to the capabilities set by hand at each synchronization.
   capabilities?: Capability[];
+  // Known from the provider itself (paid API, local runtime); a provider checking it per model uses requiresCredits().
+  requiresCredits?: boolean;
 }
 
 export interface Message {

@@ -40,6 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { TruncatedText } from "@/components/ui/truncated-text";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 import { deleteModel, setModelFavorite, updateModel } from "@/lib/mutations/aiModel";
@@ -157,17 +158,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <TruncatedText>{displayName || model.name}</TruncatedText>
 
-                  {model.requiresCredits === true && (
-                    <Badge variant="outline" className="border-amber-500/40 text-amber-600">
-                      Crédits requis
-                    </Badge>
-                  )}
-
-                  {model.requiresCredits === false && (
-                    <Badge variant="outline" className="border-green-500/40 text-green-600">
-                      Accessible
-                    </Badge>
-                  )}
+                  <CostDot requiresCredits={model.requiresCredits} />
                 </CardTitle>
 
                 <CardDescription className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
@@ -398,6 +389,37 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+const costLabels = {
+  free: "Gratuit : ce modèle s'utilise sans crédits.",
+  paid: "Payant : chaque utilisation de ce modèle consomme des crédits chez le fournisseur.",
+};
+
+// Nothing while unknown (a model Ollama Cloud did not answer for).
+function CostDot({ requiresCredits }: { requiresCredits: boolean | null }) {
+  if (requiresCredits === null) {
+    return null;
+  }
+
+  const label = requiresCredits ? costLabels.paid : costLabels.free;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          aria-label={label}
+          onClick={(event) => event.stopPropagation()}
+          className="inline-flex size-4 shrink-0 items-center justify-center rounded-full"
+        >
+          <span className={cn("size-2 rounded-full", requiresCredits ? "bg-orange-500" : "bg-green-500")} />
+        </span>
+      </TooltipTrigger>
+
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

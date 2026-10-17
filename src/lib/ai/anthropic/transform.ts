@@ -11,6 +11,8 @@ export function toAppModel(model: Anthropic.ModelInfo): AIModelInfo {
     displayName: model.display_name,
     // Claude models only generate: Anthropic has no embedding API.
     capabilities: [Capability.GENERATION],
+    // Every call is paid with the account credits.
+    requiresCredits: true,
   };
 }
 

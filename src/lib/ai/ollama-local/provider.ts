@@ -20,7 +20,8 @@ export class OllamaLocalProvider implements AIProviderClient {
 
   async models(): Promise<AIModelInfo[]> {
     const models = await this.client.models();
-    return models.map(toAppModel);
+    // Run on this machine: free.
+    return models.map((model) => ({ ...toAppModel(model), requiresCredits: false }));
   }
 
   async hasModel(modelName: string): Promise<boolean> {

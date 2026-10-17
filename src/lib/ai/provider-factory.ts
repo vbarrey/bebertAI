@@ -45,9 +45,11 @@ export async function syncProviderModels(provider: AIProvider, client: AIProvide
     ),
   );
 
-  for (const [index, { capabilities = [], ...model }] of models.entries()) {
-    // An unknown answer (rate limited...) keeps what the last synchronization found.
-    const access = requiresCredits[index] === undefined ? {} : { requiresCredits: requiresCredits[index] };
+  for (const [index, { capabilities = [], requiresCredits: listedRequiresCredits, ...model }] of models.entries()) {
+    // Checked per model first, then what the provider lists; unknown (rate limited...) keeps what the last
+    // synchronization found.
+    const knownRequiresCredits = requiresCredits[index] ?? listedRequiresCredits;
+    const access = knownRequiresCredits === undefined ? {} : { requiresCredits: knownRequiresCredits };
     // Added to the capabilities of the model: the ones set by hand stay.
     const reported = { capabilities: { connect: capabilities.map((name) => ({ name })) } };
 
