@@ -57,7 +57,7 @@ export function CreateProviderDialog() {
 
         {selectedType === null ? (
           <ProviderTypeSelector onSelect={setSelectedType} />
-        ) : selectedType === "OLLAMA_CLOUD" || selectedType === "ANTHROPIC" ? (
+        ) : selectedType === "OLLAMA_CLOUD" || selectedType === "ANTHROPIC" || selectedType === "VOYAGE" ? (
           <ApiKeyProviderForm
             type={selectedType}
             onBack={() => setSelectedType(null)}

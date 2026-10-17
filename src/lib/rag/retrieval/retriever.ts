@@ -49,6 +49,7 @@ export class DocumentRetriever {
             // A query embeds in 0.15 s on the CPU. On the GPU, Ollama evicts the chat model when it does not leave
             // room for the embedding model, then reloads it for the answer (25 s for a 36B model).
             cpuOnly: true,
+            inputType: "query",
         });
 
         const queryEmbedding = embeddings[0];

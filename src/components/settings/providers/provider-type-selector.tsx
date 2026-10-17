@@ -49,6 +49,9 @@ export function ProviderTypeSelector({
             <SelectItem value="ANTHROPIC">
               Anthropic
             </SelectItem>
+            <SelectItem value="VOYAGE">
+              Voyage AI (embeddings)
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>

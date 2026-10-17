@@ -57,6 +57,8 @@ export type EmbedRequest = {
   contextLength?: number;
   // Runs the model on the CPU, leaving the VRAM to the chat model.
   cpuOnly?: boolean;
+  // Models embedding a query and a document differently (Voyage); ignored by Ollama.
+  inputType?: "query" | "document";
 }
 
 export type Embedding = number[];

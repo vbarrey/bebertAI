@@ -212,6 +212,7 @@ enum Capability {
 enum AIProviderType {
   OLLAMA_LOCAL
   OLLAMA_CLOUD
+  VOYAGE
   OPENAI
   ANTHROPIC
 }

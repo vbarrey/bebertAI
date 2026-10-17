@@ -73,6 +73,7 @@ export class DocumentEmbedder {
         model: this.modelName,
         input: batch.map((key) => textByKey.get(key)!),
         contextLength: this.contextLength,
+        inputType: "document",
       });
 
       if (embeddings.length !== batch.length) {
