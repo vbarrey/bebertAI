@@ -1,73 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
 
 import { AIProviderType } from "@prisma/client";
 
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ProviderSourceIcon } from "./provider-source-icon";
 
 type Props = {
   onSelect: (type: AIProviderType) => void;
 };
 
-export function ProviderTypeSelector({
-  onSelect,
-}: Props) {
-  const [type, setType] =
-    useState<AIProviderType | null>(null);
+// The types a provider can be created with (OpenAI has no client yet).
+export const providerTypes = [
+  { type: "OLLAMA_LOCAL", name: "Ollama (local)", description: "Modèles exécutés sur cette machine.", icon: "/icons/ollama.svg", source: "LOCAL" },
+  { type: "OLLAMA_CLOUD", name: "Ollama Cloud", description: "Modèles Ollama hébergés sur ollama.com.", icon: "/icons/ollama.svg", source: "REMOTE" },
+  { type: "ANTHROPIC", name: "Anthropic", description: "Modèles Claude, pour la génération.", icon: "/icons/anthropic.svg", source: "REMOTE" },
+  { type: "VOYAGE", name: "Voyage AI", description: "Modèles d'embedding.", icon: "/icons/voyage.svg", source: "REMOTE" },
+] as const;
 
+export function ProviderTypeSelector({ onSelect }: Props) {
   return (
-    <div className="space-y-6 py-4">
-      <div className="space-y-2">
-        <Label>Type de fournisseur</Label>
-
-        <Select
-          defaultValue={type ?? undefined}
-          onValueChange={(value) =>
-            setType(value as AIProviderType)
-          }
+    <div className="grid grid-cols-2 gap-3 py-4">
+      {providerTypes.map((provider) => (
+        <button
+          key={provider.type}
+          type="button"
+          onClick={() => onSelect(provider.type)}
+          className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Choisir un fournisseur" />
-          </SelectTrigger>
+          <div className="flex w-full items-center justify-between">
+            {/* Black logos: inverted on the dark theme. */}
+            <Image src={provider.icon} alt="" width={28} height={28} className="dark:invert" />
 
-          <SelectContent>
-            <SelectItem value="OLLAMA_LOCAL">
-              Ollama (local)
-            </SelectItem>
-            <SelectItem value="OLLAMA_CLOUD">
-              Ollama Cloud
-            </SelectItem>
-            <SelectItem value="ANTHROPIC">
-              Anthropic
-            </SelectItem>
-            <SelectItem value="VOYAGE">
-              Voyage AI (embeddings)
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+            <ProviderSourceIcon source={provider.source} focusable={false} />
+          </div>
 
-      <div className="flex justify-end">
-        <Button
-          disabled={!type}
-          onClick={() => {
-            if (type) {
-              onSelect(type);
-            }
-          }}
-        >
-          Continuer
-        </Button>
-      </div>
+          <div>
+            <p className="text-sm font-medium">{provider.name}</p>
+
+            <p className="mt-1 text-xs text-muted-foreground">{provider.description}</p>
+          </div>
+        </button>
+      ))}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
 
 import { AIProviderType } from "@prisma/client";
 
-import { ProviderTypeSelector } from "./provider-type-selector";
+import { ProviderTypeSelector, providerTypes } from "./provider-type-selector";
 import { OllamaLocalProviderForm } from "./provider-form/ollama-local";
 import { ApiKeyProviderForm } from "./provider-form/api-key-provider";
 
@@ -44,7 +44,7 @@ export function CreateProviderDialog() {
         <DialogHeader>
           <DialogTitle>
             {selectedType
-              ? `Configurer ${selectedType}`
+              ? `Configurer ${providerTypes.find((provider) => provider.type === selectedType)?.name ?? selectedType}`
               : "Ajouter un fournisseur"}
           </DialogTitle>
 
