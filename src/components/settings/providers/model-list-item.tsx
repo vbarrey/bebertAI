@@ -239,14 +239,11 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                   <dl className="mt-3 grid gap-4 text-sm sm:grid-cols-2">
                     <InfoItem label="Nom technique" value={model.name} />
 
-                    <InfoItem label="Nom affiché" value={displayName || "—"} />
+                    <InfoItem label="Nom affiché" value={displayName} />
 
-                    <InfoItem label="Famille" value={model.family ?? "—"} />
+                    <InfoItem label="Famille" value={model.family} />
 
-                    <InfoItem
-                      label="Taille"
-                      value={model.parameterSize ?? "—"}
-                    />
+                    <InfoItem label="Taille" value={model.parameterSize} />
                   </dl>
                 </div>
 
@@ -425,7 +422,8 @@ function CostDot({ requiresCredits }: { requiresCredits: boolean | null }) {
 
 type InfoItemProps = {
   label: string;
-  value: string;
+  // Missing or empty (Ollama Cloud gives an empty family): "--".
+  value: string | null;
 };
 
 function InfoItem({ label, value }: InfoItemProps) {
@@ -434,7 +432,7 @@ function InfoItem({ label, value }: InfoItemProps) {
       <dt className="text-xs text-muted-foreground">{label}</dt>
 
       <dd className="font-medium">
-        <TruncatedText>{value}</TruncatedText>
+        <TruncatedText>{value || "--"}</TruncatedText>
       </dd>
     </div>
   );
