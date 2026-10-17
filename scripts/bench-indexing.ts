@@ -9,7 +9,7 @@
  */
 import type { Chunk } from "@prisma/client";
 
-import { OllamaProvider } from "@/lib/ai/ollama/provider";
+import { OllamaLocalProvider } from "@/lib/ai/ollama-local/provider";
 import { withDocumentFile } from "@/lib/documents/storage";
 import { prisma } from "@/lib/prisma";
 import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
@@ -56,7 +56,7 @@ async function main() {
     console.log(`  ${pages} pages OCR`);
 
     // Embedding: the model is loaded first so the timing is the embedding alone.
-    const provider = new OllamaProvider("ollama", "Ollama", { host: process.env["OLLAMA_BASE_URL"] ?? "http://localhost:11434", defaultModel: "" });
+    const provider = new OllamaLocalProvider("ollama", "Ollama", { host: process.env["OLLAMA_BASE_URL"] ?? "http://localhost:11434", defaultModel: "" });
     const contextLength = embeddingContextLength(parameters.chunking.chunkSize);
     const document = await prisma.document.findFirstOrThrow({
         where: { displayName: { startsWith: argument("embedded", "PR 236") } },

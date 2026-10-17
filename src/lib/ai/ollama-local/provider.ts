@@ -3,19 +3,19 @@ import { AIModelInfo, ChatChunk, ChatRequestInput, Embedding, EmbedRequest } fro
 import { AIProviderClient } from "../provider";
 
 // Ollama types
-import { OllamaClient } from "./client";
+import { OllamaLocalClient } from "./client";
 import { toAppModel, toOlllamaChatRequest, toAppChatChunk, toOllamaEmbedRequest, toAppEmbeddings } from "./transform";
-import { OllamaProviderConfiguration, parseOllamaConfig } from "./config";
+import { OllamaLocalConfiguration, parseOllamaLocalConfig } from "./config";
 
-export class OllamaProvider implements AIProviderClient {
+export class OllamaLocalProvider implements AIProviderClient {
   id: string;
   name: string;
-  client: OllamaClient;
+  client: OllamaLocalClient;
 
-  constructor(id: string, name: string, config: OllamaProviderConfiguration) {
+  constructor(id: string, name: string, config: OllamaLocalConfiguration) {
     this.id = id;
-    this.name = name ?? "OLLAMA";
-    this.client = new OllamaClient(config);
+    this.name = name ?? "OLLAMA LOCAL";
+    this.client = new OllamaLocalClient(config);
   }
 
   async models(): Promise<AIModelInfo[]> {
@@ -45,8 +45,8 @@ export class OllamaProvider implements AIProviderClient {
   }
 
   async updateConfig(config: unknown): Promise<void> {
-    const ollamaConfig = parseOllamaConfig(config);
-    this.client = new OllamaClient(ollamaConfig);
+    const ollamaConfig = parseOllamaLocalConfig(config);
+    this.client = new OllamaLocalClient(ollamaConfig);
   }
 
   async embed(appInput: EmbedRequest): Promise<Embedding[]> {

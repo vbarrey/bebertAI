@@ -13,10 +13,10 @@ import {
   OllamaRequestError,
   OllamaEmptyBodyResponseError,
 } from "./errors";
-import { OllamaProviderConfiguration } from "./config";
+import { OllamaLocalConfiguration } from "./config";
 
-export class OllamaClient {
-  constructor(private readonly config: OllamaProviderConfiguration) {}
+export class OllamaLocalClient {
+  constructor(private readonly config: OllamaLocalConfiguration) {}
 
   async *chat(input: OllamaChatRequest): AsyncGenerator<OllamaChatChunk> {
     const res = await this.request(() =>

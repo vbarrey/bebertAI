@@ -1,10 +1,10 @@
 
-export interface OllamaProviderConfiguration {
+export interface OllamaLocalConfiguration {
   host: string;
   defaultModel: string;
 }
 
-export function parseOllamaConfig(config: unknown): OllamaProviderConfiguration {
+export function parseOllamaLocalConfig(config: unknown): OllamaLocalConfiguration {
    if (
     typeof config !== "object" ||
     config === null ||

@@ -40,8 +40,8 @@ export function ProviderTypeSelector({
           </SelectTrigger>
 
           <SelectContent>
-            <SelectItem value="OLLAMA">
-              Ollama
+            <SelectItem value="OLLAMA_LOCAL">
+              Ollama (local)
             </SelectItem>
           </SelectContent>
         </Select>

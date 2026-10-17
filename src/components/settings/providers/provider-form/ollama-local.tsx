@@ -17,12 +17,12 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
-type OllamaProviderFormProps = {
+type OllamaLocalProviderFormProps = {
   onBack: () => void;
   onSuccess: () => void;
 };
 
-export type CreateOllamaProviderInput = {
+export type CreateOllamaLocalProviderInput = {
   name: string;
   displayName: string | null;
   description: string | null;
@@ -33,10 +33,10 @@ export type CreateOllamaProviderInput = {
   };
 };
 
-export function OllamaProviderForm({
+export function OllamaLocalProviderForm({
   onBack,
   onSuccess,
-}: OllamaProviderFormProps) {
+}: OllamaLocalProviderFormProps) {
   const [displayName, setDisplayName] = useState("Ollama");
 
   const [description, setDescription] = useState(
@@ -64,7 +64,7 @@ export function OllamaProviderForm({
     try {
       setLoading(true);
 
-      const configuration: CreateOllamaProviderInput["configuration"] = {
+      const configuration: CreateOllamaLocalProviderInput["configuration"] = {
         host: host.trim(),
       };
 
@@ -73,8 +73,8 @@ export function OllamaProviderForm({
           defaultModel.trim();
       }
 
-      const provider: CreateOllamaProviderInput = {
-        name: "OLLAMA",
+      const provider: CreateOllamaLocalProviderInput = {
+        name: "OLLAMA LOCAL",
         displayName: displayName.trim() || null,
         description: description.trim() || null,
         enabled,

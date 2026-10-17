@@ -2,24 +2,24 @@ import { prisma } from "@/lib/prisma";
 import { AIProviderType } from "@prisma/client";
 import { AIInitializer } from "../../AIInitializer";
 import { aiProviderRegistry } from "@/lib/ai/registry";
-import { parseOllamaConfig } from "@/lib/ai/ollama/config";
-import { OllamaProvider } from "@/lib/ai/ollama/provider";
+import { parseOllamaLocalConfig } from "@/lib/ai/ollama-local/config";
+import { OllamaLocalProvider } from "@/lib/ai/ollama-local/provider";
 
-export class OllamaInitializer implements AIInitializer {
+export class OllamaLocalInitializer implements AIInitializer {
   name: string = "OLLAMA LOCAL INIT";
   providerId: string | undefined;
 
   async initializeProvider(): Promise<void> {
     let pProvider = await prisma.aIProvider.findFirst({
       where: {
-        type: AIProviderType.OLLAMA,
+        type: AIProviderType.OLLAMA_LOCAL,
       },
     });
 
     if (!pProvider) {
       pProvider = await prisma.aIProvider.create({
         data: {
-          type: AIProviderType.OLLAMA,
+          type: AIProviderType.OLLAMA_LOCAL,
           name: "OLLAMA LOCAL",
           configuration: {
             host: process.env["OLLAMA_HOST"],
@@ -31,9 +31,9 @@ export class OllamaInitializer implements AIInitializer {
       });
     }
 
-    const config = parseOllamaConfig(pProvider.configuration);
+    const config = parseOllamaLocalConfig(pProvider.configuration);
 
-    const ollamaProvider = new OllamaProvider(pProvider.id, pProvider.name, config);
+    const ollamaProvider = new OllamaLocalProvider(pProvider.id, pProvider.name, config);
     this.providerId = pProvider.id;
 
     aiProviderRegistry.register(ollamaProvider);
@@ -58,7 +58,7 @@ export class OllamaInitializer implements AIInitializer {
 
     const ollamaProvider = await prisma.aIProvider.findFirst({
       where: {
-        type: AIProviderType.OLLAMA,
+        type: AIProviderType.OLLAMA_LOCAL,
       },
     });
 
@@ -74,7 +74,7 @@ export class OllamaInitializer implements AIInitializer {
         where: {
           name: model.name,
           provider: {
-            type: AIProviderType.OLLAMA,
+            type: AIProviderType.OLLAMA_LOCAL,
           },
         },
       });

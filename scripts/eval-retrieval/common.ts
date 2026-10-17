@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { OllamaProvider } from "@/lib/ai/ollama/provider";
+import { OllamaLocalProvider } from "@/lib/ai/ollama-local/provider";
 import { prisma } from "@/lib/prisma";
 import { PipelineParametersSchema, type PipelineParameters } from "@/lib/pipeline/parameters";
 import type { QueryTranslations } from "@/lib/rag/retrieval/query-translator";
@@ -59,8 +59,8 @@ export async function loadPipelineParameters(): Promise<PipelineParameters> {
     return PipelineParametersSchema.parse(JSON.parse(stored.parameters));
 }
 
-export function ollama(): OllamaProvider {
-    return new OllamaProvider("ollama", "Ollama", {
+export function ollama(): OllamaLocalProvider {
+    return new OllamaLocalProvider("ollama", "Ollama", {
         host: process.env["OLLAMA_BASE_URL"] ?? "http://localhost:11434",
         defaultModel: "",
     });

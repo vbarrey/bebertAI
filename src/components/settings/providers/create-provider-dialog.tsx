@@ -16,7 +16,7 @@ import {
 import { AIProviderType } from "@prisma/client";
 
 import { ProviderTypeSelector } from "./provider-type-selector";
-import { OllamaProviderForm } from "./provider-form/ollama-local";
+import { OllamaLocalProviderForm } from "./provider-form/ollama-local";
 
 export function CreateProviderDialog() {
   const [open, setOpen] = useState(false);
@@ -57,7 +57,7 @@ export function CreateProviderDialog() {
         {selectedType === null ? (
           <ProviderTypeSelector onSelect={setSelectedType} />
         ) : (
-          <OllamaProviderForm
+          <OllamaLocalProviderForm
             onBack={() => setSelectedType(null)}
             onSuccess={() => setOpen(false)}
           />
