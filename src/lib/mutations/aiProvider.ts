@@ -60,8 +60,9 @@ export async function createApiKeyProvider(
       data: { type, source: AIProviderSource.REMOTE, name, configuration },
     });
   } catch (error) {
+    // The database error repeats the data sent, the API key included: it stays in the server logs.
     console.error("Provider creation failed:", error);
-    return { error: `Création impossible : ${errorMessage(error)}` };
+    return { error: "Création impossible : le fournisseur n'a pas pu être enregistré (détail dans les journaux du serveur)." };
   }
 
   try {
