@@ -78,6 +78,21 @@ export class OllamaCloudClient {
     }
   }
 
+  // No API lists the models of the account plan: a one-token answer tells, 402 when the model needs usage credits.
+  async requiresCredits(model: string): Promise<boolean | undefined> {
+    try {
+      await this.request("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ model, messages: [{ role: "user", content: "ok" }], stream: false, options: { num_predict: 1 } }),
+      });
+      return false;
+    } catch (error) {
+      if (error instanceof OllamaRequestError && error.status === 402) return true;
+      // Unknown: rate limited, unreachable...
+      return undefined;
+    }
+  }
+
   private async request(path: string, init: RequestInit): Promise<Response> {
     let res: Response;
     try {

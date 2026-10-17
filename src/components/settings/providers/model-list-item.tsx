@@ -121,6 +121,18 @@ export function ModelListItem({ model, expanded, onExpandedChange }: Props) {
                   {model.favorite && (
                     <Star className="size-3.5 shrink-0 fill-current text-yellow-500" />
                   )}
+
+                  {model.requiresCredits === true && (
+                    <Badge variant="outline" className="border-amber-500/40 text-amber-600">
+                      Crédits requis
+                    </Badge>
+                  )}
+
+                  {model.requiresCredits === false && (
+                    <Badge variant="outline" className="border-green-500/40 text-green-600">
+                      Accessible
+                    </Badge>
+                  )}
                 </CardTitle>
 
                 <CardDescription className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">

@@ -186,6 +186,9 @@ model AIModel {
 
   source AIModelSource
 
+  // Remote model refused without usage credits (Ollama Cloud answers 402); null when unknown or local.
+  requiresCredits Boolean?
+
   conversations Conversation[]
 
   capabilities AIModelCapability[]

@@ -41,6 +41,10 @@ export class OllamaCloudProvider implements AIProviderClient {
     return this.client.checkApiKey();
   }
 
+  async requiresCredits(modelName: string): Promise<boolean | undefined> {
+    return this.client.requiresCredits(modelName);
+  }
+
   async updateConfig(config: unknown): Promise<void> {
     this.client = new OllamaCloudClient(parseOllamaCloudConfig(config));
   }

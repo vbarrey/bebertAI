@@ -61,7 +61,7 @@ async function initialize() {
    * Initialisation du registry une seule fois au démarrage
    * du processus worker.
    */
-  await initializeAI();
+  await initializeAI({ synchronizeModels: false });
 
   const worker = new Worker<IndexingJobData>(
     "document-indexing",

@@ -3,7 +3,8 @@ import { AIInitializer } from "./AIInitializer";
 import { OllamaLocalInitializer } from "./initializer/ollama-local/ollama-local-initializer";
 import { RemoteProvidersInitializer } from "./initializer/remote-providers-initializer";
 
-export async function initializeAI() {
+// The indexing worker only needs the registry: the models are synchronized by the app.
+export async function initializeAI({ synchronizeModels = true } = {}) {
   const initializers: AIInitializer[] = [
     // Add your AI provider initializers here
     new OllamaLocalInitializer(),
@@ -17,7 +18,7 @@ export async function initializeAI() {
     initializers.map((initializer) =>
       initializer
         .initializeProvider()
-        .then(() => initializer.synchronizeModels())
+        .then(() => (synchronizeModels ? initializer.synchronizeModels() : undefined))
     )
   ).then((results) => {
     results.forEach((result, index) => {

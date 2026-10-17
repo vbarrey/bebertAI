@@ -54,6 +54,17 @@ describe("OllamaCloudClient", () => {
         await client.checkApiKey();
     });
 
+    it("tells whether a model needs usage credits: 402 yes, an answer no, another error unknown", async () => {
+        fakeFetch(['{"error":"this model is not included in your free usage"}'], 402);
+        assert.equal(await client.requiresCredits("m"), true);
+
+        fakeFetch([line("O", true)]);
+        assert.equal(await client.requiresCredits("m"), false);
+
+        fakeFetch(['{"error":"too many requests"}'], 429);
+        assert.equal(await client.requiresCredits("m"), undefined);
+    });
+
     it("refuses a configuration without API key", () => {
         assert.throws(() => parseOllamaCloudConfig({ host: "https://ollama.com" }), /Invalid Ollama Cloud configuration/);
     });

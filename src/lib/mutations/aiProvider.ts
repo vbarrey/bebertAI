@@ -6,10 +6,9 @@ import { AIProviderType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { aiProviderRegistry } from "@/lib/ai/registry";
-import { createProviderClient } from "@/lib/ai/provider-factory";
 import { OllamaCloudProvider } from "@/lib/ai/ollama-cloud/provider";
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
-import { syncProviderModels } from "@/lib/startup/initializer/remote-providers-initializer";
+import { createProviderClient, loadProvider, syncProviderModels } from "@/lib/ai/provider-factory";
 
 const OllamaCloudProviderSchema = z.object({
   name: z.string().trim().min(1, "Le nom est requis."),
@@ -46,6 +45,25 @@ export async function createOllamaCloudProvider(
   const client = createProviderClient(provider);
   aiProviderRegistry.register(client);
   await syncProviderModels(provider, client);
+
+  revalidatePath("/settings", "layout");
+}
+
+/**
+ * Lists the models of the provider again, with whether they need usage credits.
+ */
+export async function synchronizeProviderModels(providerId: string): Promise<{ error: string } | undefined> {
+  const provider = await prisma.aIProvider.findUnique({ where: { id: providerId } });
+  if (!provider) {
+    return { error: "Fournisseur introuvable." };
+  }
+
+  try {
+    const client = aiProviderRegistry.get(providerId) ?? (await loadProvider(providerId))!;
+    await syncProviderModels(provider, client);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Synchronisation impossible." };
+  }
 
   revalidatePath("/settings", "layout");
 }

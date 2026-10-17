@@ -21,6 +21,10 @@ import { ModelList } from "./model-list";
 
 import { Prisma } from "@prisma/client";
 
+import { toast } from "sonner";
+
+import { synchronizeProviderModels } from "@/lib/mutations/aiProvider";
+
 import { ProviderConfigurationCard } from "./provider-config-card";
 
 type ProviderDetailsProps = {
@@ -33,15 +37,18 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
 
   const refreshProviderModels = async () => {
     setRefreshing(true);
-    await new Promise<void>((resolve) => {
-      setTimeout(
-        () => {
-          resolve();
-        },
-        1000 * (Math.random() * 5),
-      );
-    }); // TODO : make api fetch
-    setRefreshing(false);
+    try {
+      const result = await synchronizeProviderModels(provider.id);
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Modèles synchronisés.");
+      }
+    } catch {
+      toast.error("Synchronisation impossible.");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleEnableSwitchChange = async (enabled: boolean) => {
@@ -99,7 +106,7 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
             </p>
           </div>
 
-          <Button variant="outline" size="lg" onClick={refreshProviderModels}>
+          <Button variant="outline" size="lg" onClick={refreshProviderModels} disabled={isRefreshing}>
             <RefreshSpinnerCustom isRefreshing={isRefreshing} />
             Synchroniser
           </Button>
