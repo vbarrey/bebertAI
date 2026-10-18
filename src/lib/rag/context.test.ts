@@ -17,8 +17,8 @@ const chunk = (fields: Partial<RetrievedChunk> & Pick<RetrievedChunk, "position"
 
 const buildRagContext = (chunks: RetrievedChunk[]) => formatExcerpts(buildExcerpts(chunks));
 
-// Context without the instructions paragraph.
-const excerpts = (context: string) => context.slice(context.indexOf("### "));
+// Context without the instructions paragraphs, before and after the excerpts.
+const excerpts = (context: string) => context.slice(context.indexOf("### "), context.lastIndexOf("\n\nDans ta réponse"));
 
 describe("joinChunks", () => {
     it("rebuilds the original text from the chunker output", async () => {

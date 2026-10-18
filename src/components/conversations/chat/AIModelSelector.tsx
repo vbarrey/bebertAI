@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { ChevronDown, Lock } from "lucide-react";
 
-import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { ProviderAvatar } from "@/components/settings/providers/provider-avatar";
 import { Provider } from "@/types/augmented-prisma";
 
 type Props = {
@@ -21,14 +22,13 @@ type Props = {
   modelName: string;
   providers: Provider[];
   disabled: boolean;
-  // Greyed out and never expands: the conversation model can no longer change.
+  // The conversation has started: its model can no longer change.
   locked: boolean;
   onProviderChange: (providerId: string) => void;
   onModelChange: (modelName: string) => void;
 };
 
-const transition = { duration: 0.2, ease: "easeOut" } as const;
-
+/** The model of the conversation; a click opens the provider and model choice until the first message. */
 export function AIModelSelector({
   providerId,
   modelName,
@@ -38,113 +38,78 @@ export function AIModelSelector({
   onProviderChange,
   onModelChange,
 }: Props) {
-  const [isHovered, setIsHovered] = useState(false);
-  // The select menus are portaled outside the selector: keep it expanded while one is open.
-  const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const provider = providers.find((provider) => provider.id === providerId);
+  const model = provider?.models?.find((model) => model.name === modelName);
+  const label = model?.displayName || modelName || "Modèle";
 
-  function handleSelectOpenChange(open: boolean) {
-    setIsSelectOpen(open);
-
-    // The menu closes under the cursor without a mouseleave: re-read the hover state on the next pointer move.
-    if (!open) {
-      document.addEventListener(
-        "pointermove",
-        (event) => setIsHovered(rootRef.current?.contains(event.target as Node) ?? false),
-        { once: true },
-      );
-    }
-  }
-
-  const isExpanded = !locked && (isHovered || isSelectOpen);
-
-  const provider = providers.find(
-    (provider) => provider.id === providerId,
+  const summary = (
+    <>
+      <ProviderAvatar providerId={providerId} size={18} className="shrink-0" />
+      <span className="truncate">{label}</span>
+      {provider && <span className="hidden truncate text-muted-foreground sm:inline">· {provider.name}</span>}
+    </>
   );
 
-  return (
-    <div
-      ref={rootRef}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+  if (locked) {
+    return (
       <div
-        className={cn(
-          "flex items-center overflow-hidden rounded-xl border shadow-sm",
-          locked ? "bg-muted text-muted-foreground" : "bg-background",
-        )}
-        title={locked ? "Le modèle ne peut plus être changé une fois la conversation commencée." : undefined}
+        className="flex h-8 min-w-0 items-center gap-2 rounded-full px-2 text-xs text-muted-foreground"
+        title="Le modèle ne peut plus être changé une fois la conversation commencée."
       >
-        <AnimatePresence initial={false}>
-          {isExpanded ? (
-            <motion.div
-              key="form"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: "auto", opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={transition}
-              className="overflow-hidden"
-            >
-              <div className="flex items-center gap-2 p-2">
-                <Field>
-                  <FieldContent>
-                    <FieldLabel>Fournisseur</FieldLabel>
-                  </FieldContent>
-                  <Select value={providerId} onValueChange={onProviderChange} onOpenChange={handleSelectOpenChange} disabled={disabled}>
-                    <SelectTrigger className="h-8 w-[130px]">
-                      <SelectValue placeholder="Fournisseur"/>
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      {providers.map((provider) => (
-                        <SelectItem key={provider.id} value={provider.id}>
-                          {provider.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-
-                <Field>
-                  <FieldContent>
-                    <FieldLabel>Modèle</FieldLabel>
-                  </FieldContent>
-                  <Select value={modelName} onValueChange={onModelChange} onOpenChange={handleSelectOpenChange} disabled={disabled || !providerId}>
-                    <SelectTrigger className="h-8 w-[160px]">
-                      <SelectValue placeholder="Modèle" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>{provider?.name}</SelectLabel>
-
-                        {provider?.models?.map((model) => (
-                          <SelectItem key={model.id} value={model.name}>
-                            {model.displayName ? model.displayName : model.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="label"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: "auto", opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={transition}
-              className="overflow-hidden"
-            >
-              <div className="flex h-10 items-center px-3 text-sm font-medium whitespace-nowrap">
-                {modelName || "Modèle"}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {summary}
+        <Lock className="size-3 shrink-0" aria-label="Modèle verrouillé" />
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 min-w-0 gap-2 rounded-full px-2 text-xs" disabled={disabled}>
+          {summary}
+          <ChevronDown className="size-3 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+
+      <PopoverContent align="start" className="w-80 gap-3 p-3">
+        <Field>
+          <FieldLabel>Fournisseur</FieldLabel>
+          <Select value={providerId} onValueChange={onProviderChange} disabled={disabled}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Fournisseur">{provider?.name}</SelectValue>
+            </SelectTrigger>
+
+            <SelectContent>
+              {providers.map((provider) => (
+                <SelectItem key={provider.id} value={provider.id}>
+                  {provider.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <Field>
+          <FieldLabel>Modèle</FieldLabel>
+          <Select value={modelName} onValueChange={onModelChange} disabled={disabled || !providerId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Modèle">{label}</SelectValue>
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>{provider?.name}</SelectLabel>
+
+                {provider?.models?.map((model) => (
+                  <SelectItem key={model.id} value={model.name}>
+                    {model.displayName ? model.displayName : model.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      </PopoverContent>
+    </Popover>
   );
 }

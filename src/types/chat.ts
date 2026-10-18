@@ -12,4 +12,6 @@ export type ChatMessage = {
     step?: ChatStep;
     // Documents the answer was generated from.
     sources?: ChatSource[];
+    // Why the answer failed, told by the stream; never saved.
+    error?: string;
 };

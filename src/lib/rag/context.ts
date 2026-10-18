@@ -7,6 +7,10 @@ const EXCERPTS_INSTRUCTIONS = `Contexte documentaire : extraits des documents de
 Ce sont des passages partiels de documents plus longs : la fin d'un extrait n'est pas la fin du document.
 Ne dis jamais que la documentation s'interrompt ou que tu n'as pas accès à la suite. Si l'information semble incomplète, réponds avec ce qui est disponible et indique le document et la page où chercher la suite.`;
 
+// After the excerpts, right before the question: a small model follows best what it read last.
+// The chat links these "[n]" to the sources (lib/ai/chat/citations).
+const CITATION_INSTRUCTIONS = `Dans ta réponse, cite les extraits utilisés avec leur numéro entre crochets, juste après l'information qu'ils appuient : [1], ou [2][3] pour plusieurs extraits.`;
+
 export type Excerpt = {
     documentId: string;
     documentName: string;
@@ -106,5 +110,6 @@ export function buildRagContext(excerpts: Excerpt[]): string {
             .map((excerpt, index) =>
                 `### Extrait ${index + 1} — ${excerpt.documentName}${pagesLabel(excerpt)}\n\n${excerpt.text}`,
             ),
+        CITATION_INSTRUCTIONS,
     ].join("\n\n");
 }

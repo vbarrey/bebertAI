@@ -12,6 +12,13 @@ import { DEFAULT_SYSTEM_PROMPT } from "@/lib/pipeline/default";
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
 import { getConversationModel } from "@/lib/queries/conversation";
 
+const PREVIEW_LENGTH = 300;
+
+function excerptPreview(text: string): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > PREVIEW_LENGTH ? `${flat.slice(0, PREVIEW_LENGTH).trimEnd()}…` : flat;
+}
+
 type PipelineModel = { providerId: string; modelName: string };
 
 /**
@@ -94,11 +101,12 @@ export async function* generateAssistantResponse({
   if (excerpts.length > 0) {
     yield {
       type: "sources",
-      sources: excerpts.map(({ documentId, documentName, chunkId, chunkPage }) => ({
+      sources: excerpts.map(({ documentId, documentName, chunkId, chunkPage, text }) => ({
         documentId,
         documentName,
         chunkId,
         pageNumber: chunkPage,
+        preview: excerptPreview(text),
       })),
     };
   }

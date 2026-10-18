@@ -253,4 +253,6 @@ enum MessageStatus {
   STREAMING
   COMPLETED
   FAILED
+  // Stopped by the user: the answer is kept as far as it went.
+  CANCELLED
 }

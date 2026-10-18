@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Square } from "lucide-react";
 import { toast } from "sonner";
 
 import { updateConversationModel } from "@/lib/mutations/conversation";
 
-import { Field } from "@/components/ui/field";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
-  InputGroupInput,
+  InputGroupTextarea,
 } from "@/components/ui/input-group";
 
 import { AIModelSelector } from "./AIModelSelector";
@@ -18,7 +18,8 @@ import { Provider } from "@/types/augmented-prisma";
 
 type Props = {
   conversationId: string;
-  onSendMessage: (message: string) => Promise<void>;
+  onSendMessage: (message: string) => void;
+  onStop: () => void;
   isStreaming: boolean;
   providersModels: Provider[];
   initialModel: { providerId: string; modelName: string };
@@ -29,6 +30,7 @@ type Props = {
 export function ChatInput({
   conversationId,
   onSendMessage,
+  onStop,
   isStreaming,
   providersModels,
   initialModel,
@@ -40,7 +42,14 @@ export function ChatInput({
 
   const [isUpdatingModel, setIsUpdatingModel] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [message, setMessage] = useState("");
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Ready for the next question once the answer ends, and on opening the conversation.
+  useEffect(() => {
+    if (!isStreaming) textareaRef.current?.focus();
+  }, [isStreaming]);
 
   async function selectModel(
     nextProviderId: string,
@@ -90,52 +99,84 @@ export function ChatInput({
     await selectModel(providerId, nextModelName);
   }
 
-  async function handleSubmit(formData: FormData) {
-    const message = formData.get("content")?.toString();
-    if (!message) return;
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
-    onSendMessage(message);
+  const canSend = message.trim() !== "" && !isStreaming && !isUpdatingModel;
+
+  function submit() {
+    if (!canSend) return;
+    onSendMessage(message.trim());
+    setMessage("");
   }
 
   return (
-    <div className="flex w-full max-w-5xl justify-center items-center gap-4 p-4 m-auto">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-4 pt-2 pb-4">
       <form
-        action={handleSubmit}
-        className="flex w-full items-center gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
       >
-        <Field>
-          <InputGroup className="h-15 w-[70%] rounded-4xl p-4 shadow-md">
-            <InputGroupInput
-              placeholder="Posez votre question…"
-              name="content"
-              autoComplete="off"
-              disabled={isStreaming}
-              ref={inputRef}
-            />
+        <InputGroup className="rounded-3xl has-[textarea]:rounded-3xl bg-background px-2 py-1.5 shadow-md dark:bg-input/30">
+          <InputGroupTextarea
+            ref={textareaRef}
+            placeholder="Posez votre question…"
+            aria-label="Votre question"
+            name="content"
+            rows={1}
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            onKeyDown={(event) => {
+              // Enter sends, Shift+Enter goes to the line; not while an IME composes a character.
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                submit();
+              }
+            }}
+            className="max-h-48 min-h-10 px-3 py-2.5 text-base md:text-sm"
+          />
 
-            <InputGroupAddon align="inline-end">
+          <InputGroupAddon align="inline-end" className="self-end pb-1">
+            {isStreaming ? (
+              <InputGroupButton
+                type="button"
+                size="icon-sm"
+                variant="default"
+                className="size-8 rounded-full"
+                onClick={onStop}
+                aria-label="Arrêter la réponse"
+              >
+                <Square className="fill-current" />
+              </InputGroupButton>
+            ) : (
               <InputGroupButton
                 type="submit"
-                disabled={isStreaming || isUpdatingModel}
+                size="icon-sm"
+                variant="default"
+                className="size-8 rounded-full"
+                disabled={!canSend}
+                aria-label="Envoyer"
               >
-                {isStreaming ? "Envoi…" : "Envoyer"}
+                <ArrowUp />
               </InputGroupButton>
-            </InputGroupAddon>
-          </InputGroup>
-        </Field>
+            )}
+          </InputGroupAddon>
+        </InputGroup>
       </form>
 
-      <AIModelSelector
-        providerId={providerId}
-        modelName={modelName}
-        providers={providersModels}
-        disabled={isStreaming || isUpdatingModel}
-        locked={modelLocked}
-        onProviderChange={handleProviderChange}
-        onModelChange={handleModelChange}
-      />
+      <div className="flex items-center justify-between gap-2 px-2">
+        <AIModelSelector
+          providerId={providerId}
+          modelName={modelName}
+          providers={providersModels}
+          disabled={isStreaming || isUpdatingModel}
+          locked={modelLocked}
+          onProviderChange={handleProviderChange}
+          onModelChange={handleModelChange}
+        />
+
+        <p className="hidden text-xs text-muted-foreground sm:block">
+          Entrée pour envoyer, Maj+Entrée pour aller à la ligne
+        </p>
+      </div>
     </div>
   );
 }

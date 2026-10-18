@@ -36,34 +36,39 @@ export class OllamaLocalClient {
 
     let buffer = "";
     let hasContent = false;
-    while (true) {
-      const { value, done } = await reader.read();
+    // Closes the connection when the caller stops reading (answer stopped by the user): Ollama stops generating.
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
 
-      if (done) break;
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        const chunk: OllamaChatResponse = JSON.parse(line);
-        if (chunk.done && !hasContent && !chunk.message.content) {
-          throw new OllamaError(
-            chunk.done_reason === "length"
-              ? `Réponse vide : la limite de ${chunk.eval_count} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens ou désactivez la réflexion dans Réglages > Pipeline.`
-              : `Réponse vide du modèle (done_reason: ${chunk.done_reason}).`,
-          );
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const chunk: OllamaChatResponse = JSON.parse(line);
+          if (chunk.done && !hasContent && !chunk.message.content) {
+            throw new OllamaError(
+              chunk.done_reason === "length"
+                ? `Réponse vide : la limite de ${chunk.eval_count} tokens a été atteinte avant la réponse (réflexion du modèle ?). Augmentez le nombre maximal de tokens ou désactivez la réflexion dans Réglages > Pipeline.`
+                : `Réponse vide du modèle (done_reason: ${chunk.done_reason}).`,
+            );
+          }
+          if (chunk.message.content === "") continue;
+          hasContent = true;
+          yield {
+            created_at: chunk.created_at,
+            model: chunk.model,
+            message: { role: "assistant", content: chunk.message.content },
+            done: chunk.done,
+          };
         }
-        if (chunk.message.content === "") continue;
-        hasContent = true;
-        yield {
-          created_at: chunk.created_at,
-          model: chunk.model,
-          message: { role: "assistant", content: chunk.message.content },
-          done: chunk.done,
-        };
       }
+    } finally {
+      reader.cancel().catch(() => {});
     }
   }
 

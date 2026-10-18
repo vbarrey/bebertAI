@@ -5,6 +5,7 @@ import { setProvisionalTitle } from "../../mutations/conversation";
 import { getConversationMessages } from "../../queries/message";
 import { generateAssistantResponse } from "./engine";
 import { ChatSource, ChatStreamEvent } from "../types";
+import { userErrorMessage } from "./error-message";
 
 type StreamConversationInput = {
     conversationId: string;
@@ -41,8 +42,8 @@ export async function* streamConversation({ conversationId, message }: StreamCon
         status: MessageStatus.PENDING
     });
 
-    // FAILED unless the generation goes to the end (error or client disconnect)
-    let status: MessageStatus = MessageStatus.FAILED;
+    // Neither completed nor failed: the client went away (answer stopped by the user), the generator was returned.
+    let status: MessageStatus = MessageStatus.CANCELLED;
 
     try {
         // Stream assistant response
@@ -59,8 +60,10 @@ export async function* streamConversation({ conversationId, message }: StreamCon
 
         status = MessageStatus.COMPLETED;
     } catch (error) {
+        status = MessageStatus.FAILED;
         console.error(`Assistant response failed for conversation ${conversationId}:`, error);
-        throw error;
+        // Told in the stream: a thrown error would only cut the connection.
+        yield { type: "error", message: userErrorMessage(error) };
     } finally {
         // Single write once the generation ends instead of one write per token
         await updateMessage({

@@ -38,7 +38,9 @@ export interface ChatChunk {
 export type ChatStreamEvent =
   | { type: "step"; step: ChatStep }
   | { type: "sources"; sources: ChatSource[] }
-  | { type: "content"; content: string };
+  | { type: "content"; content: string }
+  // The answer failed: why, in words for the user.
+  | { type: "error"; message: string };
 
 // A document excerpt given to the model, in the order of the "Extrait N" it was given as.
 export type ChatSource = {
@@ -47,6 +49,8 @@ export type ChatSource = {
   // Best matching chunk of the excerpt, to open the document at its bounding box later.
   chunkId: string;
   pageNumber: number | null;
+  // The start of the excerpt text, shown on the source; missing on the answers saved before it.
+  preview?: string;
 };
 
 export type GenerateAssistantResponseInput = {

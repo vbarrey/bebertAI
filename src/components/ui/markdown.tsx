@@ -1,11 +1,13 @@
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from "remark-gfm";
 
 type Props = {
     content: string
+    // Replace the rendering of some elements, e.g. the links of the cited sources.
+    components?: Components
 }
 
-export function Markdown({ content }: Props) {
+export function Markdown({ content, components }: Props) {
     return (
         <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -187,6 +189,8 @@ export function Markdown({ content }: Props) {
                         className="my-5 max-h-[600px] max-w-full rounded-xl border object-contain"
                     />
                 ),
+
+                ...components,
             }}>{content}</ReactMarkdown>
     );
 }

@@ -53,6 +53,24 @@ export async function renameConversation(formData: FormData) {
 }
 
 /**
+ * Deletes the last question and its answer, to ask it again (regenerate, retry). Returns the question, null when
+ * the conversation does not end with a question and its answer.
+ */
+export async function removeLastExchange(conversationId: string): Promise<string | null> {
+    const [answer, question] = await prisma.message.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: "desc" },
+        take: 2,
+        select: { id: true, role: true, content: true },
+    });
+
+    if (answer?.role !== "ASSISTANT" || question?.role !== "USER") return null;
+
+    await prisma.message.deleteMany({ where: { id: { in: [answer.id, question.id] } } });
+    return question.content;
+}
+
+/**
  * The first message as title, until the generated one: an untitled conversation only, a title given by hand stays.
  */
 export async function setProvisionalTitle(conversationId: string, message: string) {
