@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import {
   Card,
   CardHeader,
@@ -28,14 +30,25 @@ export function PipelineCardItem({
   onClose: () => void;
 }) {
   const Icon = item.icon;
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Phone list: the opened card can be below the screen. The diagram opens it in the middle.
+  useEffect(() => {
+    if (isExpanded && window.matchMedia("(max-width: 47.99rem)").matches) {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isExpanded]);
+
   return (
     <Card
+      ref={cardRef}
       className={cn(
-        "absolute w-[20%] -translate-x-1/2 -translate-y-1/2 transition-[left,top,width,filter,box-shadow]",
+        // Phone: a list in the page flow, the card opening in place; md: the diagram.
+        "transition-[left,top,width,filter,box-shadow] md:absolute md:-translate-x-1/2 md:-translate-y-1/2",
         !isExpanded && someExpanded
-          ? "blur-xs cursor-default"
+          ? "md:blur-xs md:cursor-default"
           : "cursor-pointer hover:border-primary hover:shadow-lg",
-        isExpanded ? "z-20 w-[80%] min-h-[30vh] cursor-default" : "z-10",
+        isExpanded ? "z-20 cursor-default md:min-h-[30vh] md:w-[80%]" : "z-10 md:w-[20%]",
       )}
       style={{
         left: isExpanded ? "50%" : `${item.position.x}%`,
@@ -70,9 +83,7 @@ export function PipelineCardItem({
         </CardDescription>
       </CardHeader>
 
-      <CardContent>
-        {isExpanded && item.content}
-      </CardContent>
+      {isExpanded && <CardContent>{item.content}</CardContent>}
     </Card>
   );
 }

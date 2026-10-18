@@ -66,7 +66,7 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
   };
 
   return (
-    <div className="mx-auto max-w-4xl p-8">
+    <div className="mx-auto max-w-4xl p-4 md:p-8">
       <header className="mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           {provider.name}

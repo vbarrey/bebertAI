@@ -15,8 +15,9 @@ export default function SettingsLayout({
       {/* Phone: tabs above the page instead of the side panel. */}
       <SettingsNav className="flex gap-2 space-y-0 overflow-x-auto border-b p-3 [scrollbar-width:none] md:hidden [&>a]:shrink-0 [&>a]:whitespace-nowrap" />
 
-      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-        <ResizablePanel defaultSize="15%" className="hidden p-4 md:block">
+      {/* The panels set their display inline: only an important rule hides the side one. */}
+      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1 max-md:[&>[data-slot=resizable-panel]:first-child]:hidden!">
+        <ResizablePanel defaultSize="15%" className="p-4">
           <div className="mb-6 px-2">
             <h2 className="font-semibold">Réglages</h2>
           </div>
@@ -25,7 +26,8 @@ export default function SettingsLayout({
         </ResizablePanel>
         <ResizableHandle withHandle={true} className="hidden md:flex" />
 
-        <ResizablePanel className="flex-1">{children}</ResizablePanel>
+        {/* Relative: the hidden native inputs of the Radix fields (absolute) stay inside its scroll. */}
+        <ResizablePanel className="relative flex-1">{children}</ResizablePanel>
       </ResizablePanelGroup>
     </div>
   );

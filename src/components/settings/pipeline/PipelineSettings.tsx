@@ -287,12 +287,12 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
     <div className="container flex w-full flex-col p-4">
       <h2 className="mb-4 text-xl">Pipeline</h2>
 
-      <div className="relative h-[80vh] w-full">
+      <div className="flex w-full flex-col gap-3 md:relative md:block md:h-[80vh]">
         <PipelineEdges someExpanded={someExpanded} />
 
         <div
           className={cn(
-            someExpanded ? "z-15 size-full cursor-pointer" : "hidden",
+            someExpanded ? "z-15 hidden size-full cursor-pointer md:block" : "hidden",
           )}
           onClick={() => setExpandedCardId(null)}
         />

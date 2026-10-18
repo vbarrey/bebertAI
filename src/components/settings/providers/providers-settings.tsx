@@ -21,7 +21,7 @@ export function ProvidersSettings({ providers }: AISettingsProps) {
     providers.find((provider) => provider.id === selectedProviderId) ?? null;
 
   return (
-    <div className="flex h-[100vh] min-w-0 flex-col">
+    <div className="flex h-full min-w-0 flex-col">
       <ProviderCarousel
         providers={providers}
         selectedProviderId={selectedProviderId}

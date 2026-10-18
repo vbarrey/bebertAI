@@ -22,7 +22,8 @@ export function MainLayout({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <MobileHeader projects={projects} />
 
-        <div className="min-h-0 w-full flex-1 overflow-y-auto">
+        {/* Relative: the hidden native inputs of the Radix fields (absolute) stay inside its scroll. */}
+        <div className="relative min-h-0 w-full flex-1 overflow-y-auto">
           {children}
         </div>
       </div>

@@ -6,7 +6,7 @@ export function PipelineEdges({ someExpanded }: { someExpanded: boolean}) {
   return (
     <svg
       className={cn(
-        "pointer-events-none absolute inset-0 z-0 size-full",
+        "pointer-events-none absolute inset-0 z-0 hidden size-full md:block",
         someExpanded ? "blur-xs" : "",
       )}
       viewBox="0 0 100 100"

@@ -20,7 +20,7 @@ export function ProviderCarousel({
   onSelectProvider,
 }: ProviderCarouselProps) {
   return (
-    <section className="border-b px-8 py-6">
+    <section className="border-b px-4 py-4 md:px-8 md:py-6">
       <div className="mb-4">
         <h2 className="text-sm font-semibold">Fournisseurs</h2>
 
@@ -39,7 +39,7 @@ export function ProviderCarousel({
               aria-pressed={isSelected}
               onClick={() => onSelectProvider(provider.id)}
               className={cn(
-                "flex w-64 shrink-0 snap-start items-center gap-3 rounded-lg border p-4 text-left transition-colors",
+                "flex w-56 shrink-0 snap-start items-center gap-3 rounded-lg border p-3 text-left transition-colors md:w-64 md:p-4",
                 isSelected
                   ? "border-primary/40 bg-muted shadow-sm"
                   : "hover:bg-muted/50",
@@ -71,7 +71,7 @@ export function ProviderCarousel({
           );
         })}
 
-        <div className="flex w-64 shrink-0 snap-start items-center">
+        <div className="flex w-56 shrink-0 snap-start items-center md:w-64">
           <CreateProviderDialog />
         </div>
       </div>
