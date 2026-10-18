@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -258,14 +259,22 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
             </div>
 
             {/* Stats + Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                {statusOptions
-                    .filter((opt) => opt.value !== "all")
-                    .map((opt) => {
-                        const count = documents.filter((d) => d.indexingStatus === opt.value).length;
+            {/* A row that scrolls sideways on a phone, a grid from md. */}
+            <div className="-mx-6 mb-8 flex gap-2 overflow-x-auto px-6 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-4 md:gap-4 md:overflow-visible md:px-0 md:pb-0">
+                {statusOptions.map((opt) => {
+                        const count = opt.value === "ALL"
+                            ? documents.length
+                            : documents.filter((d) => d.indexingStatus === opt.value).length;
                         return (
-                            <Card key={opt.value} className="flex flex-row items-center gap-3 p-4 transition-all hover:-translate-y-1/20 duration-200 hover:border-primary hover:shadow-md" onClick={() => changeFilters(() => setStatusFilter(toIndexingStatus(opt.value as string)))}>
-                                <CardContent>
+                            <Card
+                                key={opt.value}
+                                className={cn(
+                                    "shrink-0 cursor-pointer flex-row items-center py-2 transition-all duration-200 hover:border-primary hover:shadow-md md:py-4",
+                                    statusFilter === opt.value && "border-primary",
+                                )}
+                                onClick={() => changeFilters(() => setStatusFilter(toIndexingStatus(opt.value as string)))}
+                            >
+                                <CardContent className="flex items-center gap-2 whitespace-nowrap px-3 md:px-4">
                                     <Badge variant="outline">{count}</Badge> <span>{opt.label}</span>
                                 </CardContent>
                             </Card>
@@ -274,7 +283,7 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
             </div>
 
             {/* Search & Filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
                 <Input
                     placeholder="Rechercher par nom"
                     value={search}
@@ -286,7 +295,9 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                     value={statusFilter}
                 >
                     <SelectTrigger>
-                        <SelectValue placeholder="Statut" />
+                        <SelectValue placeholder="Statut">
+                            {statusOptions.find((opt) => opt.value === statusFilter)?.label}
+                        </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                         {statusOptions.map((opt) => (
@@ -296,7 +307,7 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                         ))}
                     </SelectContent>
                 </Select>
-                <div className="mt-4 sm:mt-0 sm:ml-auto">
+                <div className="sm:ml-auto">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
                             key={selectionMode ? "bulk" : "select"}
@@ -327,8 +338,8 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
             {paginated.length === 0 ? (
                 <div className="p-6 text-center text-muted-foreground">Aucun document trouvé.</div>
             ) : (
-                <div className="overflow-hidden rounded-xl border">
-                    <table className="w-full min-w-[800px] table-fixed">
+                <div className="overflow-x-auto rounded-xl border">
+                    <table className="w-full table-fixed">
                         <thead className="bg-muted/20">
                             <tr>
                                 {/* Always rendered so the column width can animate open/closed (table-fixed reads widths from the header). */}
@@ -346,14 +357,14 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                                     </SelectionCell>
                                 </motion.th>
                                 {/* No width: this auto column absorbs the slack, so the selection column keeps its exact animated width. */}
-                                <th className="px-4 py-2">Fichier</th>
+                                <th className="px-2 py-2 md:px-4">Fichier</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Type</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Taille</th>
                                 <th className="w-[10%] px-4 py-2 hidden md:table-cell">Langue</th>
-                                <th className="w-[12.5%] px-4 py-2">Statut</th>
+                                <th className="w-24 px-2 py-2 md:w-[12.5%] md:px-4">Statut</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Dernière indexation</th>
                                 <th className="w-[12.5%] px-4 py-2 hidden md:table-cell">Dernière modification</th>
-                                <th className="w-[12.5%] px-4 py-2">Actions</th>
+                                <th className="w-20 px-2 py-2 md:w-[12.5%] md:px-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -363,7 +374,7 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                                     <tr
                                         key={doc.id}
                                         data-state={selectedIds.has(doc.id) ? "selected" : undefined}
-                                        className="border-t transition-colors data-[state=selected]:bg-muted/50 [&>td]:px-4 [&>td]:py-3"
+                                        className="border-t transition-colors data-[state=selected]:bg-muted/50 [&>td]:px-2 md:[&>td]:px-4 [&>td]:py-3"
                                     >
                                         <td className="overflow-hidden p-0!">
                                             <SelectionCell show={selectionMode}>
@@ -436,7 +447,7 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
 
             {/* Pagination */}
             {totalPages > 1 && (
-                <div className="mt-6 flex justify-center gap-2">
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
                     <Button
                         variant="ghost"
                         size="sm"
@@ -445,11 +456,14 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                     >
                         Précédent
                     </Button>
+                    {/* Too many page buttons for a phone: the position instead. */}
+                    <span className="text-sm text-muted-foreground sm:hidden">{page} / {totalPages}</span>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                         <Button
                             key={p}
                             variant={p === page ? "default" : "ghost"}
                             size="sm"
+                            className="hidden sm:inline-flex"
                             onClick={() => setPage(p)}
                         >
                             {p}

@@ -14,15 +14,15 @@ export function MainLayout({
   children,
 }: MainLayoutProps) {
   return (
-    <main className="flex min-h-screen bg-background">
+    <main className="flex h-screen bg-background">
       <MainSidebar
         projects={projects}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <MobileHeader />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <MobileHeader projects={projects} />
 
-        <div className="h-[100vh] w-full flex-1 overflow-y-hidden">
+        <div className="min-h-0 w-full flex-1 overflow-y-auto">
           {children}
         </div>
       </div>

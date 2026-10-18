@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
+import { useThemeChoice } from "./useThemeChoice";
+
 type MainSidebarProps = {
   projects: Project[];
 };
@@ -49,11 +51,7 @@ const SIDEBAR_TRANSITION = {
 export function MainSidebar({ projects }: MainSidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-
-  const handleProjectCreation = async (data: FormData) => {
-    data.set("projectName", crypto.randomUUID());
-    await createProject(data);
-  };
+  const theme = useThemeChoice();
 
   const toggleCollapsed = () => {
     setCollapsed((value) => !value);
@@ -120,7 +118,7 @@ export function MainSidebar({ projects }: MainSidebarProps) {
             ? "Agrandir la barre latérale"
             : "Réduire la barre latérale"
         }
-        className="flex shrink-0 cursor-pointer items-center justify-center bg-gray-200 p-0"
+        className="flex shrink-0 cursor-pointer items-center justify-center bg-muted p-0"
       >
         <motion.div
           initial={false}
@@ -136,7 +134,7 @@ export function MainSidebar({ projects }: MainSidebarProps) {
 
       {/* Nouveau projet */}
       <div className="shrink-0 p-2">
-        <form action={handleProjectCreation}>
+        <form action={createProject}>
           <Button
             className="w-full justify-center gap-0"
             aria-label="Créer un projet"
@@ -393,6 +391,42 @@ export function MainSidebar({ projects }: MainSidebarProps) {
               </AnimatePresence>
             </Button>
           </Link>
+
+          <Button
+            variant="ghost"
+            className="flex w-full justify-center"
+            onClick={theme.cycle}
+            aria-label={collapsed ? theme.label : undefined}
+            title="Changer de thème"
+          >
+            <theme.Icon className="h-4 w-4 shrink-0" />
+
+            <AnimatePresence initial={false}>
+              {!collapsed && (
+                <motion.span
+                  initial={{
+                    opacity: 0,
+                    width: 0,
+                    marginLeft: 0,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    width: "auto",
+                    marginLeft: "calc(.25rem * 2)",
+                  }}
+                  exit={{
+                    opacity: 0,
+                    width: 0,
+                    marginLeft: 0,
+                  }}
+                  transition={SIDEBAR_TRANSITION}
+                  className="overflow-hidden whitespace-nowrap"
+                >
+                  {theme.label}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </Button>
         </div>
       </div>
     </motion.aside>

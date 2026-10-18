@@ -17,12 +17,10 @@ export default async function ConversationPage({
   if (!conversation) notFound();
 
   return (
-    <div className="mx-auto flex w-full container flex-1 flex-col p-6 lg:p-10 h-full">
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold">
-          Conversations {conversation.title}
-        </h1>
-      </div>
+    <div className="mx-auto flex h-full w-full container flex-col p-6 lg:p-10">
+      <h1 className="mb-5 truncate text-2xl font-bold">
+        {conversation.title ?? "Nouvelle conversation"}
+      </h1>
 
       <ChatPanel 
         conversationId={conversation.id}

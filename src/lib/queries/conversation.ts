@@ -2,14 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { cache } from "react";
 import type { ChatSource } from "@/lib/ai/types";
 
-export const getProjectConversations = cache(
-  async (projectId: string) => {
-    return prisma.conversation.findMany({
-      where: { projectId },
-    });
-  }
-);
-
 export const getConversation = cache(
   async (conversationId: string) => prisma.conversation.findUnique({ where: { id: conversationId } })
 );

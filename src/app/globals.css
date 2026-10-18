@@ -6,12 +6,8 @@
 
 :root {
   --muted: oklch(0.97 0 0);
-  --surface: #fff;
-  --subtle: #f7f7f7;
   --sidebar: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
-  --hover: #f0f0f0;
-  --charcoal: #262626;
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

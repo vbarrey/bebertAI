@@ -37,7 +37,7 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
 
           <div>
             <CardTitle className="truncate">
-              {conversation.title}
+              {conversation.title ?? "Nouvelle conversation"}
             </CardTitle>
           </div>
         </CardHeader>

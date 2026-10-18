@@ -88,7 +88,7 @@ export function AIModelSelector({
               <div className="flex items-center gap-2 p-2">
                 <Field>
                   <FieldContent>
-                    <FieldLabel>Provider</FieldLabel>
+                    <FieldLabel>Fournisseur</FieldLabel>
                   </FieldContent>
                   <Select value={providerId} onValueChange={onProviderChange} onOpenChange={handleSelectOpenChange} disabled={disabled}>
                     <SelectTrigger className="h-8 w-[130px]">
@@ -107,7 +107,7 @@ export function AIModelSelector({
 
                 <Field>
                   <FieldContent>
-                    <FieldLabel>Model</FieldLabel>
+                    <FieldLabel>Modèle</FieldLabel>
                   </FieldContent>
                   <Select value={modelName} onValueChange={onModelChange} onOpenChange={handleSelectOpenChange} disabled={disabled || !providerId}>
                     <SelectTrigger className="h-8 w-[160px]">

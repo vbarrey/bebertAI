@@ -108,7 +108,7 @@ export function ChatInput({
         <Field>
           <InputGroup className="h-15 w-[70%] rounded-4xl p-4 shadow-md">
             <InputGroupInput
-              placeholder="Type to discuss..."
+              placeholder="Posez votre question…"
               name="content"
               autoComplete="off"
               disabled={isStreaming}
@@ -120,7 +120,7 @@ export function ChatInput({
                 type="submit"
                 disabled={isStreaming || isUpdatingModel}
               >
-                {isStreaming ? "Sending..." : "Send"}
+                {isStreaming ? "Envoi…" : "Envoyer"}
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>

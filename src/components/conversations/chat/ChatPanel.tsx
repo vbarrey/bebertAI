@@ -16,7 +16,7 @@ export async function ChatPanel({ conversationId, messages, model }: ChatPanelPr
   const pipelineConfig = await pipelineRuntime.getConfig();
 
   return (
-    <div className="flex flex-1 flex-col gap-4 justify-between h-full">
+    <div className="flex min-h-0 flex-1 flex-col">
       <Chat
         conversationId={conversationId}
         messages={messages}

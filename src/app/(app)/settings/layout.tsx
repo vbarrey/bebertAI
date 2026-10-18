@@ -5,36 +5,28 @@ import {
 } from "@/components/ui/resizable";
 import { ReactNode } from "react";
 
+import { SettingsNav } from "@/components/settings/SettingsNav";
+
 export default function SettingsLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <main className="flex min-h-screen">
-      <ResizablePanelGroup orientation="horizontal">
-        <ResizablePanel defaultSize="15%" className="p-4">
+    <div className="flex h-full flex-col">
+      {/* Phone: tabs above the page instead of the side panel. */}
+      <SettingsNav className="flex gap-2 space-y-0 overflow-x-auto border-b p-3 [scrollbar-width:none] md:hidden [&>a]:shrink-0 [&>a]:whitespace-nowrap" />
+
+      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+        <ResizablePanel defaultSize="15%" className="hidden p-4 md:block">
           <div className="mb-6 px-2">
             <h2 className="font-semibold">Réglages</h2>
           </div>
 
-          <nav className="space-y-1">
-            <a
-              href="/settings/provider"
-              className="flex items-center rounded-md px-3 py-2 text-sm font-medium border"
-            >
-              Fournisseurs et modèles d&apos;IA
-            </a>
-            <a
-              href="/settings/pipeline"
-              className="flex items-center rounded-md px-3 py-2 text-sm font-medium border"
-            >
-              Pipeline
-            </a>
-          </nav>
+          <SettingsNav />
         </ResizablePanel>
-        <ResizableHandle withHandle={true} />
+        <ResizableHandle withHandle={true} className="hidden md:flex" />
 
         <ResizablePanel className="flex-1">{children}</ResizablePanel>
       </ResizablePanelGroup>
-    </main>
+    </div>
   );
 }

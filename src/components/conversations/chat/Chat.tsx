@@ -116,7 +116,7 @@ export function Chat({ conversationId, messages, providersModels, initialModel }
   };
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       <MessageList messages={chatMessages} />
       <ChatInput
         conversationId={conversationId}
