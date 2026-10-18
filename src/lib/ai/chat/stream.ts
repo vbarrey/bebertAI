@@ -1,6 +1,7 @@
 import { MessageRole, MessageStatus } from "@prisma/client";
 
 import { createMessage, updateMessage } from "../../mutations/message";
+import { setProvisionalTitle } from "../../mutations/conversation";
 import { getConversationMessages } from "../../queries/message";
 import { generateAssistantResponse } from "./engine";
 import { ChatSource, ChatStreamEvent } from "../types";
@@ -23,6 +24,8 @@ export async function* streamConversation({ conversationId, message }: StreamCon
         content: message, 
         status: MessageStatus.COMPLETED
     });
+
+    await setProvisionalTitle(conversationId, message);
 
     // Read before the empty ASSISTANT message exists so it never ends up in the prompt.
     const history = await getConversationMessages(conversationId);

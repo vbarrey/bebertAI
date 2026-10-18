@@ -30,9 +30,20 @@ export const getProjectWithConversations = cache(async (projectId: string) => {
       name: true,
       description: true,
       conversations: {
-        orderBy: {
-          updatedAt: "desc",
-        }
+        orderBy: { lastMessageAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          lastMessageAt: true,
+          _count: { select: { messages: true } },
+          // The first question: the title of a conversation never titled, else its subtitle.
+          messages: {
+            where: { role: "USER" },
+            orderBy: { createdAt: "asc" },
+            take: 1,
+            select: { content: true },
+          },
+        },
       }
     }
   });

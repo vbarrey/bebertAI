@@ -3,6 +3,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { getPipelineProvider } from "@/lib/pipeline/config";
+import { getConversationModels } from "@/lib/ai/chat/engine";
+import { generateTitle, provisionalTitle } from "@/lib/ai/chat/title";
+
+const MAX_TITLE_LENGTH = 100;
 
 
 export async function createConversation(formData: FormData) {
@@ -29,7 +34,7 @@ export async function createConversation(formData: FormData) {
 export async function renameConversation(formData: FormData) {
     const projectId = formData.get("projectId")?.toString();
     const conversationId = formData.get("conversationId")?.toString();
-    const title = formData.get("title")?.toString();
+    const title = formData.get("title")?.toString().trim().slice(0, MAX_TITLE_LENGTH);
 
     if (!conversationId || !title) return; // TODO : Handle validation error
 
@@ -45,6 +50,64 @@ export async function renameConversation(formData: FormData) {
 
     revalidatePath(`/projects/${projectId}/conversations`);
     revalidatePath(`/projects/${projectId}/conversations/${conversationId}`);
+}
+
+/**
+ * The first message as title, until the generated one: an untitled conversation only, a title given by hand stays.
+ */
+export async function setProvisionalTitle(conversationId: string, message: string) {
+    await prisma.conversation.updateMany({
+        where: { id: conversationId, title: null },
+        data: { title: provisionalTitle(message) },
+    });
+}
+
+/**
+ * Titles the conversation with the small model once its first answer is complete.
+ * Only replaces the provisional title: a title given by hand meanwhile stays. Returns the title, null when unchanged.
+ */
+export async function generateConversationTitle(conversationId: string): Promise<string | null> {
+    const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: {
+            title: true,
+            projectId: true,
+            messages: { orderBy: { createdAt: "asc" }, take: 3, select: { role: true, status: true, content: true } },
+        },
+    });
+
+    const [question, answer, ...others] = conversation?.messages ?? [];
+
+    if (
+        !conversation || others.length > 0
+        || question?.role !== "USER" || answer?.role !== "ASSISTANT" || answer.status !== "COMPLETED"
+        || conversation.title !== provisionalTitle(question.content)
+    ) {
+        return null;
+    }
+
+    const { smallModel } = await getConversationModels(conversationId, (await pipelineRuntime.getConfig()).parameters);
+
+    let title: string | null;
+    try {
+        const provider = await getPipelineProvider(smallModel, "titre");
+        title = await generateTitle(provider, smallModel.modelName, question.content, answer.content);
+    } catch (error) {
+        console.warn(`[ConversationTitle] No title model for conversation ${conversationId}:`, error);
+        return null;
+    }
+
+    if (!title) return null;
+
+    const { count } = await prisma.conversation.updateMany({
+        where: { id: conversationId, title: conversation.title },
+        data: { title },
+    });
+
+    if (count === 0) return null;
+
+    revalidatePath(`/projects/${conversation.projectId}`);
+    return title;
 }
 
 /**
@@ -78,5 +141,5 @@ export async function deleteConversation(formData: FormData) {
         }
     });
 
-    revalidatePath(`/projects/${projectId}/conversations`);
+    revalidatePath(`/projects/${projectId}`);
 }

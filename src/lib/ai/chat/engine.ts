@@ -9,7 +9,32 @@ import { buildExcerpts, buildRagContext } from "@/lib/rag/context";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
 import { getPipelineProvider } from "@/lib/pipeline/config";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/pipeline/default";
+import type { PipelineParameters } from "@/lib/pipeline/parameters";
 import { getConversationModel } from "@/lib/queries/conversation";
+
+type PipelineModel = { providerId: string; modelName: string };
+
+/**
+ * The model answering the conversation, and the small model of its side tasks (query translation, title).
+ */
+export async function getConversationModels(
+  conversationId: string,
+  { generation, retrieval }: Pick<PipelineParameters, "generation" | "retrieval">,
+): Promise<{ generationModel: PipelineModel; smallModel: PipelineModel }> {
+  // The conversation keeps the model it was started with; the pipeline model is only the default.
+  const conversationModel = (await getConversationModel(conversationId))?.model;
+  const generationModel = conversationModel
+    ? { providerId: conversationModel.providerId, modelName: conversationModel.name }
+    : { providerId: generation.providerId, modelName: generation.modelName };
+
+  const { translation } = retrieval.hybrid;
+  // No translation model set: the model answering the conversation, already loaded.
+  const smallModel = translation.providerId && translation.modelName
+    ? { providerId: translation.providerId, modelName: translation.modelName }
+    : generationModel;
+
+  return { generationModel, smallModel };
+}
 
 /**
  * Generates an assistant response for a given conversation and message.
@@ -31,11 +56,7 @@ export async function* generateAssistantResponse({
   const config = await pipelineRuntime.getConfig();
   const { chunking, embedding, retrieval, generation } = config.parameters;
 
-  // The conversation keeps the model it was started with; the pipeline model is only the default.
-  const conversationModel = (await getConversationModel(conversationId))?.model;
-  const generationModel = conversationModel
-    ? { providerId: conversationModel.providerId, modelName: conversationModel.name }
-    : generation;
+  const { generationModel, smallModel: translationModel } = await getConversationModels(conversationId, config.parameters);
 
   const generationProvider = await getPipelineProvider(generationModel, "génération");
   const embeddingProvider = await getPipelineProvider(embedding, "embedding");
@@ -48,10 +69,6 @@ export async function* generateAssistantResponse({
 
   // Same Unicode form as the indexed chunks, normalized after extraction.
   const query = message.normalize("NFC");
-
-  const { translation } = retrieval.hybrid;
-  // No translation model set: the model answering the conversation, already loaded.
-  const translationModel = translation.providerId && translation.modelName ? translation : generationModel;
 
   // Different models: the translation runs while the query is embedded.
   const [queryEmbedding, translations] = await Promise.all([

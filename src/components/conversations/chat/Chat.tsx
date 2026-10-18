@@ -5,7 +5,11 @@ import { MessageRole, MessageStatus } from "@prisma/client";
 import { ChatMessage } from "@/types/chat";
 import type { ChatStreamEvent } from "@/lib/ai/types";
 
+import { generateConversationTitle } from "@/lib/mutations/conversation";
+import { provisionalTitle } from "@/lib/ai/chat/title";
+
 import { ChatInput } from "./ChatInput";
+import { ConversationTitle } from "./ConversationTitle";
 import { MessageList } from "./MessageList";
 
 import { useState } from "react";
@@ -13,17 +17,25 @@ import { Provider } from "@/types/augmented-prisma";
 
 type ChatProps = {
   conversationId: string;
+  projectId: string;
+  title: string | null;
   messages: ChatMessage[];
   providersModels: Provider[];
   initialModel: { providerId: string; modelName: string };
 };
 
-export function Chat({ conversationId, messages, providersModels, initialModel }: ChatProps) {
+export function Chat({ conversationId, projectId, title: initialTitle, messages, providersModels, initialModel }: ChatProps) {
   const [chatMessages, setChatMessages] = useState(messages);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [title, setTitle] = useState(initialTitle);
 
   async function handleSendMessage(message: string){
     setIsStreaming(true);
+
+    const isFirstExchange = chatMessages.length === 0;
+    // Same as the server sets: shown right away, a title given by hand stays.
+    if (title === null) setTitle(provisionalTitle(message));
+
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: MessageRole.USER,
@@ -113,10 +125,23 @@ export function Chat({ conversationId, messages, providersModels, initialModel }
 
       setIsStreaming(false);
     }
+
+    // After the first answer, without holding the input: the small model titles the conversation.
+    if (isFirstExchange && status === MessageStatus.COMPLETED) {
+      generateConversationTitle(conversationId)
+        .then((generated) => generated && setTitle(generated))
+        .catch((error) => console.warn("Conversation title generation failed:", error));
+    }
   };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <ConversationTitle
+        conversationId={conversationId}
+        projectId={projectId}
+        title={title}
+        onRename={setTitle}
+      />
       <MessageList messages={chatMessages} />
       <ChatInput
         conversationId={conversationId}

@@ -18,12 +18,9 @@ export default async function ConversationPage({
 
   return (
     <div className="mx-auto flex h-full w-full container flex-col p-6 lg:p-10">
-      <h1 className="mb-5 truncate text-2xl font-bold">
-        {conversation.title ?? "Nouvelle conversation"}
-      </h1>
-
       <ChatPanel 
         conversationId={conversation.id}
+        title={conversation.title}
         messages={conversation.messages}
         model={conversation.model}
         projectId={projectId}/>
