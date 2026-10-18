@@ -9,11 +9,25 @@ import { generateTitle, provisionalTitle } from "@/lib/ai/chat/title";
 
 const MAX_TITLE_LENGTH = 100;
 
+// The sidebar lists the conversations on every page: each change is revalidated with the app layout.
+function revalidateConversations() {
+    revalidatePath("/", "layout");
+}
 
+/**
+ * Opens a new conversation, in the project given or outside any project. An empty one of the same place is reused:
+ * clicking "Nouvelle conversation" twice does not leave empty conversations behind.
+ */
 export async function createConversation(formData: FormData) {
-    const projectId = formData.get("projectId")?.toString();
+    const projectId = formData.get("projectId")?.toString() || null;
 
-    if (!projectId) return; // TODO : Handle validation error
+    const empty = await prisma.conversation.findFirst({
+        where: { projectId, messages: { none: {} } },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+    });
+
+    if (empty) redirect(`/conversations/${empty.id}`);
 
     // The pipeline generation model is the default model of a new conversation.
     const { generation } = (await pipelineRuntime.getConfig()).parameters;
@@ -27,29 +41,22 @@ export async function createConversation(formData: FormData) {
         modelId: model?.id,
     }});
 
-    revalidatePath(`/projects/${projectId}/conversations`);
-    redirect(`/projects/${projectId}/conversations/${res.id}`);
+    revalidateConversations();
+    redirect(`/conversations/${res.id}`);
 }
 
-export async function renameConversation(formData: FormData) {
-    const projectId = formData.get("projectId")?.toString();
-    const conversationId = formData.get("conversationId")?.toString();
-    const title = formData.get("title")?.toString().trim().slice(0, MAX_TITLE_LENGTH);
+export async function renameConversation(conversationId: string, title: string) {
+    const trimmed = title.trim().slice(0, MAX_TITLE_LENGTH);
+    if (!trimmed) return;
 
-    if (!conversationId || !title) return; // TODO : Handle validation error
+    await prisma.conversation.update({ where: { id: conversationId }, data: { title: trimmed } });
+    revalidateConversations();
+}
 
-    await prisma.conversation.update({
-        where: {
-            id: conversationId,
-            projectId: projectId
-        },
-        data: {
-            title: title
-        }
-    });
-
-    revalidatePath(`/projects/${projectId}/conversations`);
-    revalidatePath(`/projects/${projectId}/conversations/${conversationId}`);
+/** Moves the conversation into a project, or out of any project with null. */
+export async function moveConversation(conversationId: string, projectId: string | null) {
+    await prisma.conversation.update({ where: { id: conversationId }, data: { projectId } });
+    revalidateConversations();
 }
 
 /**
@@ -89,7 +96,6 @@ export async function generateConversationTitle(conversationId: string): Promise
         where: { id: conversationId },
         select: {
             title: true,
-            projectId: true,
             messages: { orderBy: { createdAt: "asc" }, take: 3, select: { role: true, status: true, content: true } },
         },
     });
@@ -124,7 +130,7 @@ export async function generateConversationTitle(conversationId: string): Promise
 
     if (count === 0) return null;
 
-    revalidatePath(`/projects/${conversation.projectId}`);
+    revalidateConversations();
     return title;
 }
 
@@ -142,22 +148,8 @@ export async function updateConversationModel(conversationId: string, modelId: s
     }
 }
 
-/**
- * Also delete all messages by casacade
- * @param conversationId 
- */
-export async function deleteConversation(formData: FormData) {
-    const projectId = formData.get("projectId")?.toString();
-    const conversationId = formData.get("conversationId")?.toString();
-
-    if (!conversationId || !projectId) return; // TODO : Handle validation error    
-
-    await prisma.conversation.delete({
-        where: {
-            id: conversationId,
-            projectId: projectId
-        }
-    });
-
-    revalidatePath(`/projects/${projectId}`);
+/** Deletes the conversation and its messages (cascade). */
+export async function deleteConversation(conversationId: string) {
+    await prisma.conversation.delete({ where: { id: conversationId } });
+    revalidateConversations();
 }

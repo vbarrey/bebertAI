@@ -7,16 +7,16 @@ import { toast } from "sonner";
 
 import { renameConversation } from "@/lib/mutations/conversation";
 import { Button } from "@/components/ui/button";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 type ConversationTitleProps = {
   conversationId: string;
-  projectId: string;
   title: string | null;
   onRename: (title: string) => void;
 };
 
 /** The conversation title, renamed in place: Enter or leaving the field saves, Escape cancels. */
-export function ConversationTitle({ conversationId, projectId, title, onRename }: ConversationTitleProps) {
+export function ConversationTitle({ conversationId, title, onRename }: ConversationTitleProps) {
   const [editing, setEditing] = useState(false);
 
   async function save(value: string) {
@@ -28,13 +28,8 @@ export function ConversationTitle({ conversationId, projectId, title, onRename }
     const previous = title;
     onRename(next);
 
-    const formData = new FormData();
-    formData.set("projectId", projectId);
-    formData.set("conversationId", conversationId);
-    formData.set("title", next);
-
     try {
-      await renameConversation(formData);
+      await renameConversation(conversationId, next);
     } catch {
       if (previous) onRename(previous);
       toast.error("Impossible de renommer la conversation.");
@@ -61,7 +56,7 @@ export function ConversationTitle({ conversationId, projectId, title, onRename }
 
   return (
     <div className="group mb-5 flex min-w-0 items-center gap-2">
-      <h1 className="min-w-0 truncate text-2xl font-bold">
+      <h1 className="min-w-0 text-2xl font-bold">
         {/* The provisional title, then the generated one: a crossfade between them. */}
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
@@ -70,8 +65,9 @@ export function ConversationTitle({ conversationId, projectId, title, onRename }
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
+            className="block min-w-0"
           >
-            {title ?? "Nouvelle conversation"}
+            <TruncatedText>{title ?? "Nouvelle conversation"}</TruncatedText>
           </motion.span>
         </AnimatePresence>
       </h1>

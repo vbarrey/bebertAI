@@ -14,11 +14,11 @@ import { ConversationTitle } from "./ConversationTitle";
 import { MessageList } from "./MessageList";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Provider } from "@/types/augmented-prisma";
 
 type ChatProps = {
   conversationId: string;
-  projectId: string;
   title: string | null;
   messages: ChatMessage[];
   providersModels: Provider[];
@@ -27,10 +27,11 @@ type ChatProps = {
   hasIndexedDocuments: boolean;
 };
 
-export function Chat({ conversationId, projectId, title: initialTitle, messages, providersModels, initialModel, hasIndexedDocuments }: ChatProps) {
+export function Chat({ conversationId, title: initialTitle, messages, providersModels, initialModel, hasIndexedDocuments }: ChatProps) {
   const [chatMessages, setChatMessages] = useState(messages);
   const [isStreaming, setIsStreaming] = useState(false);
   const [title, setTitle] = useState(initialTitle);
+  const router = useRouter();
   // Stops the answer being generated: the request is aborted and the server keeps the answer as far as it went.
   const abortRef = useRef<AbortController | null>(null);
 
@@ -134,6 +135,9 @@ export function Chat({ conversationId, projectId, title: initialTitle, messages,
       setIsStreaming(false);
     }
 
+    // The sidebar shows the provisional title set by the stream, and the conversation moved to the top.
+    router.refresh();
+
     // After the first answer, without holding the input: the small model titles the conversation.
     if (isFirstExchange && status === MessageStatus.COMPLETED) {
       generateConversationTitle(conversationId)
@@ -157,7 +161,6 @@ export function Chat({ conversationId, projectId, title: initialTitle, messages,
     <div className="flex min-h-0 flex-1 flex-col">
       <ConversationTitle
         conversationId={conversationId}
-        projectId={projectId}
         title={title}
         onRename={setTitle}
       />

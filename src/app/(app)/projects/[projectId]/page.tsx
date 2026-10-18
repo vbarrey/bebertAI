@@ -8,7 +8,7 @@ import { MessagesSquare, Settings, Plus } from "lucide-react";
 
 import { ConversationList } from "@/components/conversations/ConversationList";
 
-import { getProjectWithConversations } from "@/lib/queries/project";
+import { getProjects, getProjectWithConversations } from "@/lib/queries/project";
 import { createConversation } from "@/lib/mutations/conversation";
 
 import {
@@ -27,7 +27,7 @@ type ProjectPageProps = {
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { projectId } = await params;
-  const project = await getProjectWithConversations(projectId);
+  const [project, projects] = await Promise.all([getProjectWithConversations(projectId), getProjects()]);
 
   if (!project) notFound();
 
@@ -120,7 +120,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </p>
         </div>
       ) : (
-        <ConversationList projectId={project.id} conversations={project.conversations} />
+        <ConversationList
+          projectId={project.id}
+          conversations={project.conversations}
+          projects={projects.map(({ id, name }) => ({ id, name }))}
+        />
       )}
     </div>
   );

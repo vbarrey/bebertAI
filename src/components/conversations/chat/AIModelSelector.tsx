@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProviderAvatar } from "@/components/settings/providers/provider-avatar";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { Provider } from "@/types/augmented-prisma";
 
 type Props = {
@@ -45,8 +46,8 @@ export function AIModelSelector({
   const summary = (
     <>
       <ProviderAvatar providerId={providerId} size={18} className="shrink-0" />
-      <span className="truncate">{label}</span>
-      {provider && <span className="hidden truncate text-muted-foreground sm:inline">· {provider.name}</span>}
+      <TruncatedText>{label}</TruncatedText>
+      {provider && <TruncatedText className="hidden text-muted-foreground sm:block">{`· ${provider.name}`}</TruncatedText>}
     </>
   );
 
