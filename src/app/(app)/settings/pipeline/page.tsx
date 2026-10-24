@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/session";
 
 export default async function PipelineSettingsPage() {
   // Shared by every user until each one has their own (phase 4).
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   // Rendered per request: installed OCR languages can change without a rebuild.
   await connection();
@@ -16,7 +16,7 @@ export default async function PipelineSettingsPage() {
   const [pipelineConfig, providers, ocrLanguages] = await Promise.all([
     pipelineRuntime.getConfig(),
     // Like the chat model selector: the disabled providers and models are not offered.
-    getEnableProvidersWithModels(),
+    getEnableProvidersWithModels(admin.id),
     // No Tesseract: the form says so instead of failing the page.
     listInstalledOcrLanguages().catch(() => []),
   ]);

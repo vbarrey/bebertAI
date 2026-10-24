@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-import { decryptToken, encryptToken } from "./tokens";
+import { decryptToken, encryptToken } from "@/lib/encryption";
 
 const AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";

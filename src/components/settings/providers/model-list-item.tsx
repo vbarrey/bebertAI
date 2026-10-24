@@ -56,11 +56,12 @@ type Props = {
   model: Model;
   // Only the models of a local provider: a remote one lists the models it serves.
   removable: boolean;
+  manageable: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
 };
 
-export function ModelListItem({ model, removable, expanded, onExpandedChange }: Props) {
+export function ModelListItem({ model, removable, manageable, expanded, onExpandedChange }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -187,6 +188,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                 className="size-7 shrink-0"
                 aria-pressed={favorite}
                 aria-label={favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+                disabled={!manageable}
                 onClick={(event) => {
                   event.stopPropagation();
                   handleToggleFavorite();
@@ -203,6 +205,7 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
               <Switch
                 checked={enabled}
                 aria-label={enabled ? "Désactiver le modèle" : "Activer le modèle"}
+                disabled={!manageable}
                 onClick={(event) => event.stopPropagation()}
                 onCheckedChange={handleToggleEnabled}
               />
@@ -252,30 +255,32 @@ export function ModelListItem({ model, removable, expanded, onExpandedChange }: 
                   </dl>
                 </div>
 
-                <div
-                  className="flex items-center justify-between border-t pt-4"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditOpen(true)}
+                {manageable && (
+                  <div
+                    className="flex items-center justify-between border-t pt-4"
+                    onClick={(event) => event.stopPropagation()}
                   >
-                    <Pencil className="size-3.5" />
-                    Modifier
-                  </Button>
-
-                  {removable && !model.isDefault && (
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
-                      onClick={() => setDeleteOpen(true)}
+                      onClick={() => setEditOpen(true)}
                     >
-                      <Trash2Icon className="size-3.5" />
-                      Supprimer
+                      <Pencil className="size-3.5" />
+                      Modifier
                     </Button>
-                  )}
-                </div>
+
+                    {removable && !model.isDefault && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeleteOpen(true)}
+                      >
+                        <Trash2Icon className="size-3.5" />
+                        Supprimer
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </CollapsibleContent>

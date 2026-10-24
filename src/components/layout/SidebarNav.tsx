@@ -161,10 +161,10 @@ export function SidebarNav({ tree, user, onNavigate }: SidebarNavProps) {
           Documents
         </Link>
 
-        {user.role === "admin" && <Link href="/settings" onClick={onNavigate} className={cn(rowClassName(pathname.startsWith("/settings")), "gap-2 px-2 py-1.5 text-sm")}>
+        <Link href="/settings" onClick={onNavigate} className={cn(rowClassName(pathname.startsWith("/settings")), "gap-2 px-2 py-1.5 text-sm")}>
           <Settings className="size-4 shrink-0" />
           Réglages
-        </Link>}
+        </Link>
 
         <button type="button" onClick={theme.cycle} className={cn(rowClassName(false), "w-full gap-2 px-2 py-1.5 text-sm")}>
           <theme.Icon className="size-4 shrink-0" />

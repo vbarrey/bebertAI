@@ -32,6 +32,7 @@ export default async function ConversationPage({ params }: ConversationPageProps
       )}
 
       <ChatPanel
+        userId={user.id}
         conversationId={conversation.id}
         title={conversation.title}
         messages={conversation.messages}

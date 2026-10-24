@@ -13,9 +13,11 @@ import { ModelListItem, capabilityLabels } from "./model-list-item";
 type ModelListProps = {
   models: Model[];
   removable: boolean;
+  // False: the models are shown without their controls.
+  manageable: boolean;
 };
 
-export function ModelList({ models, removable }: ModelListProps) {
+export function ModelList({ models, removable, manageable }: ModelListProps) {
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
@@ -109,6 +111,7 @@ export function ModelList({ models, removable }: ModelListProps) {
               key={model.id}
               model={model}
               removable={removable}
+              manageable={manageable}
               expanded={expandedModelId === model.id}
               onExpandedChange={(expanded) => {
                 setExpandedModelId(expanded ? model.id : null);

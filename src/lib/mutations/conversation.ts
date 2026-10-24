@@ -7,6 +7,7 @@ import { getPipelineProvider } from "@/lib/pipeline/config";
 import { getConversationModels } from "@/lib/ai/chat/engine";
 import { generateTitle, provisionalTitle } from "@/lib/ai/chat/title";
 import { requireUser } from "@/lib/session";
+import { usableProviders } from "@/lib/ai/provider-access";
 
 const MAX_TITLE_LENGTH = 100;
 
@@ -35,7 +36,7 @@ export async function createConversation(formData: FormData) {
     // The pipeline generation model is the default model of a new conversation.
     const { generation } = (await pipelineRuntime.getConfig()).parameters;
     const model = await prisma.aIModel.findFirst({
-        where: { providerId: generation.providerId, name: generation.modelName },
+        where: { providerId: generation.providerId, name: generation.modelName, provider: usableProviders(user.id) },
         select: { id: true },
     });
 
@@ -139,6 +140,10 @@ export async function generateConversationTitle(conversationId: string): Promise
  */
 export async function updateConversationModel(conversationId: string, modelId: string) {
     const user = await requireUser();
+    if (!(await prisma.aIModel.count({ where: { id: modelId, provider: usableProviders(user.id) } }))) {
+        throw new Error("Modèle introuvable.");
+    }
+
     const { count } = await prisma.conversation.updateMany({
         where: { id: conversationId, userId: user.id, messages: { none: {} } },
         data: { modelId },

@@ -10,7 +10,9 @@ import { loadProvider } from "@/lib/ai/provider-factory";
 import { OllamaRequestError } from "@/lib/ai/ollama-local/errors";
 import { isOllamaLocalDefaultModel } from "@/lib/ai/ollama-local/config";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
-import { requireAdmin } from "@/lib/session";
+import { requireUser } from "@/lib/session";
+import { manageableProviders } from "@/lib/ai/provider-access";
+
 
 const ModelUpdateSchema = z.object({
   displayName: z.string().trim().transform((value) => value || null),
@@ -21,7 +23,13 @@ const ModelUpdateSchema = z.object({
 export type ModelUpdateInput = z.input<typeof ModelUpdateSchema>;
 
 export async function updateModel(modelId: string, input: ModelUpdateInput): Promise<{ error: string } | undefined> {
-  await requireAdmin();
+  const user = await requireUser();
+  // The models of the providers the user can manage (the shared Ollama local: the admin).
+  const manageable = { provider: manageableProviders(user) };
+  if (!(await prisma.aIModel.count({ where: { id: modelId, ...manageable } }))) {
+    return { error: "Modèle introuvable." };
+  }
+
   const parsed = ModelUpdateSchema.safeParse(input);
   if (!parsed.success) {
     return { error: "Modification invalide." };
@@ -44,15 +52,19 @@ export async function updateModel(modelId: string, input: ModelUpdateInput): Pro
 }
 
 export async function setModelFavorite(modelId: string, favorite: boolean): Promise<void> {
-  await requireAdmin();
-  await prisma.aIModel.update({ where: { id: modelId }, data: { favorite } });
+  const user = await requireUser();
+  // The models of the providers the user can manage (the shared Ollama local: the admin).
+  const manageable = { provider: manageableProviders(user) };
+  await prisma.aIModel.updateMany({ where: { id: modelId, ...manageable }, data: { favorite } });
   revalidatePath("/settings", "layout");
 }
 
 // Same as a disabled provider, for one of its models.
 export async function setModelEnabled(modelId: string, enabled: boolean): Promise<void> {
-  await requireAdmin();
-  await prisma.aIModel.update({ where: { id: modelId }, data: { enabled } });
+  const user = await requireUser();
+  // The models of the providers the user can manage (the shared Ollama local: the admin).
+  const manageable = { provider: manageableProviders(user) };
+  await prisma.aIModel.updateMany({ where: { id: modelId, ...manageable }, data: { enabled } });
   revalidatePath("/", "layout");
 }
 
@@ -62,8 +74,10 @@ export async function setModelEnabled(modelId: string, enabled: boolean): Promis
  * pipeline model.
  */
 export async function deleteModel(modelId: string): Promise<{ error: string } | undefined> {
-  await requireAdmin();
-  const model = await prisma.aIModel.findUnique({ where: { id: modelId }, include: { provider: true } });
+  const user = await requireUser();
+  // The models of the providers the user can manage (the shared Ollama local: the admin).
+  const manageable = { provider: manageableProviders(user) };
+  const model = await prisma.aIModel.findFirst({ where: { id: modelId, ...manageable }, include: { provider: true } });
   if (!model) {
     return { error: "Modèle introuvable." };
   }

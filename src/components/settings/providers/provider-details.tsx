@@ -75,7 +75,9 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
         </h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          Configuration du fournisseur et des modèles disponibles.
+          {provider.manageable
+            ? "Configuration du fournisseur et des modèles disponibles."
+            : "Fournisseur partagé par tous les utilisateurs : ses modèles sont gérés par l'administrateur."}
         </p>
       </header>
 
@@ -97,6 +99,7 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
                 <Switch
                   checked={enabled}
                   onCheckedChange={handleEnableSwitchChange}
+                  disabled={!provider.manageable}
                 />
               </div>
             </CardHeader>
@@ -118,15 +121,17 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
             </p>
           </div>
 
-          <Button variant="outline" size="lg" onClick={refreshProviderModels} disabled={isRefreshing}>
-            <RefreshSpinnerCustom isRefreshing={isRefreshing} />
-            Synchroniser
-          </Button>
+          {provider.manageable && (
+            <Button variant="outline" size="lg" onClick={refreshProviderModels} disabled={isRefreshing}>
+              <RefreshSpinnerCustom isRefreshing={isRefreshing} />
+              Synchroniser
+            </Button>
+          )}
         </div>
 
         <div className="mt-4">
           {/* A remote provider lists the models it serves: they cannot be deleted. */}
-          <ModelList models={provider.models ?? []} removable={provider.source === "LOCAL"} />
+          <ModelList models={provider.models ?? []} removable={provider.source === "LOCAL"} manageable={!!provider.manageable} />
         </div>
       </section>
     </div>

@@ -12,7 +12,8 @@ import { VoyageProvider } from "@/lib/ai/voyage/provider";
 import { GoogleProvider } from "@/lib/ai/google/provider";
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 import { createProviderClient, loadProvider, syncProviderModels } from "@/lib/ai/provider-factory";
-import { requireAdmin } from "@/lib/session";
+import { requireUser } from "@/lib/session";
+import { encryptApiKey, manageableProviders } from "@/lib/ai/provider-access";
 
 const ApiKeyProviderSchema = z.object({
   name: z.string().trim().min(1, "Le nom est requis."),
@@ -34,7 +35,7 @@ export async function createApiKeyProvider(
   type: ApiKeyProviderType,
   input: CreateApiKeyProviderInput,
 ): Promise<{ error: string } | undefined> {
-  await requireAdmin();
+  const user = await requireUser();
   // A server action takes any value: Ollama local comes from the .env and is never created here.
   if (!API_KEY_PROVIDER_TYPES.includes(type)) {
     return { error: "Ce type de fournisseur ne peut pas être créé." };
@@ -66,7 +67,7 @@ export async function createApiKeyProvider(
   try {
     provider = await prisma.aIProvider.create({
       // Every provider reached with an API key runs its models remotely.
-      data: { type, source: AIProviderSource.REMOTE, name, configuration },
+      data: { userId: user.id, type, source: AIProviderSource.REMOTE, name, configuration: encryptApiKey(configuration) },
     });
   } catch (error) {
     // The database error repeats the data sent, the API key included: it stays in the server logs.
@@ -94,8 +95,8 @@ function errorMessage(error: unknown): string {
  * Lists the models of the provider again, with whether they need usage credits.
  */
 export async function synchronizeProviderModels(providerId: string): Promise<{ error: string } | undefined> {
-  await requireAdmin();
-  const provider = await prisma.aIProvider.findUnique({ where: { id: providerId } });
+  const user = await requireUser();
+  const provider = await prisma.aIProvider.findFirst({ where: { id: providerId, ...manageableProviders(user) } });
   if (!provider) {
     return { error: "Fournisseur introuvable." };
   }
@@ -115,7 +116,7 @@ export async function synchronizeProviderModels(providerId: string): Promise<{ e
  * steps still set on it fail with a message saying so.
  */
 export async function setProviderEnabled(providerId: string, enabled: boolean): Promise<void> {
-  await requireAdmin();
-  await prisma.aIProvider.update({ where: { id: providerId }, data: { enabled } });
+  const user = await requireUser();
+  await prisma.aIProvider.updateMany({ where: { id: providerId, ...manageableProviders(user) }, data: { enabled } });
   revalidatePath("/", "layout");
 }

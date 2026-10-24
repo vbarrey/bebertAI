@@ -12,8 +12,12 @@ import { VoyageProvider } from "./voyage/provider";
 import { parseVoyageConfig } from "./voyage/config";
 import { GoogleProvider } from "./google/provider";
 import { parseGoogleConfig } from "./google/config";
+import { decryptApiKey } from "./provider-access";
 
-export function createProviderClient(provider: AIProvider): AIProviderClient {
+export function createProviderClient(stored: AIProvider): AIProviderClient {
+  // Stored encrypted: the client calls the provider with the key itself.
+  const provider = { ...stored, configuration: decryptApiKey(stored.configuration) };
+
   switch (provider.type) {
     case AIProviderType.OLLAMA_LOCAL:
       return new OllamaLocalProvider(provider.id, provider.name, parseOllamaLocalConfig(provider.configuration));

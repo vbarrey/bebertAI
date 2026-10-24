@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { describe, it } from "node:test";
 
-import { decryptToken, encryptToken } from "./tokens";
+import { decryptToken, encryptToken } from "./encryption";
 
-describe("Google Drive token encryption", () => {
+describe("encryption of the tokens and API keys", () => {
     const key = randomBytes(32);
 
     it("decrypts what it encrypted, with a new IV each time", () => {

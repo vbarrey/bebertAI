@@ -1,10 +1,11 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
+// The Google Drive tokens and the API keys of the providers. GOOGLE_TOKEN_ENCRYPTION_KEY: its name before the API keys.
 function encryptionKey(): Buffer {
-    const key = Buffer.from(process.env.GOOGLE_TOKEN_ENCRYPTION_KEY ?? "", "base64");
+    const key = Buffer.from(process.env.ENCRYPTION_KEY ?? process.env.GOOGLE_TOKEN_ENCRYPTION_KEY ?? "", "base64");
 
     if (key.length !== 32) {
-        throw new Error("GOOGLE_TOKEN_ENCRYPTION_KEY doit contenir 32 octets encodés en base64.");
+        throw new Error("ENCRYPTION_KEY doit contenir 32 octets encodés en base64 (openssl rand -base64 32).");
     }
 
     return key;

@@ -16,6 +16,7 @@ let conversations: typeof import("@/lib/queries/conversation");
 let projects: typeof import("@/lib/queries/project");
 let documents: typeof import("@/lib/queries/document");
 let scope: typeof import("@/lib/rag/retrieval/document-scope");
+let providers: typeof import("@/lib/queries/aiProvider");
 let documentMutations: typeof import("@/lib/mutations/document");
 
 /** One user with a project, a conversation in it and one outside, a library document and a project document. */
@@ -53,6 +54,7 @@ describe("ownership: a user sees nothing of another user's", () => {
     projects = await import("@/lib/queries/project");
     documents = await import("@/lib/queries/document");
     scope = await import("@/lib/rag/retrieval/document-scope");
+    providers = await import("@/lib/queries/aiProvider");
     documentMutations = await import("@/lib/mutations/document");
 
     a = await seed("alice");
@@ -104,6 +106,24 @@ describe("ownership: a user sees nothing of another user's", () => {
     await prisma.project.update({ where: { id: b.project.id }, data: { documentScope: "ALL" } });
 
     assert.deepEqual(await scope.getSearchableDocumentIds("unknown"), []);
+  });
+
+  it("providers: the user's own and the shared Ollama local, which only the admin manages", async () => {
+    const model = { name: "m", enabled: true };
+    const shared = await prisma.aIProvider.create({
+      data: { type: "OLLAMA_LOCAL", source: "LOCAL", name: "Ollama", configuration: {}, models: { create: model } },
+    });
+    const alices = await prisma.aIProvider.create({
+      data: { userId: a.user.id, type: "ANTHROPIC", source: "REMOTE", name: "Anthropic", configuration: {}, models: { create: model } },
+    });
+
+    assert.deepEqual((await providers.getEnableProvidersWithModels(b.user.id)).map((provider) => provider.id), [shared.id]);
+    assert.deepEqual((await providers.getEnableProvidersWithModels(a.user.id)).map((provider) => provider.id).sort(), [shared.id, alices.id].sort());
+
+    const asUser = await providers.getProvidersWithModels({ id: b.user.id });
+    const asAdmin = await providers.getProvidersWithModels({ id: b.user.id, role: "admin" });
+    assert.deepEqual(asUser.map(({ id, manageable }) => ({ id, manageable })), [{ id: shared.id, manageable: false }]);
+    assert.deepEqual(asAdmin.map(({ id, manageable }) => ({ id, manageable })), [{ id: shared.id, manageable: true }]);
   });
 
   it("a project selection takes the user's own project and documents only", async () => {

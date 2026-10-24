@@ -6,4 +6,5 @@ export const Capability = P_Capability;
 // isDefault: a default model of Ollama local (.env), which cannot be deleted.
 export type Model = AIModel & { capabilities?: AIModelCapability[]; isDefault?: boolean };
 
-export type Provider = AIProvider & { models?: Model[] };
+// manageable: the signed-in user can change it (their own, or the shared Ollama local for the admin).
+export type Provider = AIProvider & { models?: Model[]; manageable?: boolean };

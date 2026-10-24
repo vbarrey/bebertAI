@@ -37,6 +37,7 @@ model User {
   projects      Project[]
   conversations Conversation[]
   documents     Document[]
+  aiProviders   AIProvider[]
 }
 
 // Accounts are created from an invitation link sent by email (src/lib/invitations.ts).
@@ -292,6 +293,10 @@ model IndexingJob {
 model AIProvider {
   id        String @id @default(cuid())
 
+  // The user who added it, with their API key. Null for Ollama local, shared by everyone and managed by the admin.
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   name      String
   type      AIProviderType
   // Where the provider runs its models: its models are local or remote with it.
@@ -309,6 +314,8 @@ model AIProvider {
 
   defaultModelId String?
   defaultModel AIModel? @relation("DefaultModel", fields: [defaultModelId], references: [id])
+
+  @@index([userId])
 }
 
 model AIModel {

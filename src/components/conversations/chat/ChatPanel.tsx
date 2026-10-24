@@ -7,15 +7,17 @@ import { documentScopeWhere, getConversationScope } from "@/lib/rag/retrieval/do
 
 type ChatPanelProps = {
   conversationId: string;
+  // The signed-in user, owner of the conversation: the models offered are theirs and the shared ones.
+  userId: string;
   title: string | null;
   messages: ChatMessage[];
   model: { providerId: string; name: string } | null;
 };
 
-export async function ChatPanel({ conversationId, title, messages, model }: ChatPanelProps) {
+export async function ChatPanel({ conversationId, userId, title, messages, model }: ChatPanelProps) {
 
   const [providersModels, pipelineConfig, scope] = await Promise.all([
-    getEnableProvidersWithModels(),
+    getEnableProvidersWithModels(userId),
     pipelineRuntime.getConfig(),
     getConversationScope(conversationId),
   ]);
