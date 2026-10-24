@@ -32,6 +32,11 @@ model User {
   sessions      Session[]
   accounts      Account[]
   invitations   Invitation[]
+
+  // Their owner's only. Restrict: removing an account must first delete its documents' files and vectors.
+  projects      Project[]
+  conversations Conversation[]
+  documents     Document[]
 }
 
 // Accounts are created from an invitation link sent by email (src/lib/invitations.ts).
@@ -112,7 +117,10 @@ model RateLimit {
 
 model Project {
   id                String         @id @default(cuid())
-  name              String         @unique
+  userId            String
+  user              User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // Unique for its owner.
+  name              String
   description       String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -124,6 +132,8 @@ model Project {
   documents         ProjectDocument[]
   // Documents imported for the project only: out of the library and of the other projects.
   ownedDocuments    Document[]     @relation("OwnedDocuments")
+
+  @@unique([userId, name])
 }
 
 enum DocumentScope {
@@ -145,6 +155,9 @@ model ProjectDocument {
 
 model Conversation {
   id                String    @id @default(cuid())
+  // The owner of its project too.
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   // Null: a conversation outside any project, on the whole library.
   projectId         String?
   title             String?
@@ -158,6 +171,7 @@ model Conversation {
   model   AIModel? @relation(fields: [modelId], references: [id])
 
   @@index([projectId, lastMessageAt])
+  @@index([userId, lastMessageAt])
 }
 
 model Message {
@@ -186,10 +200,13 @@ enum DocumentSourceType {
 
 model Document {
   id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Restrict)
   displayName    String
   format         String
   fileSize       Int?
-  checksum       String         @unique
+  // Unique in its owner's documents: two users can import the same file.
+  checksum       String
   language       String?
 
   sourceType  DocumentSourceType
@@ -211,6 +228,7 @@ model Document {
   chunks         Chunk[]
   indexingJobs   IndexingJob[]
 
+  @@unique([userId, checksum])
   @@index([displayName])
   @@index([ownerProjectId])
 }

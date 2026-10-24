@@ -15,7 +15,7 @@ import type {
 import { apiUser } from "@/lib/session";
 
 export async function POST(request: Request) {
-  const { error: authError } = await apiUser();
+  const { user, error: authError } = await apiUser();
   if (authError) return authError;
 
   try {
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
       const existingDocument =
         await prisma.document.findUnique({
           where: {
-            checksum,
+            userId_checksum: { userId: user.id, checksum },
           },
           select: {
             id: true,

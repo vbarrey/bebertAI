@@ -66,7 +66,7 @@ async function collectFiles(fileIds: string[], folderIds: string[]): Promise<Can
  * Same analysis as the local import, the checksum computed from the file streamed from Drive (nothing is stored).
  */
 export async function POST(request: Request) {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     const parsed = AnalyzeRequestSchema.safeParse(await request.json().catch(() => undefined));
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
             seenChecksums.add(checksum);
 
             const existingDocument = await prisma.document.findUnique({
-                where: { checksum },
+                where: { userId_checksum: { userId: user.id, checksum } },
                 select: { id: true, displayName: true, checksum: true },
             });
 

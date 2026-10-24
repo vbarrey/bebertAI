@@ -11,10 +11,10 @@ import { requireUser } from "@/lib/session";
 
 const NEW_PROJECT_NAME = "Nouveau projet";
 
-/** "Nouveau projet", else "Nouveau projet 2", 3…: project names are unique. */
-async function newProjectName() {
+/** "Nouveau projet", else "Nouveau projet 2", 3…: project names are unique for their owner. */
+async function newProjectName(userId: string) {
   const projects = await prisma.project.findMany({
-    where: { name: { startsWith: NEW_PROJECT_NAME } },
+    where: { userId, name: { startsWith: NEW_PROJECT_NAME } },
     select: { name: true },
   });
   const taken = new Set(projects.map((project) => project.name));
@@ -25,10 +25,11 @@ async function newProjectName() {
 }
 
 export async function createProject(formData: FormData) {
-  await requireUser();
-  const projectName = formData.get("projectName")?.toString().trim() || await newProjectName();
+  const user = await requireUser();
+  const projectName = formData.get("projectName")?.toString().trim() || await newProjectName(user.id);
 
   const res = await prisma.project.create({data: {
+    userId: user.id,
     name: projectName
   }});
 

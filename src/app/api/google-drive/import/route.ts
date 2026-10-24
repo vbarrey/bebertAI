@@ -28,7 +28,7 @@ const ImportRequestSchema = z.object({
 });
 
 export async function POST(request: Request) {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     const parsed = ImportRequestSchema.safeParse(await request.json().catch(() => undefined));
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
 
     try {
         const result = await importDocuments(
+            user.id,
             files.map((file) => ({
                 ...file,
                 id: crypto.randomUUID(),

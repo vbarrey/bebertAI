@@ -39,6 +39,7 @@ export function getImportDecisionKey(checksum: string, displayName: string) {
 }
 
 async function persistDocuments(
+    userId: string,
     files: DocumentToImport[],
     decisions: Map<string, DocumentImportConflictAction>,
     indexImmediately: boolean,
@@ -54,7 +55,7 @@ async function persistDocuments(
         for (const file of files) {
             const existing = await tx.document.findUnique({
                 where: {
-                    checksum: file.checksum,
+                    userId_checksum: { userId, checksum: file.checksum },
                 },
                 select: {
                     id: true,
@@ -107,6 +108,7 @@ async function persistDocuments(
 
             const document = await createDocument({
                 id: file.id,
+                userId,
                 storagePath: file.storagePath,
                 displayName: file.displayName,
                 format: file.format,
@@ -165,6 +167,8 @@ async function persistDocuments(
  * then queues their indexing. The stored copies of the files are deleted when the creation fails.
  */
 export async function importDocuments(
+    // The owner of the documents; a checksum already in their documents is a conflict.
+    userId: string,
     files: DocumentToImport[],
     decisions: Map<string, DocumentImportConflictAction>,
     indexImmediately: boolean,
@@ -175,6 +179,7 @@ export async function importDocuments(
 
     try {
         result = await persistDocuments(
+            userId,
             files,
             decisions,
             indexImmediately,

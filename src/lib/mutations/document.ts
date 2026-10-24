@@ -9,6 +9,7 @@ import { DocumentFormat } from "@/lib/documents/format";
 
 export async function createDocument(data: {
   id?: string;
+  userId: string;
   storagePath?: string | null;
   displayName: string;
   format: DocumentFormat;

@@ -20,11 +20,11 @@ function revalidateConversations() {
  * clicking "Nouvelle conversation" twice does not leave empty conversations behind.
  */
 export async function createConversation(formData: FormData) {
-    await requireUser();
+    const user = await requireUser();
     const projectId = formData.get("projectId")?.toString() || null;
 
     const empty = await prisma.conversation.findFirst({
-        where: { projectId, messages: { none: {} } },
+        where: { userId: user.id, projectId, messages: { none: {} } },
         orderBy: { createdAt: "desc" },
         select: { id: true },
     });
@@ -39,6 +39,7 @@ export async function createConversation(formData: FormData) {
     });
 
     const res = await prisma.conversation.create({data: {
+        userId: user.id,
         projectId: projectId,
         modelId: model?.id,
     }});

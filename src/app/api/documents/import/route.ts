@@ -74,6 +74,7 @@ function parseConflictDecisions(
 }
 
 async function prepareImportedFiles(
+    userId: string,
     files: File[],
     decisions: Map<string, DocumentImportConflictAction>,
     // Filled with the documents already there that the files were not imported over.
@@ -111,7 +112,7 @@ async function prepareImportedFiles(
 
         const existing = await prisma.document.findUnique({
             where: {
-                checksum,
+                userId_checksum: { userId, checksum },
             },
             select: {
                 id: true,
@@ -215,7 +216,7 @@ class ImportConflictError extends Error {
 export async function POST(
     request: Request,
 ): Promise<NextResponse<ImportResponse>> {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     try {
@@ -268,6 +269,7 @@ export async function POST(
 
         try {
             importedFiles = await prepareImportedFiles(
+                user.id,
                 files,
                 decisions,
                 keptExistingIds,
@@ -306,6 +308,7 @@ export async function POST(
         await storePreparedFiles(preparedFiles);
 
         const importResult = await importDocuments(
+            user.id,
             preparedFiles,
             decisions,
             indexImmediately,
