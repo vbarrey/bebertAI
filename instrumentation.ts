@@ -18,4 +18,8 @@ export async function register() {
 
   console.log(`[Initialize pipeline configuration]`);
   await pipelineRuntime.initialize();
+
+  const { inviteFirstAdmin } = await import("@/lib/invitations");
+
+  await inviteFirstAdmin().catch((error) => console.error("Invitation du premier administrateur impossible :", error));
 }

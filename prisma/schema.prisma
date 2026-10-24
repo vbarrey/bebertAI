@@ -31,6 +31,26 @@ model User {
 
   sessions      Session[]
   accounts      Account[]
+  invitations   Invitation[]
+}
+
+// Accounts are created from an invitation link sent by email (src/lib/invitations.ts).
+model Invitation {
+  id          String    @id @default(cuid())
+  email       String
+  // Role of the account created from it.
+  role        String    @default("user")
+  // sha256 of the token in the link: the token itself is not stored.
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  // Null for the first admin's invitation, created at start-up.
+  invitedById String?
+  invitedBy   User?     @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([email])
 }
 
 model Session {
