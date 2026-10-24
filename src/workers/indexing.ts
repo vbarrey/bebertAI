@@ -7,6 +7,7 @@ import {
   startIndexingJob,
 } from "@/lib/mutations/indexing-job";
 import { getIndexingJobById } from "@/lib/queries/indexing-job";
+import { enableWriteAheadLog } from "@/lib/prisma";
 
 import { getDocumentExtractor } from "@/lib/rag/indexing/extractor-factory";
 import { getDocumentChunker } from "@/lib/rag/indexing/chunker-factory";
@@ -41,8 +42,8 @@ export type IndexingJobData = {
 
 const NAME = "Document-Indexing-Worker";
 
-// One document OCRs on the CPU while the other one is embedded on the GPU.
-const CONCURRENCY = 2;
+// Documents indexed at once: by default one OCRs on the CPU while the other one is embedded on the GPU.
+const CONCURRENCY = Number(process.env.INDEXING_CONCURRENCY) || 2;
 
 let collectionWrites: Promise<unknown> = Promise.resolve();
 
@@ -62,6 +63,7 @@ async function initialize() {
    * du processus worker.
    */
   await initializeAI({ synchronizeModels: false });
+  await enableWriteAheadLog();
 
   const worker = new Worker<IndexingJobData>(
     "document-indexing",

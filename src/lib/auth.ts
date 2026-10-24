@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 
 // Secret from BETTER_AUTH_SECRET. Sessions last 7 days, extended once a day while the app is used.
 export const auth = betterAuth({
+  // The build loads this module without the secret, which is only given at run time (and required by instrumentation.ts).
+  ...(process.env.NEXT_PHASE === "phase-production-build" && { secret: "build-only-placeholder-never-used-at-run-time" }),
   baseURL: process.env.APP_URL,
   database: prismaAdapter(prisma, { provider: "sqlite" }),
 

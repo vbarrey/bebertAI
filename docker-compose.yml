@@ -18,6 +18,8 @@ services:
       QDRANT_URL: http://qdrant:6333
       OLLAMA_DEFAULT_MODEL: ${OLLAMA_DEFAULT_MODEL:-qwen3:0.6b}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+      # Documents the worker indexes at once.
+      INDEXING_CONCURRENCY: ${INDEXING_CONCURRENCY:-2}
 
     volumes:
       - data:/app/data
@@ -68,6 +70,14 @@ services:
     image: ollama/ollama
     volumes:
       - ollama:/root/.ollama
+
+    # Shared by every user. Prudent values for a GPU of about 12 GB, to raise with a bigger one:
+    # requests answered at once by a model (each one reserves its context in memory),
+    # models kept loaded (a chat model and the embedding model), how long an unused model stays loaded.
+    environment:
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-2}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-2}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-10m}
 
     # NVIDIA GPU; remove this block on a machine without one, Ollama then runs on the CPU.
     deploy:

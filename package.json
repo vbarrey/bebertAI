@@ -12,7 +12,8 @@
     "test": "tsx --test \"src/**/*.test.ts\"",
     "eval:questions": "tsx scripts/eval-retrieval/generate-questions.ts",
     "eval:retrieval": "tsx scripts/eval-retrieval/evaluate.ts",
-    "bench:indexing": "tsx scripts/bench-indexing.ts"
+    "bench:indexing": "tsx scripts/bench-indexing.ts",
+    "bench:load": "tsx scripts/load-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
