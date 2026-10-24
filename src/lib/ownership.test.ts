@@ -7,6 +7,7 @@ import { after, before, describe, it } from "node:test";
 
 // A database of its own, created by the migrations: set before the modules reading DATABASE_URL are loaded.
 const directory = mkdtempSync(path.join(tmpdir(), "bebert-ownership-"));
+process.env.ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
 process.env.DATABASE_URL = `file:${path.join(directory, "test.db").replaceAll("\\", "/")}`;
 execSync("npx prisma migrate deploy", { env: process.env, stdio: "ignore" });
 
@@ -18,6 +19,8 @@ let documents: typeof import("@/lib/queries/document");
 let scope: typeof import("@/lib/rag/retrieval/document-scope");
 let providers: typeof import("@/lib/queries/aiProvider");
 let runtime: typeof import("@/lib/pipeline/runtime");
+let drive: typeof import("@/lib/google-drive/auth");
+let encryption: typeof import("@/lib/encryption");
 let documentMutations: typeof import("@/lib/mutations/document");
 
 /** One user with a project, a conversation in it and one outside, a library document and a project document. */
@@ -57,6 +60,8 @@ describe("ownership: a user sees nothing of another user's", () => {
     scope = await import("@/lib/rag/retrieval/document-scope");
     providers = await import("@/lib/queries/aiProvider");
     runtime = await import("@/lib/pipeline/runtime");
+    drive = await import("@/lib/google-drive/auth");
+    encryption = await import("@/lib/encryption");
     documentMutations = await import("@/lib/mutations/document");
 
     a = await seed("alice");
@@ -151,6 +156,24 @@ describe("ownership: a user sees nothing of another user's", () => {
 
     assert.ok((await prisma.document.findMany({ where: { userId: b.user.id } })).every((document) => document.indexingStatus === "NEEDREINDEX"));
     assert.ok((await prisma.document.findMany({ where: { userId: a.user.id } })).every((document) => document.indexingStatus === "PROCESSED"));
+  });
+
+  it("Google Drive: each user's own connection and token", async () => {
+    await prisma.googleDriveConnection.create({
+      data: {
+        userId: a.user.id, email: "alice@gmail.com", refreshToken: encryption.encryptToken("refresh-alice"),
+        accessToken: encryption.encryptToken("access-alice"), expiresAt: new Date(Date.now() + 3_600_000),
+      },
+    });
+
+    assert.equal((await drive.getGoogleDriveConnection(a.user.id))?.email, "alice@gmail.com");
+    assert.equal(await drive.getGoogleDriveConnection(b.user.id), null);
+    assert.equal(await drive.getGoogleDriveAccessToken(a.user.id), "access-alice");
+    await assert.rejects(drive.getGoogleDriveAccessToken(b.user.id), drive.GoogleDriveAuthError);
+
+    // Bob disconnecting leaves Alice's connection.
+    await drive.disconnectGoogleDrive(b.user.id);
+    assert.equal(await prisma.googleDriveConnection.count(), 1);
   });
 
   it("a project selection takes the user's own project and documents only", async () => {

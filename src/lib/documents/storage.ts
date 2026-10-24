@@ -53,7 +53,7 @@ export async function deleteDocumentFile(
  * a temporary download of a Google Drive one, deleted once `run` is done.
  */
 export async function withDocumentFile<T>(
-  document: Pick<Document, "id" | "sourceType" | "storagePath" | "sourceRef">,
+  document: Pick<Document, "id" | "userId" | "sourceType" | "storagePath" | "sourceRef">,
   run: (filePath: string) => Promise<T>,
 ): Promise<T> {
   if (document.sourceType === "LOCAL" && document.storagePath) {
@@ -67,7 +67,8 @@ export async function withDocumentFile<T>(
       const filePath = path.join(directory, document.id);
 
       await pipeline(
-        Readable.fromWeb((await downloadDriveFile(document.sourceRef)) as NodeReadableStream<Uint8Array>),
+        // With the owner's Drive connection.
+        Readable.fromWeb((await downloadDriveFile(document.userId, document.sourceRef)) as NodeReadableStream<Uint8Array>),
         createWriteStream(filePath),
       );
 

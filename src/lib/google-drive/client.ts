@@ -45,9 +45,10 @@ export function isDriveId(value: string) {
     return DRIVE_ID.test(value);
 }
 
-async function driveRequest(path: string, parameters: Record<string, string>): Promise<Response> {
+// On the Drive connection of the user: their own files only.
+async function driveRequest(userId: string, path: string, parameters: Record<string, string>): Promise<Response> {
     const response = await fetch(`${DRIVE_API_URL}${path}?${new URLSearchParams(parameters)}`, {
-        headers: { Authorization: `Bearer ${await getGoogleDriveAccessToken()}` },
+        headers: { Authorization: `Bearer ${await getGoogleDriveAccessToken(userId)}` },
     });
 
     if (!response.ok) {
@@ -62,8 +63,8 @@ async function driveRequest(path: string, parameters: Record<string, string>): P
     return response;
 }
 
-async function driveFetch<T>(path: string, parameters: Record<string, string>): Promise<T> {
-    return (await driveRequest(path, parameters)).json();
+async function driveFetch<T>(userId: string, path: string, parameters: Record<string, string>): Promise<T> {
+    return (await driveRequest(userId, path, parameters)).json();
 }
 
 const FILE_FIELDS = "id, name, mimeType, size, modifiedTime";
@@ -95,10 +96,11 @@ export const SHARED_WITH_ME = "sharedWithMe";
 /**
  * One page of the content of a folder ("root" for My Drive, SHARED_WITH_ME), folders first, then by name.
  */
-export async function listDriveFolder(folderId: string, pageToken?: string): Promise<DriveFolderPage> {
+export async function listDriveFolder(userId: string, folderId: string, pageToken?: string): Promise<DriveFolderPage> {
     checkDriveId(folderId);
 
     return listDriveFiles(
+        userId,
         folderId === SHARED_WITH_ME
             ? "sharedWithMe = true and trashed = false"
             : `'${folderId}' in parents and trashed = false`,
@@ -109,15 +111,15 @@ export async function listDriveFolder(folderId: string, pageToken?: string): Pro
 /**
  * Files and folders whose name contains `text`, in every folder of My Drive and of the shared items.
  */
-export async function searchDrive(text: string, pageToken?: string): Promise<DriveFolderPage> {
+export async function searchDrive(userId: string, text: string, pageToken?: string): Promise<DriveFolderPage> {
     // Drive query strings escape \ and ' with a backslash.
     const escaped = text.replace(/[\\']/g, "\\$&");
 
-    return listDriveFiles(`name contains '${escaped}' and trashed = false`, pageToken);
+    return listDriveFiles(userId, `name contains '${escaped}' and trashed = false`, pageToken);
 }
 
-async function listDriveFiles(q: string, pageToken?: string): Promise<DriveFolderPage> {
-    const page = await driveFetch<{ files: DriveFile[]; nextPageToken?: string }>("/files", {
+async function listDriveFiles(userId: string, q: string, pageToken?: string): Promise<DriveFolderPage> {
+    const page = await driveFetch<{ files: DriveFile[]; nextPageToken?: string }>(userId, "/files", {
         q,
         fields: `nextPageToken, files(${FILE_FIELDS})`,
         orderBy: "folder, name",
@@ -133,10 +135,10 @@ async function listDriveFiles(q: string, pageToken?: string): Promise<DriveFolde
     };
 }
 
-export async function getDriveItem(id: string): Promise<DriveItem> {
+export async function getDriveItem(userId: string, id: string): Promise<DriveItem> {
     checkDriveId(id);
 
-    return toDriveItem(await driveFetch<DriveFile>(`/files/${id}`, {
+    return toDriveItem(await driveFetch<DriveFile>(userId, `/files/${id}`, {
         fields: FILE_FIELDS,
         supportsAllDrives: "true",
     }));
@@ -146,17 +148,18 @@ export async function getDriveItem(id: string): Promise<DriveItem> {
  * Every file under a folder, its subfolders included, with its path from that folder ("Folder/Sub/name.pdf").
  */
 export async function listDriveFilesRecursive(
+    userId: string,
     folder: Pick<DriveItem, "id" | "name">,
 ): Promise<(DriveItem & { relativePath: string })[]> {
     const files: (DriveItem & { relativePath: string })[] = [];
     let pageToken: string | undefined;
 
     do {
-        const page = await listDriveFolder(folder.id, pageToken);
+        const page = await listDriveFolder(userId, folder.id, pageToken);
 
         for (const item of page.items) {
             if (item.isFolder) {
-                const children = await listDriveFilesRecursive(item);
+                const children = await listDriveFilesRecursive(userId, item);
 
                 files.push(...children.map((child) => ({ ...child, relativePath: `${folder.name}/${child.relativePath}` })));
             } else {
@@ -171,10 +174,10 @@ export async function listDriveFilesRecursive(
 }
 
 // Content of a file, streamed from Drive.
-export async function downloadDriveFile(id: string): Promise<ReadableStream<Uint8Array>> {
+export async function downloadDriveFile(userId: string, id: string): Promise<ReadableStream<Uint8Array>> {
     checkDriveId(id);
 
-    const response = await driveRequest(`/files/${id}`, { alt: "media", supportsAllDrives: "true" }).catch((error) => {
+    const response = await driveRequest(userId, `/files/${id}`, { alt: "media", supportsAllDrives: "true" }).catch((error) => {
         throw error instanceof GoogleDriveApiError && error.status === 404
             ? new GoogleDriveApiError(404, "Fichier supprimé ou inaccessible dans Google Drive.")
             : error;

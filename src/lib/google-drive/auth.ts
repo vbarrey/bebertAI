@@ -91,9 +91,10 @@ export function getAuthorizationUrl(state: string): string {
 }
 
 /**
- * Exchanges the authorization code and stores the tokens, replacing the account connected before.
+ * Exchanges the authorization code and stores the tokens as the user's connection, replacing the account they
+ * connected before.
  */
-export async function connectGoogleDrive(code: string): Promise<string> {
+export async function connectGoogleDrive(userId: string, code: string): Promise<string> {
     const tokens = await requestToken({
         code,
         grant_type: "authorization_code",
@@ -117,26 +118,27 @@ export async function connectGoogleDrive(code: string): Promise<string> {
     };
 
     await prisma.googleDriveConnection.upsert({
-        where: { id: 1 },
-        create: data,
+        where: { userId },
+        create: { userId, ...data },
         update: data,
     });
 
     return email;
 }
 
-export async function getGoogleDriveConnection() {
+export async function getGoogleDriveConnection(userId: string) {
     return prisma.googleDriveConnection.findUnique({
-        where: { id: 1 },
+        where: { userId },
         select: { email: true },
     });
 }
 
 /**
- * A valid access token, refreshed when it is about to expire. Used by the app and by the indexing worker.
+ * A valid access token of the user's connection, refreshed when it is about to expire. Used by the app and by the
+ * indexing worker, with the document owner's connection.
  */
-export async function getGoogleDriveAccessToken(): Promise<string> {
-    const connection = await prisma.googleDriveConnection.findUnique({ where: { id: 1 } });
+export async function getGoogleDriveAccessToken(userId: string): Promise<string> {
+    const connection = await prisma.googleDriveConnection.findUnique({ where: { userId } });
 
     if (!connection) {
         throw new GoogleDriveAuthError();
@@ -156,14 +158,14 @@ export async function getGoogleDriveAccessToken(): Promise<string> {
     } catch (error) {
         // The refresh token no longer works: shown as disconnected so the user connects again.
         if (error instanceof GoogleDriveAuthError) {
-            await prisma.googleDriveConnection.deleteMany();
+            await prisma.googleDriveConnection.deleteMany({ where: { userId } });
         }
 
         throw error;
     }
 
     await prisma.googleDriveConnection.update({
-        where: { id: 1 },
+        where: { userId },
         data: {
             accessToken: encryptToken(tokens.access_token),
             expiresAt: expiresAt(tokens.expires_in),
@@ -176,8 +178,8 @@ export async function getGoogleDriveAccessToken(): Promise<string> {
 /**
  * Revokes the access at Google (best effort: the tokens are forgotten anyway) and deletes the connection.
  */
-export async function disconnectGoogleDrive() {
-    const connection = await prisma.googleDriveConnection.findUnique({ where: { id: 1 } });
+export async function disconnectGoogleDrive(userId: string) {
+    const connection = await prisma.googleDriveConnection.findUnique({ where: { userId } });
 
     if (!connection) {
         return;
@@ -188,5 +190,5 @@ export async function disconnectGoogleDrive() {
         body: new URLSearchParams({ token: decryptToken(connection.refreshToken) }),
     }).catch((error) => console.error("Google Drive token revocation failed:", error));
 
-    await prisma.googleDriveConnection.deleteMany();
+    await prisma.googleDriveConnection.deleteMany({ where: { userId } });
 }

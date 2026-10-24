@@ -13,7 +13,7 @@ const MAX_SEARCH_LENGTH = 200;
  * or the files and folders matching ?search= in every folder; ?pageToken= for the next page.
  */
 export async function GET(request: NextRequest): Promise<NextResponse<FilesResponse>> {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     const folderId = request.nextUrl.searchParams.get("folderId") || "root";
@@ -27,8 +27,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<FilesRespo
     try {
         return NextResponse.json(
             search
-                ? await searchDrive(search, pageToken)
-                : await listDriveFolder(folderId, pageToken),
+                ? await searchDrive(user.id, search, pageToken)
+                : await listDriveFolder(user.id, folderId, pageToken),
         );
     } catch (error) {
         // 401: the dialog shows the connect button again.

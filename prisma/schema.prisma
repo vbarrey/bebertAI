@@ -41,6 +41,7 @@ model User {
   documents     Document[]
   aiProviders   AIProvider[]
   pipeline      PipelineParameters?
+  googleDrive   GoogleDriveConnection?
 }
 
 // Accounts are created from an invitation link sent by email (src/lib/invitations.ts).
@@ -266,9 +267,10 @@ model EmbeddingCache {
   createdAt DateTime @default(now())
 }
 
-// The Google account connected for the Drive import, a single one. Tokens are encrypted (GOOGLE_TOKEN_ENCRYPTION_KEY).
+// The Google account each user connected for the Drive import. Tokens are encrypted (ENCRYPTION_KEY).
 model GoogleDriveConnection {
-  id           Int      @id @default(1)
+  userId       String   @id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   email        String
   refreshToken String
   accessToken  String

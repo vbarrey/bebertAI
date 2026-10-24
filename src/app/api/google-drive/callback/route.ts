@@ -13,7 +13,7 @@ function redirectToDocuments(request: NextRequest, result: "connected" | "error"
 }
 
 export async function GET(request: NextRequest) {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     const code = request.nextUrl.searchParams.get("code");
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        await connectGoogleDrive(code);
+        await connectGoogleDrive(user.id, code);
 
         return redirectToDocuments(request, "connected");
     } catch (error) {

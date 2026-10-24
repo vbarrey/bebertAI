@@ -40,11 +40,11 @@ type Candidate = DriveItem & { relativePath?: string };
 /**
  * Files picked directly and the files under the picked folders, each once.
  */
-async function collectFiles(fileIds: string[], folderIds: string[]): Promise<Candidate[]> {
+async function collectFiles(userId: string, fileIds: string[], folderIds: string[]): Promise<Candidate[]> {
     const files = new Map<string, Candidate>();
 
     for (const id of fileIds) {
-        const item = await getDriveItem(id);
+        const item = await getDriveItem(userId, id);
 
         if (!item.isFolder) {
             files.set(item.id, item);
@@ -52,7 +52,7 @@ async function collectFiles(fileIds: string[], folderIds: string[]): Promise<Can
     }
 
     for (const id of folderIds) {
-        for (const item of await listDriveFilesRecursive(await getDriveItem(id))) {
+        for (const item of await listDriveFilesRecursive(userId, await getDriveItem(userId, id))) {
             if (!files.has(item.id)) {
                 files.set(item.id, item);
             }
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     }
 
     try {
-        const files = await collectFiles(parsed.data.fileIds, parsed.data.folderIds);
+        const files = await collectFiles(user.id, parsed.data.fileIds, parsed.data.folderIds);
 
         const ignored: DocumentImportIgnoredFile[] = [];
         const analyzed: DocumentImportFile[] = [];
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         const checksums = await mapWithConcurrency(
             supported,
             DOWNLOAD_CONCURRENCY,
-            async (file) => calculateFileChecksumFromStream(await downloadDriveFile(file.id)),
+            async (file) => calculateFileChecksumFromStream(await downloadDriveFile(user.id, file.id)),
         );
 
         const seenChecksums = new Set<string>();

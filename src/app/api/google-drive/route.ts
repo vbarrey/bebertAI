@@ -9,11 +9,11 @@ type ConnectionResponse =
     | { connected: true; email: string };
 
 export async function GET(): Promise<NextResponse<ConnectionResponse>> {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     try {
-        const connection = await getGoogleDriveConnection();
+        const connection = await getGoogleDriveConnection(user.id);
 
         return NextResponse.json(
             connection
@@ -31,11 +31,11 @@ export async function GET(): Promise<NextResponse<ConnectionResponse>> {
 }
 
 export async function DELETE() {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     try {
-        await disconnectGoogleDrive();
+        await disconnectGoogleDrive(user.id);
 
         return new NextResponse(null, { status: 204 });
     } catch (error) {
