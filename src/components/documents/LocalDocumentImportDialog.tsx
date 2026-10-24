@@ -44,6 +44,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   addDocuments: (documents: Document[]) => void;
   onIndexingStarted: (jobId: string) => void;
+  // Imported for this project only; already there, they join its selection.
+  projectId?: string;
 };
 
 function getFileKey(item: ImportFile) {
@@ -59,7 +61,8 @@ export function LocalDocumentImportDialog({
   open,
   onOpenChange,
   addDocuments,
-  onIndexingStarted
+  onIndexingStarted,
+  projectId,
 }: Props) {
   const fileInputRef =
     useRef<HTMLInputElement>(null);
@@ -450,6 +453,10 @@ export function LocalDocumentImportDialog({
         "indexImmediately",
         String(indexImmediately),
       );
+
+      if (projectId) {
+        formData.append("projectId", projectId);
+      }
 
       const response = await fetch(
         "/api/documents/import",

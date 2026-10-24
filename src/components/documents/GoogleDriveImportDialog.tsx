@@ -42,6 +42,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   addDocuments: (documents: Document[]) => void;
   onIndexingStarted: (jobId: string) => void;
+  // Imported for this project only; already there, they join its selection.
+  projectId?: string;
 };
 
 const ROOT: FolderStep = { id: "root", name: "Mon Drive" };
@@ -96,7 +98,7 @@ async function postJson<T>(url: string, body: unknown, fallbackError: string): P
   return data;
 }
 
-export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIndexingStarted }: Props) {
+export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIndexingStarted, projectId }: Props) {
   // Undefined while the status loads.
   const [connection, setConnection] = useState<Connection>();
 
@@ -275,6 +277,7 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
           })),
           decisions: Object.fromEntries(decisions),
           indexImmediately,
+          projectId,
         },
         "L'import a échoué.",
       );

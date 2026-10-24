@@ -29,6 +29,7 @@ export const getProjectWithConversations = cache(async (projectId: string) => {
       id: true,
       name: true,
       description: true,
+      documentScope: true,
       conversations: {
         orderBy: { lastMessageAt: "desc" },
         select: {

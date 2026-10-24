@@ -22,6 +22,8 @@ const ImportRequestSchema = z.object({
     })).min(1),
     decisions: z.record(z.string(), z.enum(["IGNORE", "REPLACE"])).default({}),
     indexImmediately: z.boolean(),
+    // Imported from this project.
+    projectId: z.string().min(1).optional(),
 });
 
 export async function POST(request: Request) {
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
         );
     }
 
-    const { files, decisions, indexImmediately } = parsed.data;
+    const { files, decisions, indexImmediately, projectId } = parsed.data;
 
     try {
         const result = await importDocuments(
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
             })),
             new Map(Object.entries(decisions)),
             indexImmediately,
+            projectId ?? null,
         );
 
         return NextResponse.json({

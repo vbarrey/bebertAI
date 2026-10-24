@@ -26,6 +26,8 @@ export type RetrievalOptions = {
     retrieval: PipelineParameters["retrieval"];
     sparse: PipelineParameters["embedding"]["sparse"];
     chunkSize: number;
+    // The documents searched, all of them when undefined; none when empty.
+    documentIds?: string[];
 };
 
 type PointPayload = {
@@ -68,6 +70,11 @@ export class DocumentRetriever {
         { retrieval, ...lexical }: RetrievalOptions,
     ): Promise<RetrievedChunk[]> {
         const { neighborChunks } = retrieval;
+
+        // A project that selected no document: nothing to search.
+        if (lexical.documentIds?.length === 0) {
+            return [];
+        }
 
         // Deleted when pipeline parameters requiring a reindex change, until the next indexing.
         if (!(await qdrant.collectionExists(CHUNKS_COLLECTION)).exists) {

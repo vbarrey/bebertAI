@@ -14,6 +14,8 @@ type HybridQueryInput = {
     sparse: PipelineParameters["embedding"]["sparse"];
     // Same as at indexing: the BM25 options of the query and of the chunks must match.
     chunkSize: number;
+    // The documents searched, all of them when undefined.
+    documentIds?: string[];
 };
 
 /** Lexical search runs, and the query is translated, only when it can weigh in the fusion. */
@@ -33,11 +35,17 @@ export function buildHybridQuery({
     retrieval,
     sparse,
     chunkSize,
+    documentIds,
 }: HybridQueryInput): Schemas["QueryRequest"] {
     const { topK, scoreThreshold, hybrid } = retrieval;
 
+    // On every search, prefetches included: Qdrant does not pass the filter of a query down to its prefetches.
+    const filter: { filter?: Schemas["Filter"] } = documentIds
+        ? { filter: { must: [{ key: "documentId", match: { any: documentIds } }] } }
+        : {};
+
     if (!usesLexicalSearch(hybrid)) {
-        return { query: vector, limit: topK, score_threshold: scoreThreshold, with_payload: true };
+        return { query: vector, ...filter, limit: topK, score_threshold: scoreThreshold, with_payload: true };
     }
 
     const lexical = [
@@ -46,6 +54,7 @@ export function buildHybridQuery({
     ].map(({ language, text }) => ({
         query: bm25Document(text, language, sparse, chunkSize),
         using: sparseVectorName(language),
+        ...filter,
         limit: hybrid.sparseLimit,
     }));
 
@@ -53,7 +62,7 @@ export function buildHybridQuery({
 
     return {
         prefetch: [
-            { query: vector, limit: hybrid.denseLimit, score_threshold: scoreThreshold },
+            { query: vector, ...filter, limit: hybrid.denseLimit, score_threshold: scoreThreshold },
             {
                 // One lexical list ranked by BM25 score. Fusing the language lists by RRF would rank the best match
                 // of every language first, a weak Russian match level with a strong French one. A chunk is in the
@@ -67,6 +76,7 @@ export function buildHybridQuery({
             },
         ],
         query: { rrf: { k: hybrid.rrfK, weights: [1, hybrid.sparseWeight] } },
+        ...filter,
         limit: topK,
         with_payload: true,
     };

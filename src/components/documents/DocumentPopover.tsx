@@ -25,9 +25,11 @@ type Props = {
     onIndexingStarted: (jobId: string) => void;
     // Back from the Google consent screen: "connected" reopens the Drive import.
     googleDriveResult?: string;
+    // Imported for this project only.
+    projectId?: string;
 }
 
-export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleDriveResult }: Props) {
+export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleDriveResult, projectId }: Props) {
     const [popoverOpen, setPopoverOpen] =
         useState(false);
 
@@ -64,7 +66,7 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
                 <PopoverTrigger asChild>
                     <Button>
                         <Plus className="mr-2 size-4" />
-                        Ajouter / Importer
+                        {projectId ? "Importer dans le projet" : "Ajouter / Importer"}
                     </Button>
                 </PopoverTrigger>
 
@@ -109,6 +111,7 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
                 onOpenChange={setLocalImportOpen}
                 addDocuments={addDocuments}
                 onIndexingStarted={onIndexingStarted}
+                projectId={projectId}
             />
 
             <GoogleDriveImportDialog
@@ -116,6 +119,7 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
                 onOpenChange={setDriveImportOpen}
                 addDocuments={addDocuments}
                 onIndexingStarted={onIndexingStarted}
+                projectId={projectId}
             />
         </>
     );

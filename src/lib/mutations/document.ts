@@ -18,6 +18,8 @@ export async function createDocument(data: {
   sourceType: DocumentSourceType;
   sourceRef?: string | null;
   indexingStatus: IndexingStatus;
+  // Imported for this project only.
+  ownerProjectId?: string | null;
 }, db: Prisma.TransactionClient = prisma) {
   return db.document.create({
     data,

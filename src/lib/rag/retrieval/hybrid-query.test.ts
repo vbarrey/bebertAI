@@ -27,6 +27,7 @@ const input = (hybrid: Partial<typeof defaultPipelineParameters.retrieval.hybrid
 
 type Prefetch = {
     query: unknown;
+    filter?: unknown;
     using?: string;
     limit?: number;
     score_threshold?: number;
@@ -101,5 +102,26 @@ describe("buildHybridQuery", () => {
                 with_payload: true,
             });
         }
+    });
+
+    it("restricts every search to the documents given, prefetches included", () => {
+        const filter = { must: [{ key: "documentId", match: { any: ["a", "b"] } }] };
+        const body = buildHybridQuery({ ...input(), documentIds: ["a", "b"] });
+        const [dense, lexical] = prefetches(body);
+
+        assert.deepEqual(body.filter, filter);
+        assert.deepEqual(dense!.filter, filter);
+        for (const language of lexical!.prefetch!) assert.deepEqual(language.filter, filter);
+
+        assert.deepEqual(buildHybridQuery({ ...input({ enabled: false }), documentIds: ["a"] }).filter, {
+            must: [{ key: "documentId", match: { any: ["a"] } }],
+        });
+    });
+
+    it("searches all the documents without a list", () => {
+        const body = buildHybridQuery(input());
+
+        assert.equal(body.filter, undefined);
+        assert.equal(prefetches(body)[0]!.filter, undefined);
     });
 });

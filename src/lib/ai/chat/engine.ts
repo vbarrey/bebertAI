@@ -11,6 +11,7 @@ import { getPipelineProvider } from "@/lib/pipeline/config";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/pipeline/default";
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
 import { getConversationModel } from "@/lib/queries/conversation";
+import { getSearchableDocumentIds } from "@/lib/rag/retrieval/document-scope";
 
 const PREVIEW_LENGTH = 300;
 
@@ -78,11 +79,13 @@ export async function* generateAssistantResponse({
   const query = message.normalize("NFC");
 
   // Different models: the translation runs while the query is embedded.
-  const [queryEmbedding, translations] = await Promise.all([
+  const [queryEmbedding, translations, documentIds] = await Promise.all([
     retriever.embedQuery(query),
     usesLexicalSearch(retrieval.hybrid)
       ? getPipelineProvider(translationModel, "traduction").then((provider) => translateQuery(provider, translationModel.modelName, query))
       : untranslatedQuery(query),
+    // Its project documents, or the library outside any project.
+    getSearchableDocumentIds(conversationId),
   ]);
 
   yield { type: "step", step: "RETRIEVING" };
@@ -93,6 +96,7 @@ export async function* generateAssistantResponse({
     retrieval,
     sparse: embedding.sparse,
     chunkSize: chunking.chunkSize,
+    documentIds: documentIds ?? undefined,
   });
 
   const excerpts = buildExcerpts(retrievedChunks);

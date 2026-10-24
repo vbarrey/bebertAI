@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import type { DocumentScope } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
+import { addToProjectSelection } from "@/lib/documents/import";
 
 const NEW_PROJECT_NAME = "Nouveau projet";
 
@@ -50,5 +53,21 @@ export async function updateProject(formData: FormData) {
   });
 
   revalidatePath("/");
+  revalidatePath(`/projects/${projectId}`);
+}
+
+/** Where the conversations of the project search: the whole library, or the documents selected in it. */
+export async function setProjectDocumentScope(projectId: string, documentScope: DocumentScope) {
+  await prisma.project.update({ where: { id: projectId }, data: { documentScope } });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function selectProjectDocuments(projectId: string, documentIds: string[]) {
+  await addToProjectSelection(projectId, documentIds);
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function unselectProjectDocument(projectId: string, documentId: string) {
+  await prisma.projectDocument.deleteMany({ where: { projectId, documentId } });
   revalidatePath(`/projects/${projectId}`);
 }

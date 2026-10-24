@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateProject } from "@/lib/mutations/projects";
 
@@ -7,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { MessagesSquare, Settings, Plus } from "lucide-react";
 
 import { ConversationList } from "@/components/conversations/ConversationList";
+import { ProjectDocuments } from "@/components/projects/ProjectDocuments";
+import { getProjectDocuments } from "@/lib/queries/document";
+import { cn } from "@/lib/utils";
 
 import { getProjects, getProjectWithConversations } from "@/lib/queries/project";
 import { createConversation } from "@/lib/mutations/conversation";
@@ -23,13 +27,28 @@ import {
 
 type ProjectPageProps = {
   params: Promise<{ projectId: string }>;
+  // The tab shown: the conversations unless "documents".
+  searchParams: Promise<{ tab?: string }>;
 };
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
+export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const { projectId } = await params;
-  const [project, projects] = await Promise.all([getProjectWithConversations(projectId), getProjects()]);
+  const tab = (await searchParams).tab === "documents" ? "documents" : "conversations";
+  const [project, projects, documents] = await Promise.all([
+    getProjectWithConversations(projectId),
+    getProjects(),
+    getProjectDocuments(projectId),
+  ]);
 
   if (!project) notFound();
+
+  const documentCount = documents.owned.length
+    + (project.documentScope === "SELECTION" ? documents.selected.length : documents.selected.length + documents.library.length);
+
+  const tabs = [
+    { id: "conversations", label: "Conversations", count: project.conversations.length, href: `/projects/${project.id}` },
+    { id: "documents", label: "Documents", count: documentCount, href: `/projects/${project.id}?tab=documents` },
+  ];
 
   return (
     <div className="mx-auto w-full max-w-4xl p-6 lg:p-10">
@@ -107,11 +126,26 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </div>
       </header>
 
-      <h2 className="mb-4 text-sm font-medium text-muted-foreground">
-        {project.conversations.length} conversation{project.conversations.length !== 1 && "s"}
-      </h2>
+      <nav aria-label="Sections du projet" className="mb-6 flex gap-1 border-b">
+        {tabs.map(({ id, label, count, href }) => (
+          <Link
+            key={id}
+            href={href}
+            aria-current={tab === id ? "page" : undefined}
+            className={cn(
+              "-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              tab === id ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+            <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">{count}</span>
+          </Link>
+        ))}
+      </nav>
 
-      {project.conversations.length === 0 ? (
+      {tab === "documents" ? (
+        <ProjectDocuments projectId={project.id} scope={project.documentScope} documents={documents} />
+      ) : project.conversations.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-16 text-center">
           <MessagesSquare className="size-8 text-muted-foreground" />
           <p className="font-medium">Aucune conversation pour le moment</p>

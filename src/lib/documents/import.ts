@@ -42,6 +42,7 @@ async function persistDocuments(
     files: DocumentToImport[],
     decisions: Map<string, DocumentImportConflictAction>,
     indexImmediately: boolean,
+    projectId: string | null,
 ): Promise<PersistResult> {
     return prisma.$transaction(async (tx) => {
         const documents: Document[] = [];
@@ -58,8 +59,13 @@ async function persistDocuments(
                 select: {
                     id: true,
                     storagePath: true,
+                    ownerProjectId: true,
+                    projects: { select: { projectId: true } },
                 },
             });
+
+            // Imported from a project: the document already there joins its selection instead of a copy.
+            const joinsProject = projectId !== null && existing !== null && existing.ownerProjectId !== projectId;
 
             if (existing) {
                 const action = decisions.get(
@@ -71,6 +77,14 @@ async function persistDocuments(
                         skippedStoragePaths.push(
                             file.storagePath,
                         );
+                    }
+
+                    if (joinsProject) {
+                        await tx.projectDocument.upsert({
+                            where: { projectId_documentId: { projectId, documentId: existing.id } },
+                            create: { projectId, documentId: existing.id },
+                            update: {},
+                        });
                     }
 
                     continue;
@@ -103,7 +117,21 @@ async function persistDocuments(
                 indexingStatus: indexImmediately
                     ? "PENDING"
                     : "UNPLANNED",
+                // A replaced document stays where it was: in the library or in its project.
+                ownerProjectId: existing ? existing.ownerProjectId : projectId,
             }, tx);
+
+            // The selections of the replaced document, and the importing project, keep the new one.
+            const selectedBy = [
+                ...(existing?.projects.map((link) => link.projectId) ?? []),
+                ...(joinsProject && !existing.projects.some((link) => link.projectId === projectId) ? [projectId] : []),
+            ];
+
+            if (selectedBy.length > 0) {
+                await tx.projectDocument.createMany({
+                    data: selectedBy.map((selecting) => ({ projectId: selecting, documentId: document.id })),
+                });
+            }
 
             documents.push(document);
 
@@ -140,6 +168,8 @@ export async function importDocuments(
     files: DocumentToImport[],
     decisions: Map<string, DocumentImportConflictAction>,
     indexImmediately: boolean,
+    // Imported from this project: the new documents are its own, those already there join its selection.
+    projectId: string | null = null,
 ): Promise<{ documents: Document[]; createdJobIds: string[] }> {
     let result: PersistResult;
 
@@ -148,6 +178,7 @@ export async function importDocuments(
             files,
             decisions,
             indexImmediately,
+            projectId,
         );
     } catch (error) {
         await Promise.allSettled(
@@ -203,4 +234,20 @@ export async function importDocuments(
         documents: result.documents,
         createdJobIds: result.createdJobIds,
     };
+}
+
+/** Adds documents already in the app to the selection of a project; its own documents are left as they are. */
+export async function addToProjectSelection(projectId: string, documentIds: string[]) {
+    const documents = await prisma.document.findMany({
+        where: { id: { in: documentIds }, OR: [{ ownerProjectId: null }, { ownerProjectId: { not: projectId } }] },
+        select: { id: true },
+    });
+
+    for (const { id } of documents) {
+        await prisma.projectDocument.upsert({
+            where: { projectId_documentId: { projectId, documentId: id } },
+            create: { projectId, documentId: id },
+            update: {},
+        });
+    }
 }

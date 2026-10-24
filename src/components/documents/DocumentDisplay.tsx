@@ -10,7 +10,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { DocumentStatusBadge } from "@/components/documents/DocumentStatusBadge";
 import { DocumentActions } from "@/components/documents/DocumentActions";
 import { DocumentBulkActions } from "@/components/documents/DocumentBulkActions";
-import { File, ListChecks } from "lucide-react";
+import { File, FolderOpen, ListChecks } from "lucide-react";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import Image from "next/image";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
@@ -75,7 +76,15 @@ const languageLabels: Record<string, string> = {
     german: "Allemand",
 };
 
-type DocumentRow = Document & { indexingError?: string | null; activeJobId?: string | null };
+type DocumentRow = Document & {
+    indexingError?: string | null;
+    activeJobId?: string | null;
+    // Imported for this project only; null for a library document.
+    ownerProject?: { id: string; name: string } | null;
+};
+
+// "LIBRARY", or the id of the project the documents were imported for.
+type LocationFilter = "ALL" | "LIBRARY" | string;
 
 type Props = {
     initialDocuments: DocumentRow[]
@@ -87,6 +96,7 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
     const [documents, setDocuments] = useState<DocumentRow[]>(initialDocuments);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | IndexingStatus>("ALL");
+    const [locationFilter, setLocationFilter] = useState<LocationFilter>("ALL");
     const [page, setPage] = useState(1);
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -95,8 +105,15 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
         const matchesSearch =
             d.displayName.toLowerCase().includes(search.toLowerCase());
         const matchesStatus = statusFilter === "ALL" ? true : d.indexingStatus === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesLocation = locationFilter === "ALL"
+            || (locationFilter === "LIBRARY" ? !d.ownerProjectId : d.ownerProjectId === locationFilter);
+        return matchesSearch && matchesStatus && matchesLocation;
     });
+
+    // The projects that have their own documents, for the location filter.
+    const ownerProjects = [...new Map(
+        documents.flatMap((d) => (d.ownerProject ? [[d.ownerProject.id, d.ownerProject.name] as const] : [])),
+    )];
 
     const totalPages = Math.ceil(filtered.length / PerPage);
     const paginated = filtered.slice((page - 1) * PerPage, page * PerPage);
@@ -307,6 +324,28 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                         ))}
                     </SelectContent>
                 </Select>
+                {/* Only once documents were imported for a project. */}
+                {ownerProjects.length > 0 && (
+                    <Select
+                        onValueChange={(v) => changeFilters(() => setLocationFilter(v))}
+                        value={locationFilter}
+                    >
+                        <SelectTrigger aria-label="Emplacement">
+                            <SelectValue placeholder="Emplacement">
+                                {locationFilter === "ALL" ? "Tous les emplacements"
+                                    : locationFilter === "LIBRARY" ? "Bibliothèque"
+                                    : ownerProjects.find(([id]) => id === locationFilter)?.[1]}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="ALL">Tous les emplacements</SelectItem>
+                            <SelectItem value="LIBRARY">Bibliothèque</SelectItem>
+                            {ownerProjects.map(([id, name]) => (
+                                <SelectItem key={id} value={id}>{name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
                 <div className="sm:ml-auto">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
@@ -409,6 +448,12 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                                                     {doc.displayName}
                                                 </TooltipContent>
                                             </Tooltip>
+                                            {doc.ownerProject && (
+                                                <Badge variant="secondary" className="mt-1 ml-6 flex max-w-48 gap-1">
+                                                    <FolderOpen className="size-3 shrink-0" />
+                                                    <TruncatedText>{doc.ownerProject.name}</TruncatedText>
+                                                </Badge>
+                                            )}
                                         </td>
                                         <td className="hidden lg:table-cell text-center">{doc.format}</td>
                                         <td className="hidden lg:table-cell text-center text-muted-foreground">

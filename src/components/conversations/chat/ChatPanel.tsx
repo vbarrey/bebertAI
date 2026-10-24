@@ -3,6 +3,7 @@ import { getEnableProvidersWithModels } from "@/lib/queries/aiProvider";
 import { Chat } from "./Chat";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
 import { prisma } from "@/lib/prisma";
+import { documentScopeWhere, getConversationScope } from "@/lib/rag/retrieval/document-scope";
 
 type ChatPanelProps = {
   conversationId: string;
@@ -13,11 +14,15 @@ type ChatPanelProps = {
 
 export async function ChatPanel({ conversationId, title, messages, model }: ChatPanelProps) {
 
-  const [providersModels, pipelineConfig, indexedDocuments] = await Promise.all([
+  const [providersModels, pipelineConfig, project] = await Promise.all([
     getEnableProvidersWithModels(),
     pipelineRuntime.getConfig(),
-    prisma.document.count({ where: { indexingStatus: "PROCESSED" } }),
+    getConversationScope(conversationId),
   ]);
+  // In the documents the conversation searches.
+  const indexedDocuments = await prisma.document.count({
+    where: { AND: [documentScopeWhere(project), { indexingStatus: "PROCESSED" }] },
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

@@ -20,6 +20,30 @@ model Project {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   conversations     Conversation[]
+
+  // Where its conversations search: the whole library, or the documents selected in it. Its own documents always.
+  documentScope     DocumentScope  @default(ALL)
+  // Library documents selected for the project.
+  documents         ProjectDocument[]
+  // Documents imported for the project only: out of the library and of the other projects.
+  ownedDocuments    Document[]     @relation("OwnedDocuments")
+}
+
+enum DocumentScope {
+  ALL
+  SELECTION
+}
+
+model ProjectDocument {
+  projectId  String
+  documentId String
+  createdAt  DateTime @default(now())
+
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, documentId])
+  @@index([documentId])
 }
 
 model Conversation {
@@ -81,10 +105,17 @@ model Document {
 
   indexingStatus IndexingStatus @default(UNPLANNED)
 
+  // Null: a library document. Else imported for this project only; back to the library if the project goes.
+  ownerProjectId String?
+  ownerProject   Project?       @relation("OwnedDocuments", fields: [ownerProjectId], references: [id], onDelete: SetNull)
+  // The projects that selected it.
+  projects       ProjectDocument[]
+
   chunks         Chunk[]
   indexingJobs   IndexingJob[]
 
   @@index([displayName])
+  @@index([ownerProjectId])
 }
 
 model Chunk {

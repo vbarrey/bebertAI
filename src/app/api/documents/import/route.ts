@@ -16,6 +16,7 @@ import {
 } from "@/lib/documents/storage";
 import {
     DocumentToImport,
+    addToProjectSelection,
     getImportDecisionKey,
     importDocuments,
 } from "@/lib/documents/import";
@@ -74,6 +75,8 @@ function parseConflictDecisions(
 async function prepareImportedFiles(
     files: File[],
     decisions: Map<string, DocumentImportConflictAction>,
+    // Filled with the documents already there that the files were not imported over.
+    keptExistingIds: string[],
 ): Promise<ImportedFile[]> {
     const supportedFormats =
         pipelineCapabilities.import.supportedFormat;
@@ -136,6 +139,7 @@ async function prepareImportedFiles(
         }
 
         if (action === "IGNORE") {
+            keptExistingIds.push(existing.id);
             continue;
         }
 
@@ -255,11 +259,14 @@ export async function POST(
         }
 
         let importedFiles: ImportedFile[];
+        const keptExistingIds: string[] = [];
+        const projectId = formData.get("projectId")?.toString() || null;
 
         try {
             importedFiles = await prepareImportedFiles(
                 files,
                 decisions,
+                keptExistingIds,
             );
         } catch (error) {
             if (error instanceof ImportConflictError) {
@@ -274,6 +281,11 @@ export async function POST(
             }
 
             throw error;
+        }
+
+        // Imported from a project: the documents already there join its selection instead of a copy.
+        if (projectId && keptExistingIds.length > 0) {
+            await addToProjectSelection(projectId, keptExistingIds);
         }
 
         if (importedFiles.length === 0) {
@@ -293,6 +305,7 @@ export async function POST(
             preparedFiles,
             decisions,
             indexImmediately,
+            projectId,
         );
 
         return NextResponse.json({
