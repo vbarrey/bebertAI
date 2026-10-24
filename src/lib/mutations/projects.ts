@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import type { DocumentScope } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { addToProjectSelection } from "@/lib/documents/import";
+import { addToProjectSelection } from "@/lib/mutations/document";
 import { requireUser } from "@/lib/session";
 
 const NEW_PROJECT_NAME = "Nouveau projet";
@@ -39,16 +39,17 @@ export async function createProject(formData: FormData) {
 }
 
 export async function updateProject(formData: FormData) {
-  await requireUser();
+  const user = await requireUser();
   const projectId = formData.get("projectId")?.toString();
   const projectName = formData.get("name")?.toString();
   const projectDescription = formData.get("description")?.toString();
 
   if (!projectId || !projectName) return; // TODO : Handle validation error
 
-  await prisma.project.update({
+  await prisma.project.updateMany({
     where: {
       id: projectId,
+      userId: user.id,
     },
     data: {
       name: projectName,
@@ -62,19 +63,19 @@ export async function updateProject(formData: FormData) {
 
 /** Where the conversations of the project search: the whole library, or the documents selected in it. */
 export async function setProjectDocumentScope(projectId: string, documentScope: DocumentScope) {
-  await requireUser();
-  await prisma.project.update({ where: { id: projectId }, data: { documentScope } });
+  const user = await requireUser();
+  await prisma.project.updateMany({ where: { id: projectId, userId: user.id }, data: { documentScope } });
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function selectProjectDocuments(projectId: string, documentIds: string[]) {
-  await requireUser();
-  await addToProjectSelection(projectId, documentIds);
+  const user = await requireUser();
+  await addToProjectSelection(user.id, projectId, documentIds);
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function unselectProjectDocument(projectId: string, documentId: string) {
-  await requireUser();
-  await prisma.projectDocument.deleteMany({ where: { projectId, documentId } });
+  const user = await requireUser();
+  await prisma.projectDocument.deleteMany({ where: { projectId, documentId, project: { userId: user.id } } });
   revalidatePath(`/projects/${projectId}`);
 }

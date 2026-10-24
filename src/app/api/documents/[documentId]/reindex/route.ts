@@ -20,7 +20,7 @@ export async function POST(
     _request: Request,
     { params }: RouteContext,
 ): Promise<NextResponse<ReindexResponse>> {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     const { documentId } = await params;
@@ -32,6 +32,7 @@ export async function POST(
                     await tx.document.findUnique({
                         where: {
                             id: documentId,
+                            userId: user.id,
                         },
                         select: {
                             id: true,

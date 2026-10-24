@@ -2,10 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { cache } from "react";
 import type { ChatSource } from "@/lib/ai/types";
 
-export const getConversation = cache(
-  async (conversationId: string) => prisma.conversation.findUnique({ where: { id: conversationId } })
-);
-
 export const getConversationModel = cache(
   async (conversationId: string) => prisma.conversation.findUnique({
     where: { id: conversationId },
@@ -13,10 +9,11 @@ export const getConversationModel = cache(
   })
 );
 
+/** Null when unknown or another user's. */
 export const getConversationWithMessages = cache(
-  async (conversationId: string) => {
+  async (conversationId: string, userId: string) => {
     const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
+      where: { id: conversationId, userId },
       select: {
         id: true,
         title: true,
@@ -51,12 +48,6 @@ export const getConversationWithMessages = cache(
   }
 );
 
-export const getConversationCount = cache(
-  async (projectId: string) =>
-    prisma.conversation.count({ where: { projectId } 
-  })
-);
-
 const SIDEBAR_PROJECTS = 30;
 const SIDEBAR_PROJECT_CONVERSATIONS = 5;
 const SIDEBAR_CONVERSATIONS = 50;
@@ -65,11 +56,12 @@ const SIDEBAR_CONVERSATIONS = 50;
  * What the sidebar lists: the projects with their latest conversations, the most recently active first, and the
  * conversations outside any project.
  */
-export const getSidebarTree = cache(async () => {
+export const getSidebarTree = cache(async (userId: string) => {
   const conversationFields = { id: true, title: true, lastMessageAt: true } as const;
 
   const [projects, conversations] = await Promise.all([
     prisma.project.findMany({
+      where: { userId },
       orderBy: { updatedAt: "desc" },
       take: SIDEBAR_PROJECTS,
       select: {
@@ -81,7 +73,7 @@ export const getSidebarTree = cache(async () => {
       },
     }),
     prisma.conversation.findMany({
-      where: { projectId: null },
+      where: { userId, projectId: null },
       orderBy: { lastMessageAt: "desc" },
       take: SIDEBAR_CONVERSATIONS,
       select: conversationFields,

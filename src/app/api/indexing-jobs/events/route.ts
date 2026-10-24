@@ -14,7 +14,7 @@ const FINISHED_STATUSES = ["COMPLETED", "FAILED", "CANCELLED"];
  * Usage: GET /api/indexing-jobs/events?ids=jobA,jobB
  */
 export async function GET(request: NextRequest) {
-  const { error: authError } = await apiUser();
+  const { user, error: authError } = await apiUser();
   if (authError) return authError;
 
   const ids = (request.nextUrl.searchParams.get("ids") ?? "")
@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
     .filter(Boolean);
 
   const jobs = await prisma.indexingJob.findMany({
-    where: { id: { in: ids } },
+    // The user's documents' jobs only.
+    where: { id: { in: ids }, document: { userId: user.id } },
     select: { id: true, documentId: true, status: true, errorMessage: true, document: { select: { displayName: true } } },
   });
 

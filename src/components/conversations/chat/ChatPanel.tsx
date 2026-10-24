@@ -14,15 +14,15 @@ type ChatPanelProps = {
 
 export async function ChatPanel({ conversationId, title, messages, model }: ChatPanelProps) {
 
-  const [providersModels, pipelineConfig, project] = await Promise.all([
+  const [providersModels, pipelineConfig, scope] = await Promise.all([
     getEnableProvidersWithModels(),
     pipelineRuntime.getConfig(),
     getConversationScope(conversationId),
   ]);
   // In the documents the conversation searches.
-  const indexedDocuments = await prisma.document.count({
-    where: { AND: [documentScopeWhere(project), { indexingStatus: "PROCESSED" }] },
-  });
+  const indexedDocuments = scope
+    ? await prisma.document.count({ where: { AND: [documentScopeWhere(scope), { indexingStatus: "PROCESSED" }] } })
+    : 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

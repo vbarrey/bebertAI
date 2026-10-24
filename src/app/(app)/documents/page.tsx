@@ -1,5 +1,6 @@
 import { DocumentsDisplay } from "@/components/documents/DocumentDisplay";
 import { getAllDocuments } from "@/lib/queries/document";
+import { requireUser } from "@/lib/session";
 
 
 type Props = {
@@ -8,7 +9,8 @@ type Props = {
 };
 
 export default async function DocumentPage({ searchParams }: Props) {
-  const documents = await getAllDocuments();
+  const user = await requireUser();
+  const documents = await getAllDocuments(user.id);
   const { googleDrive } = await searchParams;
 
   return (

@@ -2,8 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { cache } from "react";
 
 export const getProjects = cache(
-  async (limit: number | undefined = undefined) => {
+  async (userId: string, limit: number | undefined = undefined) => {
     return prisma.project.findMany({
+      where: { userId },
       orderBy: {
         updatedAt: "desc",
       },
@@ -12,18 +13,12 @@ export const getProjects = cache(
   }
 );
 
-export const getProject = cache(async (projectId: string) => {
+/** Null when unknown or another user's. */
+export const getProjectWithConversations = cache(async (projectId: string, userId: string) => {
   return prisma.project.findUnique({
     where: {
       id: projectId,
-    },
-  });
-});
-
-export const getProjectWithConversations = cache(async (projectId: string) => {
-  return prisma.project.findUnique({
-    where: {
-      id: projectId,
+      userId,
     },
     select: {
       id: true,

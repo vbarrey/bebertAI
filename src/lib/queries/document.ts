@@ -24,8 +24,9 @@ function withIndexingState<T extends WithLatestJob>({ indexingJobs: [job], ...do
  * Documents with the error message of their latest indexing job (null when it did not fail)
  * and its id while it is queued or running, for the page to follow it.
  */
-export async function getAllDocuments() {
+export async function getAllDocuments(userId: string) {
   const documents = await prisma.document.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
     include: { ...latestJob, ownerProject: { select: { id: true, name: true } } },
   });
@@ -37,17 +38,17 @@ export async function getAllDocuments() {
  * The documents of a project: imported for it, selected in the library, and the library documents it can still
  * select.
  */
-export async function getProjectDocuments(projectId: string) {
+export async function getProjectDocuments(projectId: string, userId: string) {
   const [owned, selected, library] = await Promise.all([
-    prisma.document.findMany({ where: { ownerProjectId: projectId }, orderBy: { createdAt: "desc" }, include: latestJob }),
+    prisma.document.findMany({ where: { userId, ownerProjectId: projectId }, orderBy: { createdAt: "desc" }, include: latestJob }),
     prisma.document.findMany({
       // Not "NOT owner = project": in SQL that is null, not true, for the library documents (no owner).
-      where: { projects: { some: { projectId } }, OR: [{ ownerProjectId: null }, { ownerProjectId: { not: projectId } }] },
+      where: { userId, projects: { some: { projectId } }, OR: [{ ownerProjectId: null }, { ownerProjectId: { not: projectId } }] },
       orderBy: { displayName: "asc" },
       include: latestJob,
     }),
     prisma.document.findMany({
-      where: { ownerProjectId: null, projects: { none: { projectId } } },
+      where: { userId, ownerProjectId: null, projects: { none: { projectId } } },
       orderBy: { displayName: "asc" },
       select: { id: true, displayName: true, format: true, indexingStatus: true },
     }),
@@ -58,6 +59,7 @@ export async function getProjectDocuments(projectId: string) {
 
 export type ProjectDocuments = Awaited<ReturnType<typeof getProjectDocuments>>;
 
+// For the indexing worker: the job already names its document.
 export function getDocumentById(documentId: string) {
   return prisma.document.findUnique({
     where: { id: documentId }

@@ -42,3 +42,24 @@ export function flagIndexedDocumentsForReindex(db: Prisma.TransactionClient = pr
     data: { indexingStatus: IndexingStatus.NEEDREINDEX },
   });
 }
+
+/**
+ * Adds documents already in the app to the selection of a project; its own documents are left as they are.
+ * The user's project and documents only: anything else is ignored.
+ */
+export async function addToProjectSelection(userId: string, projectId: string, documentIds: string[]) {
+    if (!(await prisma.project.count({ where: { id: projectId, userId } }))) return;
+
+    const documents = await prisma.document.findMany({
+        where: { userId, id: { in: documentIds }, OR: [{ ownerProjectId: null }, { ownerProjectId: { not: projectId } }] },
+        select: { id: true },
+    });
+
+    for (const { id } of documents) {
+        await prisma.projectDocument.upsert({
+            where: { projectId_documentId: { projectId, documentId: id } },
+            create: { projectId, documentId: id },
+            update: {},
+        });
+    }
+}

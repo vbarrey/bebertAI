@@ -167,7 +167,8 @@ async function persistDocuments(
  * then queues their indexing. The stored copies of the files are deleted when the creation fails.
  */
 export async function importDocuments(
-    // The owner of the documents; a checksum already in their documents is a conflict.
+    // The owner of the documents; a checksum already in their documents is a conflict. The routes check that the
+    // project is theirs.
     userId: string,
     files: DocumentToImport[],
     decisions: Map<string, DocumentImportConflictAction>,
@@ -239,20 +240,4 @@ export async function importDocuments(
         documents: result.documents,
         createdJobIds: result.createdJobIds,
     };
-}
-
-/** Adds documents already in the app to the selection of a project; its own documents are left as they are. */
-export async function addToProjectSelection(projectId: string, documentIds: string[]) {
-    const documents = await prisma.document.findMany({
-        where: { id: { in: documentIds }, OR: [{ ownerProjectId: null }, { ownerProjectId: { not: projectId } }] },
-        select: { id: true },
-    });
-
-    for (const { id } of documents) {
-        await prisma.projectDocument.upsert({
-            where: { projectId_documentId: { projectId, documentId: id } },
-            create: { projectId, documentId: id },
-            update: {},
-        });
-    }
 }

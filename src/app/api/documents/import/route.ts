@@ -16,7 +16,6 @@ import {
 } from "@/lib/documents/storage";
 import {
     DocumentToImport,
-    addToProjectSelection,
     getImportDecisionKey,
     importDocuments,
 } from "@/lib/documents/import";
@@ -25,6 +24,7 @@ import type {
     DocumentImportConflictAction,
 } from "@/types/document-import";
 import { apiUser } from "@/lib/session";
+import { addToProjectSelection } from "@/lib/mutations/document";
 
 type ImportedFile = {
     file: File;
@@ -267,6 +267,10 @@ export async function POST(
         const keptExistingIds: string[] = [];
         const projectId = formData.get("projectId")?.toString() || null;
 
+        if (projectId && !(await prisma.project.count({ where: { id: projectId, userId: user.id } }))) {
+            return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
+        }
+
         try {
             importedFiles = await prepareImportedFiles(
                 user.id,
@@ -291,7 +295,7 @@ export async function POST(
 
         // Imported from a project: the documents already there join its selection instead of a copy.
         if (projectId && keptExistingIds.length > 0) {
-            await addToProjectSelection(projectId, keptExistingIds);
+            await addToProjectSelection(user.id, projectId, keptExistingIds);
         }
 
         if (importedFiles.length === 0) {

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 import { getConversationWithMessages } from "@/lib/queries/conversation";
+import { requireUser } from "@/lib/session";
 import { ChatPanel } from "@/components/conversations/chat/ChatPanel";
 import { TruncatedText } from "@/components/ui/truncated-text";
 
@@ -13,7 +14,8 @@ type ConversationPageProps = {
 export default async function ConversationPage({ params }: ConversationPageProps) {
   const { conversationId } = await params;
 
-  const conversation = await getConversationWithMessages(conversationId);
+  const user = await requireUser();
+  const conversation = await getConversationWithMessages(conversationId, user.id);
 
   if (!conversation) notFound();
 

@@ -7,6 +7,7 @@ import { DocumentFormatSchema } from "@/lib/documents/format";
 import { importDocuments } from "@/lib/documents/import";
 import { isDriveId } from "@/lib/google-drive/client";
 import { apiUser } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 
 /**
  * The files of the analysis, sent back as they were analyzed: nothing is downloaded again before the indexing.
@@ -41,6 +42,10 @@ export async function POST(request: Request) {
     }
 
     const { files, decisions, indexImmediately, projectId } = parsed.data;
+
+    if (projectId && !(await prisma.project.count({ where: { id: projectId, userId: user.id } }))) {
+        return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
+    }
 
     try {
         const result = await importDocuments(

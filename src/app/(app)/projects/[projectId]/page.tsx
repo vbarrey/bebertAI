@@ -13,6 +13,7 @@ import { getProjectDocuments } from "@/lib/queries/document";
 import { cn } from "@/lib/utils";
 
 import { getProjects, getProjectWithConversations } from "@/lib/queries/project";
+import { requireUser } from "@/lib/session";
 import { createConversation } from "@/lib/mutations/conversation";
 
 import {
@@ -34,10 +35,11 @@ type ProjectPageProps = {
 export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const { projectId } = await params;
   const tab = (await searchParams).tab === "documents" ? "documents" : "conversations";
+  const user = await requireUser();
   const [project, projects, documents] = await Promise.all([
-    getProjectWithConversations(projectId),
-    getProjects(),
-    getProjectDocuments(projectId),
+    getProjectWithConversations(projectId, user.id),
+    getProjects(user.id),
+    getProjectDocuments(projectId, user.id),
   ]);
 
   if (!project) notFound();

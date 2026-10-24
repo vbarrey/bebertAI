@@ -84,7 +84,7 @@ export async function* generateAssistantResponse({
     usesLexicalSearch(retrieval.hybrid)
       ? getPipelineProvider(translationModel, "traduction").then((provider) => translateQuery(provider, translationModel.modelName, query))
       : untranslatedQuery(query),
-    // Its project documents, or the library outside any project.
+    // Its project documents, or the library outside any project: its owner's only.
     getSearchableDocumentIds(conversationId),
   ]);
 
@@ -96,7 +96,7 @@ export async function* generateAssistantResponse({
     retrieval,
     sparse: embedding.sparse,
     chunkSize: chunking.chunkSize,
-    documentIds: documentIds ?? undefined,
+    documentIds,
   });
 
   const excerpts = buildExcerpts(retrievedChunks);

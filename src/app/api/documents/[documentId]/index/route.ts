@@ -28,7 +28,7 @@ export async function POST(
     _request: Request,
     { params }: RouteContext,
 ): Promise<NextResponse<IndexResponse>> {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     const { documentId } = await params;
@@ -37,6 +37,7 @@ export async function POST(
         const document = await prisma.document.findUnique({
             where: {
                 id: documentId,
+                userId: user.id,
             },
             select: {
                 id: true,

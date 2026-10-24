@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
     await connection();
 
     const user = await requireUser();
-    const tree = await getSidebarTree();
+    const tree = await getSidebarTree(user.id);
 
     return (
         // Around the sidebar too: its truncated titles show the full text in a tooltip.

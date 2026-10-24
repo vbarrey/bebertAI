@@ -2,45 +2,41 @@ import type { DocumentScope, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
+type ConversationScope = { userId: string; project: { id: string; documentScope: DocumentScope } | null };
+
 /**
- * The documents a conversation searches:
+ * The documents a conversation searches, always among its owner's:
  * - outside any project, the library (the documents imported for a project are left out);
  * - in a project, its own documents, and the whole library or the documents it selected in it.
  */
-export function documentScopeWhere(project: { id: string; documentScope: DocumentScope } | null): Prisma.DocumentWhereInput {
-  if (!project) return { ownerProjectId: null };
+export function documentScopeWhere({ userId, project }: ConversationScope): Prisma.DocumentWhereInput {
+  if (!project) return { userId, ownerProjectId: null };
 
-  return project.documentScope === "ALL"
-    ? { OR: [{ ownerProjectId: null }, { ownerProjectId: project.id }] }
-    : { OR: [{ ownerProjectId: project.id }, { projects: { some: { projectId: project.id } } }] };
+  return {
+    userId,
+    ...(project.documentScope === "ALL"
+      ? { OR: [{ ownerProjectId: null }, { ownerProjectId: project.id }] }
+      : { OR: [{ ownerProjectId: project.id }, { projects: { some: { projectId: project.id } } }] }),
+  };
 }
 
-/** The project of the conversation and its scope, null outside any project. */
-export async function getConversationScope(conversationId: string) {
-  const conversation = await prisma.conversation.findUnique({
+/** The owner of the conversation and its project with its scope (null outside any project); null when unknown. */
+export async function getConversationScope(conversationId: string): Promise<ConversationScope | null> {
+  return prisma.conversation.findUnique({
     where: { id: conversationId },
-    select: { project: { select: { id: true, documentScope: true } } },
+    select: { userId: true, project: { select: { id: true, documentScope: true } } },
   });
-
-  return conversation?.project ?? null;
 }
 
 /**
- * The ids of the documents the conversation may search, null when it may search them all: the Qdrant search is
- * then not filtered, as long as no document was imported for a project.
+ * The ids of the documents the conversation may search: the Qdrant search is always filtered by them, the
+ * collection holding every user's chunks.
  */
-export async function getSearchableDocumentIds(conversationId: string): Promise<string[] | null> {
-  const project = await getConversationScope(conversationId);
+export async function getSearchableDocumentIds(conversationId: string): Promise<string[]> {
+  const scope = await getConversationScope(conversationId);
 
-  if (!project || project.documentScope === "ALL") {
-    // The documents it must not see: those of the projects, or of the other projects.
-    const hidden = await prisma.document.count({
-      where: { ownerProjectId: project ? { not: project.id } : { not: null } },
-    });
+  if (!scope) return [];
 
-    if (hidden === 0) return null;
-  }
-
-  const documents = await prisma.document.findMany({ where: documentScopeWhere(project), select: { id: true } });
+  const documents = await prisma.document.findMany({ where: documentScopeWhere(scope), select: { id: true } });
   return documents.map((document) => document.id);
 }

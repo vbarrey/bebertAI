@@ -23,7 +23,7 @@ export async function GET(
     _request: Request,
     { params }: RouteContext,
 ) {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     const { documentId } = await params;
@@ -31,6 +31,7 @@ export async function GET(
     const document = await prisma.document.findUnique({
         where: {
             id: documentId,
+            userId: user.id,
         },
         select: {
             storagePath: true,
@@ -125,7 +126,7 @@ export async function DELETE(
     _request: Request,
     { params }: RouteContext,
 ) {
-    const { error: authError } = await apiUser();
+    const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
     const { documentId } = await params;
@@ -134,6 +135,7 @@ export async function DELETE(
         const document = await prisma.document.findUnique({
             where: {
                 id: documentId,
+                userId: user.id,
             },
             select: {
                 id: true,

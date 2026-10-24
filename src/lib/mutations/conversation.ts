@@ -1,5 +1,5 @@
 "use server";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
@@ -22,6 +22,7 @@ function revalidateConversations() {
 export async function createConversation(formData: FormData) {
     const user = await requireUser();
     const projectId = formData.get("projectId")?.toString() || null;
+    if (projectId && !(await prisma.project.count({ where: { id: projectId, userId: user.id } }))) notFound();
 
     const empty = await prisma.conversation.findFirst({
         where: { userId: user.id, projectId, messages: { none: {} } },
@@ -49,18 +50,20 @@ export async function createConversation(formData: FormData) {
 }
 
 export async function renameConversation(conversationId: string, title: string) {
-    await requireUser();
+    const user = await requireUser();
     const trimmed = title.trim().slice(0, MAX_TITLE_LENGTH);
     if (!trimmed) return;
 
-    await prisma.conversation.update({ where: { id: conversationId }, data: { title: trimmed } });
+    await prisma.conversation.updateMany({ where: { id: conversationId, userId: user.id }, data: { title: trimmed } });
     revalidateConversations();
 }
 
-/** Moves the conversation into a project, or out of any project with null. */
+/** Moves the conversation into a project, or out of any project with null: the user's own project only. */
 export async function moveConversation(conversationId: string, projectId: string | null) {
-    await requireUser();
-    await prisma.conversation.update({ where: { id: conversationId }, data: { projectId } });
+    const user = await requireUser();
+    if (projectId && !(await prisma.project.count({ where: { id: projectId, userId: user.id } }))) return;
+
+    await prisma.conversation.updateMany({ where: { id: conversationId, userId: user.id }, data: { projectId } });
     revalidateConversations();
 }
 
@@ -69,9 +72,9 @@ export async function moveConversation(conversationId: string, projectId: string
  * the conversation does not end with a question and its answer.
  */
 export async function removeLastExchange(conversationId: string): Promise<string | null> {
-    await requireUser();
+    const user = await requireUser();
     const [answer, question] = await prisma.message.findMany({
-        where: { conversationId },
+        where: { conversationId, conversation: { userId: user.id } },
         orderBy: { createdAt: "desc" },
         take: 2,
         select: { id: true, role: true, content: true },
@@ -88,9 +91,9 @@ export async function removeLastExchange(conversationId: string): Promise<string
  * Only replaces the provisional title: a title given by hand meanwhile stays. Returns the title, null when unchanged.
  */
 export async function generateConversationTitle(conversationId: string): Promise<string | null> {
-    await requireUser();
+    const user = await requireUser();
     const conversation = await prisma.conversation.findUnique({
-        where: { id: conversationId },
+        where: { id: conversationId, userId: user.id },
         select: {
             title: true,
             messages: { orderBy: { createdAt: "asc" }, take: 3, select: { role: true, status: true, content: true } },
@@ -135,9 +138,9 @@ export async function generateConversationTitle(conversationId: string): Promise
  * The model can only be changed before the first message: a conversation keeps the model it was started with.
  */
 export async function updateConversationModel(conversationId: string, modelId: string) {
-    await requireUser();
+    const user = await requireUser();
     const { count } = await prisma.conversation.updateMany({
-        where: { id: conversationId, messages: { none: {} } },
+        where: { id: conversationId, userId: user.id, messages: { none: {} } },
         data: { modelId },
     });
 
@@ -148,7 +151,7 @@ export async function updateConversationModel(conversationId: string, modelId: s
 
 /** Deletes the conversation and its messages (cascade). */
 export async function deleteConversation(conversationId: string) {
-    await requireUser();
-    await prisma.conversation.delete({ where: { id: conversationId } });
+    const user = await requireUser();
+    await prisma.conversation.deleteMany({ where: { id: conversationId, userId: user.id } });
     revalidateConversations();
 }
