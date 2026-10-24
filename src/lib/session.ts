@@ -28,20 +28,14 @@ export async function requireAdmin() {
 }
 
 /**
- * API routes: the signed-in user, or the response to return, 401 signed out or 403 for a user on an admin route.
+ * API routes: the signed-in user, or the 401 response to return when signed out.
  * Typed `never` so that it fits any route response type.
  */
-export async function apiUser(
-  { admin = false } = {},
-): Promise<{ user: SessionUser; error?: undefined } | { user?: undefined; error: NextResponse<never> }> {
+export async function apiUser(): Promise<{ user: SessionUser; error?: undefined } | { user?: undefined; error: NextResponse<never> }> {
   const session = await getSession();
 
   if (!session) {
     return { error: NextResponse.json({ error: "Non authentifié." }, { status: 401 }) as NextResponse<never> };
-  }
-
-  if (admin && session.user.role !== "admin") {
-    return { error: NextResponse.json({ error: "Réservé aux administrateurs." }, { status: 403 }) as NextResponse<never> };
   }
 
   return { user: session.user };

@@ -14,6 +14,11 @@ export async function register() {
     throw new Error("BETTER_AUTH_SECRET doit être défini (32 caractères ou plus : openssl rand -base64 32).");
   }
 
+  // The providers' API keys and the Google Drive tokens are stored encrypted with it.
+  if (process.env.NODE_ENV === "production" && !process.env.ENCRYPTION_KEY && !process.env.GOOGLE_TOKEN_ENCRYPTION_KEY) {
+    throw new Error("ENCRYPTION_KEY doit être défini (openssl rand -base64 32), et ne plus changer : les clés API stockées en dépendent.");
+  }
+
   const { initializeAI } = await import("@/lib/startup/initialize-ai");
   const { adoptLegacyChunksCollection } = await import("@/lib/qdrant/collections");
 

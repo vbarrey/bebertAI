@@ -11,9 +11,11 @@ export class OllamaLocalInitializer implements AIInitializer {
   providerId: string | undefined;
 
   async initializeProvider(): Promise<void> {
+    // The shared one, without owner.
     let pProvider = await prisma.aIProvider.findFirst({
       where: {
         type: AIProviderType.OLLAMA_LOCAL,
+        userId: null,
       },
     });
 

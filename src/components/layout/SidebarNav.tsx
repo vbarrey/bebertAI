@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { useSignOut } from "./useSignOut";
 import { useThemeChoice } from "./useThemeChoice";
 
-export type SidebarUser = { name: string; email: string; role?: string | null };
+export type SidebarUser = { name: string; email: string };
 
 type SidebarNavProps = {
   tree: SidebarTree;
