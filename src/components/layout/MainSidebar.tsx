@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, cubicBezier } from "motion/react";
-import { ChevronsLeft, Files, FolderPlus, Settings, SquarePen } from "lucide-react";
+import { ChevronsLeft, Files, FolderPlus, LogOut, Settings, SquarePen } from "lucide-react";
 
 import { createConversation } from "@/lib/mutations/conversation";
 import { createProject } from "@/lib/mutations/projects";
@@ -13,11 +13,13 @@ import type { SidebarTree } from "@/lib/queries/conversation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { SidebarNav } from "./SidebarNav";
+import { SidebarNav, type SidebarUser } from "./SidebarNav";
+import { useSignOut } from "./useSignOut";
 import { useThemeChoice } from "./useThemeChoice";
 
 type MainSidebarProps = {
   tree: SidebarTree;
+  user: SidebarUser;
 };
 
 // A fixed width: the sidebar no longer follows the length of its content.
@@ -29,10 +31,11 @@ const SIDEBAR_TRANSITION = {
   ease: cubicBezier(0.9, 0, 0.1, 1),
 };
 
-export function MainSidebar({ tree }: MainSidebarProps) {
+export function MainSidebar({ tree, user }: MainSidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const theme = useThemeChoice();
+  const signOut = useSignOut();
 
   return (
     <motion.aside
@@ -87,11 +90,15 @@ export function MainSidebar({ tree }: MainSidebarProps) {
             <Button variant="ghost" size="icon" onClick={theme.cycle} aria-label={theme.label} title={theme.label}>
               <theme.Icon />
             </Button>
+
+            <Button variant="ghost" size="icon" onClick={signOut} aria-label="Se déconnecter" title={`Se déconnecter (${user.email})`}>
+              <LogOut />
+            </Button>
           </div>
         </div>
       ) : (
         <div className="min-h-0 flex-1" style={{ width: EXPANDED_WIDTH }}>
-          <SidebarNav tree={tree} />
+          <SidebarNav tree={tree} user={user} />
         </div>
       )}
     </motion.aside>

@@ -15,6 +15,8 @@ export const auth = betterAuth({
     enabled: true,
     // Accounts come from invitations only.
     disableSignUp: true,
+    // A reset signs out everywhere: whoever knew the old password loses access.
+    revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
       await sendEmail({
         to: user.email,

@@ -10,12 +10,14 @@ const LINKS = [
   { href: "/settings/pipeline", label: "Pipeline" },
 ];
 
-export function SettingsNav({ className }: { className?: string }) {
+const ADMIN_LINKS = [{ href: "/settings/utilisateurs", label: "Utilisateurs" }];
+
+export function SettingsNav({ className, isAdmin }: { className?: string; isAdmin: boolean }) {
   const pathname = usePathname();
 
   return (
     <nav className={cn("space-y-1", className)}>
-      {LINKS.map(({ href, label }) => (
+      {(isAdmin ? [...LINKS, ...ADMIN_LINKS] : LINKS).map(({ href, label }) => (
         <Link
           key={href}
           href={href}

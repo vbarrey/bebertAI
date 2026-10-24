@@ -9,13 +9,14 @@ import type { SidebarTree } from "@/lib/queries/conversation";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-import { SidebarNav } from "./SidebarNav";
+import { SidebarNav, type SidebarUser } from "./SidebarNav";
 
 type MobileHeaderProps = {
   tree: SidebarTree;
+  user: SidebarUser;
 };
 
-export function MobileHeader({ tree }: MobileHeaderProps) {
+export function MobileHeader({ tree, user }: MobileHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -58,7 +59,7 @@ export function MobileHeader({ tree }: MobileHeaderProps) {
             <DialogTitle className="flex h-14 shrink-0 items-center border-b px-4 text-sm font-semibold">Bebert AI</DialogTitle>
 
             <div className="min-h-0 flex-1">
-              <SidebarNav tree={tree} onNavigate={() => setMenuOpen(false)} />
+              <SidebarNav tree={tree} user={user} onNavigate={() => setMenuOpen(false)} />
             </div>
           </DialogContent>
         </Dialog>

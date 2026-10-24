@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Files, FolderOpen, FolderPlus, Settings, SquarePen } from "lucide-react";
+import { ChevronRight, Files, FolderOpen, FolderPlus, LogOut, Settings, SquarePen } from "lucide-react";
 
 import { createConversation } from "@/lib/mutations/conversation";
 import { createProject } from "@/lib/mutations/projects";
@@ -15,10 +15,14 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 import { ConversationMenu } from "@/components/conversations/ConversationMenu";
 import { cn } from "@/lib/utils";
 
+import { useSignOut } from "./useSignOut";
 import { useThemeChoice } from "./useThemeChoice";
+
+export type SidebarUser = { name: string; email: string };
 
 type SidebarNavProps = {
   tree: SidebarTree;
+  user: SidebarUser;
   // Closes the mobile menu once a link or an action is chosen.
   onNavigate?: () => void;
 };
@@ -29,9 +33,10 @@ const rowClassName = (active: boolean) =>
   cn("group relative flex min-w-0 items-center rounded-md transition-colors hover:bg-accent", active && "bg-accent");
 
 /** The projects with their latest conversations, the conversations outside any project, and the app pages. */
-export function SidebarNav({ tree, onNavigate }: SidebarNavProps) {
+export function SidebarNav({ tree, user, onNavigate }: SidebarNavProps) {
   const pathname = usePathname();
   const theme = useThemeChoice();
+  const signOut = useSignOut();
   // Opened or closed by hand; otherwise a project is open when the page shown is in it.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
@@ -165,6 +170,16 @@ export function SidebarNav({ tree, onNavigate }: SidebarNavProps) {
           <theme.Icon className="size-4 shrink-0" />
           {theme.label}
         </button>
+
+        <div className="flex items-center gap-2 border-t pt-2 pl-2">
+          <div className="min-w-0 flex-1">
+            <TruncatedText className="text-sm font-medium">{user.name}</TruncatedText>
+            <TruncatedText className="text-xs text-muted-foreground">{user.email}</TruncatedText>
+          </div>
+          <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={signOut} aria-label="Se déconnecter" title="Se déconnecter">
+            <LogOut className="size-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
