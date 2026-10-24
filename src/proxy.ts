@@ -25,6 +25,11 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(login);
 }
 
+/** The page asked before signing in (?next= set above): a path of this site only, never another site. */
+export function safeNext(next: string | undefined) {
+  return next?.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : "/";
+}
+
 export const config = {
   // Not the build files nor the public images.
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)"],

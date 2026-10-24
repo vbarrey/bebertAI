@@ -9,6 +9,11 @@ export async function register() {
     return;
   }
 
+  // Better Auth refuses its default secret in production: stop at start-up rather than fail on every page.
+  if (process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_SECRET) {
+    throw new Error("BETTER_AUTH_SECRET doit être défini (32 caractères ou plus : openssl rand -base64 32).");
+  }
+
   const { initializeAI } = await import("@/lib/startup/initialize-ai");
   const { pipelineRuntime } = await import("@/lib/pipeline/runtime");
 
