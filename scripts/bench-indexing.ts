@@ -42,7 +42,8 @@ function memoryCache(): EmbeddingCache {
 
 async function main() {
     const parameters = PipelineParametersSchema.parse(
-        JSON.parse((await prisma.pipelineParameters.findUniqueOrThrow({ where: { id: 1 } })).parameters),
+        // The first admin's pipeline.
+        JSON.parse((await prisma.pipelineParameters.findFirstOrThrow({ where: { user: { role: "admin" } }, orderBy: { user: { createdAt: "asc" } } })).parameters),
     );
 
     // OCR: every page under the native text threshold is rendered and recognized.

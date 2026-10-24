@@ -1,7 +1,7 @@
 import { PipelineParameters } from "./parameters";
 
 // Provider and model of a step never configured.
-const UNSET = "...";
+export const UNSET = "...";
 
 export const DEFAULT_SYSTEM_PROMPT = `Tu es l'assistant de Bebert AI.
 Tu aides l'utilisateur à répondre à ses questions en utilisant les informations disponibles dans la conversation.

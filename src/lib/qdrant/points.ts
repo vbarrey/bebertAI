@@ -2,12 +2,14 @@ import type { Chunk } from "@prisma/client";
 import { ChunkEmbedding } from "../ai/types";
 import type { Bm25Language, PipelineParameters } from "@/lib/pipeline/parameters";
 import { qdrant } from "./client";
-import { CHUNKS_COLLECTION } from "./collections";
+import { chunksCollection } from "./collections";
 import { getQdrantPointId } from "./ids";
 import { bm25Document, sparseVectorName } from "./bm25";
 
 /** Upserts each chunk with its dense embedding and the BM25 sparse vector of its language. */
 export async function upsertChunkEmbeddings(
+  // The owner of the documents: their collection.
+  userId: string,
   chunks: Chunk[],
   embeddings: ChunkEmbedding[],
   sparse: PipelineParameters["embedding"]["sparse"],
@@ -15,7 +17,7 @@ export async function upsertChunkEmbeddings(
 ): Promise<void> {
   const embeddingByChunkId = new Map(embeddings.map(({ chunkId, embedding }) => [chunkId, embedding]));
 
-  await qdrant.upsert(CHUNKS_COLLECTION, {
+  await qdrant.upsert(chunksCollection(userId), {
     wait: true,
     points: chunks.map((chunk) => {
       const embedding = embeddingByChunkId.get(chunk.id);
@@ -43,15 +45,17 @@ export async function upsertChunkEmbeddings(
 }
 
 export async function deleteDocumentEmbeddings(
+  userId: string,
   documentId: string,
 ): Promise<void> {
-  const { exists } = await qdrant.collectionExists(CHUNKS_COLLECTION);
+  const collection = chunksCollection(userId);
+  const { exists } = await qdrant.collectionExists(collection);
 
   if (!exists) {
     return;
   }
 
-  await qdrant.delete(CHUNKS_COLLECTION, {
+  await qdrant.delete(collection, {
     wait: true,
     filter: {
       must: [{ key: "documentId", match: { value: documentId } }],

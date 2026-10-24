@@ -91,7 +91,7 @@ export async function POST(
         );
 
         const pipelineConfig =
-            await pipelineRuntime.getConfig();
+            await pipelineRuntime.getConfig(user.id);
 
         await enqueueIndexingJob(
             indexingJob.id,

@@ -162,7 +162,7 @@ export async function DELETE(
 
         await deleteDocumentFile(document.storagePath);
 
-        await deleteDocumentEmbeddings(document.id).catch((error) =>
+        await deleteDocumentEmbeddings(user.id, document.id).catch((error) =>
             console.error(`Failed to delete embeddings of document ${document.id}:`, error),
         );
 

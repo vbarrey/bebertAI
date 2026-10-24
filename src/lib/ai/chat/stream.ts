@@ -8,6 +8,8 @@ import { userErrorMessage } from "./error-message";
 
 type StreamConversationInput = {
     conversationId: string;
+    // Its owner: their pipeline and their collection.
+    userId: string;
     message: string;
 };
 
@@ -16,7 +18,7 @@ type StreamConversationInput = {
  * @param input 
  * @returns AsyncGenerator<ChatStreamEvent>
  */
-export async function* streamConversation({ conversationId, message }: StreamConversationInput): AsyncGenerator<ChatStreamEvent> {
+export async function* streamConversation({ conversationId, userId, message }: StreamConversationInput): AsyncGenerator<ChatStreamEvent> {
     // Create USER message
     await createMessage({
         conversationId: conversationId, 
@@ -46,7 +48,7 @@ export async function* streamConversation({ conversationId, message }: StreamCon
 
     try {
         // Stream assistant response
-        for await (const event of generateAssistantResponse({ conversationId, message, history })) {
+        for await (const event of generateAssistantResponse({ conversationId, userId, message, history })) {
             // Yield the event to the caller; the answer and its sources are saved, steps are transient.
             yield event;
 

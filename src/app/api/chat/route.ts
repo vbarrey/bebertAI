@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         return new Response("Conversation introuvable.", { status: 404 });
     }
 
-    const generator = streamConversation({ conversationId, message });
+    const generator = streamConversation({ conversationId, userId: user.id, message });
     const stream = generatorToHttpStream(generator);
 
     return new Response(

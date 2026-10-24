@@ -18,7 +18,7 @@ export async function ChatPanel({ conversationId, userId, title, messages, model
 
   const [providersModels, pipelineConfig, scope] = await Promise.all([
     getEnableProvidersWithModels(userId),
-    pipelineRuntime.getConfig(),
+    pipelineRuntime.getConfig(userId),
     getConversationScope(conversationId),
   ]);
   // In the documents the conversation searches.

@@ -15,14 +15,14 @@ export async function register() {
   }
 
   const { initializeAI } = await import("@/lib/startup/initialize-ai");
-  const { pipelineRuntime } = await import("@/lib/pipeline/runtime");
+  const { adoptLegacyChunksCollection } = await import("@/lib/qdrant/collections");
 
   console.log(`[Launch One-Time functions]`);
   await initializeAI();
   console.log(`[Finish all One-Time functions]`);
 
-  console.log(`[Initialize pipeline configuration]`);
-  await pipelineRuntime.initialize();
+  // Qdrant down: tried again at the next start.
+  await adoptLegacyChunksCollection().catch((error) => console.error("Reprise de la collection Qdrant impossible :", error));
 
   const { inviteFirstAdmin } = await import("@/lib/invitations");
 

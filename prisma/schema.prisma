@@ -6,9 +6,11 @@ datasource db {
   provider = "sqlite"
 }
 
+// Each user's pipeline: their models, chunking, retrieval and generation settings.
 model PipelineParameters {
-  id        Int      @id @default(1)
-  parameters    String
+  userId     String   @id
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parameters String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -38,6 +40,7 @@ model User {
   conversations Conversation[]
   documents     Document[]
   aiProviders   AIProvider[]
+  pipeline      PipelineParameters?
 }
 
 // Accounts are created from an invitation link sent by email (src/lib/invitations.ts).

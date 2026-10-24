@@ -35,10 +35,10 @@ export async function setDocumentLanguage(documentId: string, language: string |
   });
 }
 
-// Their vectors were deleted: they no longer answer the chat until they are reindexed.
-export function flagIndexedDocumentsForReindex(db: Prisma.TransactionClient = prisma) {
+// The user's vectors were deleted: their documents no longer answer the chat until they are reindexed.
+export function flagIndexedDocumentsForReindex(userId: string, db: Prisma.TransactionClient = prisma) {
   return db.document.updateMany({
-    where: { indexingStatus: IndexingStatus.PROCESSED },
+    where: { userId, indexingStatus: IndexingStatus.PROCESSED },
     data: { indexingStatus: IndexingStatus.NEEDREINDEX },
   });
 }

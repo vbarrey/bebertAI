@@ -17,6 +17,7 @@ let projects: typeof import("@/lib/queries/project");
 let documents: typeof import("@/lib/queries/document");
 let scope: typeof import("@/lib/rag/retrieval/document-scope");
 let providers: typeof import("@/lib/queries/aiProvider");
+let runtime: typeof import("@/lib/pipeline/runtime");
 let documentMutations: typeof import("@/lib/mutations/document");
 
 /** One user with a project, a conversation in it and one outside, a library document and a project document. */
@@ -55,6 +56,7 @@ describe("ownership: a user sees nothing of another user's", () => {
     documents = await import("@/lib/queries/document");
     scope = await import("@/lib/rag/retrieval/document-scope");
     providers = await import("@/lib/queries/aiProvider");
+    runtime = await import("@/lib/pipeline/runtime");
     documentMutations = await import("@/lib/mutations/document");
 
     a = await seed("alice");
@@ -124,6 +126,31 @@ describe("ownership: a user sees nothing of another user's", () => {
     const asAdmin = await providers.getProvidersWithModels({ id: b.user.id, role: "admin" });
     assert.deepEqual(asUser.map(({ id, manageable }) => ({ id, manageable })), [{ id: shared.id, manageable: false }]);
     assert.deepEqual(asAdmin.map(({ id, manageable }) => ({ id, manageable })), [{ id: shared.id, manageable: true }]);
+  });
+
+  it("pipeline: each user's own, on their providers or the shared Ollama only", async () => {
+    const shared = await prisma.aIProvider.findFirstOrThrow({ where: { type: "OLLAMA_LOCAL" } });
+    const alices = await prisma.aIProvider.findFirstOrThrow({ where: { userId: a.user.id } });
+
+    // A new user starts from the default pipeline on the shared Ollama local.
+    const bobs = (await runtime.pipelineRuntime.getConfig(b.user.id)).parameters;
+    assert.equal(await prisma.pipelineParameters.count({ where: { userId: b.user.id } }), 1);
+
+    const onAlicesProvider = { ...bobs, generation: { ...bobs.generation, providerId: alices.id, modelName: "m" } };
+    await assert.rejects(runtime.pipelineRuntime.updateParameters(b.user.id, onAlicesProvider), /Fournisseur inconnu/);
+
+    const onShared = { ...bobs, generation: { ...bobs.generation, providerId: shared.id, modelName: "m", temperature: 0.2 } };
+    await runtime.pipelineRuntime.updateParameters(b.user.id, onShared);
+    assert.equal((await runtime.pipelineRuntime.getConfig(b.user.id)).parameters.generation.temperature, 0.2);
+    // Alice's pipeline is her own.
+    assert.notEqual((await runtime.pipelineRuntime.getConfig(a.user.id)).parameters.generation.temperature, 0.2);
+  });
+
+  it("a reindex flag only touches the user's own documents", async () => {
+    await documentMutations.flagIndexedDocumentsForReindex(b.user.id);
+
+    assert.ok((await prisma.document.findMany({ where: { userId: b.user.id } })).every((document) => document.indexingStatus === "NEEDREINDEX"));
+    assert.ok((await prisma.document.findMany({ where: { userId: a.user.id } })).every((document) => document.indexingStatus === "PROCESSED"));
   });
 
   it("a project selection takes the user's own project and documents only", async () => {

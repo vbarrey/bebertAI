@@ -8,7 +8,7 @@
  * The first run embeds and translates every question like the chat does (cached in data/prepared.json).
  */
 import { qdrant } from "@/lib/qdrant/client";
-import { CHUNKS_COLLECTION } from "@/lib/qdrant/collections";
+import { chunksCollection } from "@/lib/qdrant/collections";
 import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
 import { buildHybridQuery } from "@/lib/rag/retrieval/hybrid-query";
 import { translateQuery } from "@/lib/rag/retrieval/query-translator";
@@ -16,6 +16,7 @@ import type { PipelineParameters } from "@/lib/pipeline/parameters";
 
 import {
     loadPipelineParameters,
+    evaluationUserId,
     ollama,
     prisma,
     PREPARED_FILE,
@@ -117,7 +118,7 @@ async function measure(
         const question = item.questions[style].normalize("NFC");
         const { vector, translations } = prepared.questions[item.questions[style]]!;
 
-        const { points } = await qdrant.query(CHUNKS_COLLECTION, buildHybridQuery({
+        const { points } = await qdrant.query(chunksCollection(await evaluationUserId()), buildHybridQuery({
             vector,
             query: question,
             translations,

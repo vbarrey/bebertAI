@@ -217,13 +217,13 @@ export async function importDocuments(
     await Promise.allSettled(
         result.replacedDocumentIds.map(
             (documentId) =>
-                deleteDocumentEmbeddings(documentId),
+                deleteDocumentEmbeddings(userId, documentId),
         ),
     );
 
     if (result.createdJobIds.length > 0) {
         const pipelineConfig =
-            await pipelineRuntime.getConfig();
+            await pipelineRuntime.getConfig(userId);
 
         await Promise.all(
             result.createdJobIds.map(

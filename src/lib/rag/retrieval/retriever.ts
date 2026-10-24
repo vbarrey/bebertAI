@@ -1,6 +1,5 @@
 import { AIProviderClient } from "@/lib/ai/provider";
 import { qdrant } from "@/lib/qdrant/client";
-import { CHUNKS_COLLECTION } from "@/lib/qdrant/collections";
 import { getChunksByIds, getChunksInRanges } from "@/lib/queries/chunk";
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
 import { buildHybridQuery } from "./hybrid-query";
@@ -20,6 +19,8 @@ export type RetrievedChunk = {
 };
 
 export type RetrievalOptions = {
+    // The Qdrant collection of the conversation owner.
+    collection: string;
     // The query as typed, NFC.
     query: string;
     translations: QueryTranslations;
@@ -67,7 +68,7 @@ export class DocumentRetriever {
 
     async search(
         queryEmbedding: number[],
-        { retrieval, ...lexical }: RetrievalOptions,
+        { retrieval, collection, ...lexical }: RetrievalOptions,
     ): Promise<RetrievedChunk[]> {
         const { neighborChunks } = retrieval;
 
@@ -77,12 +78,12 @@ export class DocumentRetriever {
         }
 
         // Deleted when pipeline parameters requiring a reindex change, until the next indexing.
-        if (!(await qdrant.collectionExists(CHUNKS_COLLECTION)).exists) {
+        if (!(await qdrant.collectionExists(collection)).exists) {
             return [];
         }
 
         const results = await qdrant.query(
-            CHUNKS_COLLECTION,
+            collection,
             buildHybridQuery({ vector: queryEmbedding, retrieval, ...lexical }),
         );
 

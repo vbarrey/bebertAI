@@ -9,7 +9,7 @@ import { aiProviderRegistry } from "@/lib/ai/registry";
 import { loadProvider } from "@/lib/ai/provider-factory";
 import { OllamaRequestError } from "@/lib/ai/ollama-local/errors";
 import { isOllamaLocalDefaultModel } from "@/lib/ai/ollama-local/config";
-import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
 import { requireUser } from "@/lib/session";
 import { manageableProviders } from "@/lib/ai/provider-access";
 
@@ -91,15 +91,21 @@ export async function deleteModel(modelId: string): Promise<{ error: string } | 
     return { error: "Ce modèle est un modèle par défaut défini dans le .env (génération ou embedding) : il ne peut pas être supprimé." };
   }
 
-  const { parameters } = await pipelineRuntime.getConfig();
-  const steps = [
-    ["génération", parameters.generation],
-    ["embedding", parameters.embedding],
-    ["traduction", parameters.retrieval.hybrid.translation],
-  ] as const;
-  const usedBy = steps
-    .filter(([, step]) => step.providerId === model.providerId && step.modelName === model.name)
-    .map(([name]) => name);
+  const pipelines = await prisma.pipelineParameters.findMany({ select: { parameters: true } });
+  const usedBy = [...new Set(pipelines.flatMap(({ parameters: stored }) => {
+    const parsed = PipelineParametersSchema.safeParse(JSON.parse(stored));
+    if (!parsed.success) return [];
+
+    const parameters = parsed.data;
+    const steps = [
+      ["génération", parameters.generation],
+      ["embedding", parameters.embedding],
+      ["traduction", parameters.retrieval.hybrid.translation],
+    ] as const;
+    return steps
+      .filter(([, step]) => step.providerId === model.providerId && step.modelName === model.name)
+      .map(([name]) => name);
+  }))];
 
   if (usedBy.length > 0) {
     return { error: `Ce modèle est utilisé par le pipeline (${usedBy.join(", ")}) : choisissez-en un autre dans Réglages > Pipeline avant de le supprimer.` };

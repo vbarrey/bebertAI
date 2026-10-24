@@ -1,5 +1,5 @@
 import { PipelineConfig } from "./config";
-import { defaultPipelineParameters, withDefaultModels } from "./default";
+import { defaultPipelineParameters, UNSET, withDefaultModels } from "./default";
 import { pipelineCapabilities } from "./capabilities";
 import { PipelineParametersSchema, PipelineParameters, requiresReindex } from "./parameters";
 import { prisma } from "@/lib/prisma";
@@ -8,50 +8,49 @@ import { flagIndexedDocumentsForReindex } from "@/lib/mutations/document";
 import { AIProviderType, IndexingStatus } from "@prisma/client";
 import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
 import { z } from "zod";
+import { usableProviders } from "@/lib/ai/provider-access";
 
+/** Each user's pipeline, cached in this process; the indexing jobs carry the configuration they were enqueued with. */
 class PipelineRuntime {
-  private config: PipelineConfig | null = null;
+  private configs = new Map<string, PipelineConfig>();
 
-  async initialize() {
-    if(this.config) return;
+  async getConfig(userId: string): Promise<PipelineConfig> {
+    const cached = this.configs.get(userId);
+    if (cached) return cached;
 
-    const storedParameters = await prisma.pipelineParameters.findUnique({
-      where: { id: 1 },
-    });
+    const stored = await prisma.pipelineParameters.findUnique({ where: { userId } });
 
-    if (!storedParameters) {
-      console.log("No parameters stored in database - using default parameters");
-    }
+    const parsedParameters = this.parseParameters(stored?.parameters ?? defaultPipelineParameters);
+    const parameters = await this.withLocalDefaultModels(parsedParameters);
 
-    const parsedParameters = this.parseParameters(storedParameters?.parameters ?? defaultPipelineParameters);
-    const pipelineParameters = await this.withLocalDefaultModels(parsedParameters);
-
-    if (!storedParameters || pipelineParameters !== parsedParameters) {
+    if (!stored || parameters !== parsedParameters) {
       await prisma.pipelineParameters.upsert({
-        where: { id: 1 },
-        create: { id: 1, parameters: JSON.stringify(pipelineParameters) },
-        update: { parameters: JSON.stringify(pipelineParameters) },
+        where: { userId },
+        create: { userId, parameters: JSON.stringify(parameters) },
+        update: { parameters: JSON.stringify(parameters) },
       });
     }
 
-    this.config = {
-      parameters: pipelineParameters,
-      capabilities: pipelineCapabilities,
-    };
+    const config = { parameters, capabilities: pipelineCapabilities };
+    this.configs.set(userId, config);
+    return config;
   }
 
-  async getConfig(): Promise<PipelineConfig> {
-    if (!this.config){
-      await this.initialize();
-    }
-      
-    return this.config!;
-  }
-
-  async updateParameters(parameters: unknown) {
-    if(!this.config) await this.initialize();
+  async updateParameters(userId: string, parameters: unknown) {
+    const current = await this.getConfig(userId);
 
     const validatedParameters = this.parseParameters(parameters);
+
+    // A step on another user's provider would run on their API key.
+    const providerIds = [...new Set([
+      validatedParameters.embedding.providerId,
+      validatedParameters.generation.providerId,
+      validatedParameters.retrieval.hybrid.translation.providerId,
+    ].filter((providerId) => providerId && providerId !== UNSET))];
+
+    if (await prisma.aIProvider.count({ where: { id: { in: providerIds }, ...usableProviders(userId) } }) !== providerIds.length) {
+      throw new Error("Fournisseur inconnu : choisissez l'un de vos fournisseurs ou l'Ollama local.");
+    }
 
     // Checked on save only: stored parameters must still load if a language is removed later.
     const { ocrEnabled, ocrLanguages } = validatedParameters.extraction;
@@ -65,39 +64,36 @@ class PipelineRuntime {
       }
     }
 
-    const reindex = requiresReindex(this.config!.parameters, validatedParameters);
+    const reindex = requiresReindex(current.parameters, validatedParameters);
 
     if (reindex) {
       // A running job uses the parameters it was enqueued with and would end up indexed with the old ones.
       const indexing = await prisma.document.count({
-        where: { indexingStatus: { in: [IndexingStatus.PENDING, IndexingStatus.PROCESSING] } },
+        where: { userId, indexingStatus: { in: [IndexingStatus.PENDING, IndexingStatus.PROCESSING] } },
       });
 
       if (indexing > 0) {
         throw new Error(`${indexing} document(s) en cours d'indexation : attendez la fin avant de modifier ces paramètres.`);
       }
 
-      // Every vector is stale, including leftovers of failed runs; the worker recreates the collection
-      // with the new embedding dimension.
-      await deleteChunksCollection();
+      // Every vector of the user is stale, including leftovers of failed runs; the worker recreates their
+      // collection with the new embedding dimension. The other users' collections are not touched.
+      await deleteChunksCollection(userId);
     }
 
     await prisma.$transaction([
       prisma.pipelineParameters.update({
-        where: { id: 1 },
+        where: { userId },
         data: {
           parameters: JSON.stringify(validatedParameters),
         },
       }),
       ...(reindex
-        ? [flagIndexedDocumentsForReindex()]
+        ? [flagIndexedDocumentsForReindex(userId)]
         : []),
     ]);
 
-    this.config = {
-      ...(await this.getConfig()),
-      parameters: validatedParameters,
-    };
+    this.configs.set(userId, { ...current, parameters: validatedParameters });
   }
 
   /**
@@ -105,8 +101,9 @@ class PipelineRuntime {
    * for the generation, OLLAMA_EMBEDDING_MODEL for the embedding (both downloaded by docker compose).
    */
   private async withLocalDefaultModels(parameters: PipelineParameters): Promise<PipelineParameters> {
+    // The shared Ollama local.
     const provider = await prisma.aIProvider.findFirst({
-      where: { type: AIProviderType.OLLAMA_LOCAL },
+      where: { type: AIProviderType.OLLAMA_LOCAL, userId: null },
       select: { id: true, defaultModel: { select: { name: true } }, models: { select: { name: true } } },
     });
 

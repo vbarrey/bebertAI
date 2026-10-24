@@ -7,6 +7,7 @@ import { usesLexicalSearch } from "@/lib/rag/retrieval/hybrid-query";
 import { translateQuery, untranslatedQuery } from "@/lib/rag/retrieval/query-translator";
 import { buildExcerpts, buildRagContext } from "@/lib/rag/context";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { chunksCollection } from "@/lib/qdrant/collections";
 import { getPipelineProvider } from "@/lib/pipeline/config";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/pipeline/default";
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
@@ -51,17 +52,20 @@ export async function getConversationModels(
  */
 export async function* generateAssistantResponse({
   conversationId,
+  userId,
   message,
   history,
 }: {
   conversationId: string;
+  // The owner of the conversation: their pipeline and their collection.
+  userId: string;
   message: string;
   // Conversation messages, the last one being the user message to answer.
   history: PrismaMessage[];
 }): AsyncGenerator<ChatStreamEvent> {
   yield { type: "step", step: "ANALYZING" };
 
-  const config = await pipelineRuntime.getConfig();
+  const config = await pipelineRuntime.getConfig(userId);
   const { chunking, embedding, retrieval, generation } = config.parameters;
 
   const { generationModel, smallModel: translationModel } = await getConversationModels(conversationId, config.parameters);
@@ -97,6 +101,7 @@ export async function* generateAssistantResponse({
     sparse: embedding.sparse,
     chunkSize: chunking.chunkSize,
     documentIds,
+    collection: chunksCollection(userId),
   });
 
   const excerpts = buildExcerpts(retrievedChunks);

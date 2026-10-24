@@ -5,13 +5,12 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-const LINKS = [{ href: "/settings/provider", label: "Fournisseurs et modèles d'IA" }];
-
-// The pipeline is shared until each user has their own.
-const ADMIN_LINKS = [
+const LINKS = [
+  { href: "/settings/provider", label: "Fournisseurs et modèles d'IA" },
   { href: "/settings/pipeline", label: "Pipeline" },
-  { href: "/settings/utilisateurs", label: "Utilisateurs" },
 ];
+
+const ADMIN_LINKS = [{ href: "/settings/utilisateurs", label: "Utilisateurs" }];
 
 export function SettingsNav({ className, isAdmin }: { className?: string; isAdmin: boolean }) {
   const pathname = usePathname();

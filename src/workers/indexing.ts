@@ -193,15 +193,16 @@ async function initialize() {
 
         await serializeCollectionWrites(async () => {
           // Created before the BM25 vectors: every point is stale, the other indexed documents need a reindex too.
-          if (await chunksCollectionLacksSparseVectors()) {
-            await deleteChunksCollection();
-            await flagIndexedDocumentsForReindex();
+          if (await chunksCollectionLacksSparseVectors(document.userId)) {
+            await deleteChunksCollection(document.userId);
+            await flagIndexedDocumentsForReindex(document.userId);
           }
 
-          await ensureChunksCollection(vectorSize);
+          await ensureChunksCollection(document.userId, vectorSize);
           // Chunks are recreated with new ids on each run: drop the previous points of the document first.
-          await deleteDocumentEmbeddings(document.id);
+          await deleteDocumentEmbeddings(document.userId, document.id);
           await upsertChunkEmbeddings(
+            document.userId,
             persistedChunks,
             embeddings,
             parameters.embedding.sparse,

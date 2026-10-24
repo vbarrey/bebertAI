@@ -34,7 +34,7 @@ export async function createConversation(formData: FormData) {
     if (empty) redirect(`/conversations/${empty.id}`);
 
     // The pipeline generation model is the default model of a new conversation.
-    const { generation } = (await pipelineRuntime.getConfig()).parameters;
+    const { generation } = (await pipelineRuntime.getConfig(user.id)).parameters;
     const model = await prisma.aIModel.findFirst({
         where: { providerId: generation.providerId, name: generation.modelName, provider: usableProviders(user.id) },
         select: { id: true },
@@ -111,7 +111,7 @@ export async function generateConversationTitle(conversationId: string): Promise
         return null;
     }
 
-    const { smallModel } = await getConversationModels(conversationId, (await pipelineRuntime.getConfig()).parameters);
+    const { smallModel } = await getConversationModels(conversationId, (await pipelineRuntime.getConfig(user.id)).parameters);
 
     let title: string | null;
     try {

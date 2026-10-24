@@ -52,11 +52,17 @@ export async function writeJson(file: string, value: unknown): Promise<void> {
     await writeFile(file, JSON.stringify(value, null, 2));
 }
 
-/** The pipeline parameters saved in the settings page: the evaluation starts from what the chat uses. */
+/** The first admin's pipeline, saved in the settings page: the evaluation starts from what their chat uses. */
 export async function loadPipelineParameters(): Promise<PipelineParameters> {
-    const stored = await prisma.pipelineParameters.findUniqueOrThrow({ where: { id: 1 } });
+    const stored = await prisma.pipelineParameters.findFirstOrThrow({ where: { userId: await evaluationUserId() } });
 
     return PipelineParametersSchema.parse(JSON.parse(stored.parameters));
+}
+
+/** The first admin: owner of the documents indexed before the users. */
+export async function evaluationUserId(): Promise<string> {
+    const admin = await prisma.user.findFirstOrThrow({ where: { role: "admin" }, orderBy: { createdAt: "asc" } });
+    return admin.id;
 }
 
 export function ollama(): OllamaLocalProvider {
