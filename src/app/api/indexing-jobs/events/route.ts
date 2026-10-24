@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createQueueConnection } from "@/lib/queue/redis";
 import { indexingQueue } from "@/lib/queue/indexing";
+import { apiUser } from "@/lib/session";
 
 const FINISHED_STATUSES = ["COMPLETED", "FAILED", "CANCELLED"];
 
@@ -13,6 +14,9 @@ const FINISHED_STATUSES = ["COMPLETED", "FAILED", "CANCELLED"];
  * Usage: GET /api/indexing-jobs/events?ids=jobA,jobB
  */
 export async function GET(request: NextRequest) {
+  const { error: authError } = await apiUser();
+  if (authError) return authError;
+
   const ids = (request.nextUrl.searchParams.get("ids") ?? "")
     .split(",")
     .filter(Boolean);

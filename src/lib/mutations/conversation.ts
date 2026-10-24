@@ -6,6 +6,7 @@ import { pipelineRuntime } from "@/lib/pipeline/runtime";
 import { getPipelineProvider } from "@/lib/pipeline/config";
 import { getConversationModels } from "@/lib/ai/chat/engine";
 import { generateTitle, provisionalTitle } from "@/lib/ai/chat/title";
+import { requireUser } from "@/lib/session";
 
 const MAX_TITLE_LENGTH = 100;
 
@@ -19,6 +20,7 @@ function revalidateConversations() {
  * clicking "Nouvelle conversation" twice does not leave empty conversations behind.
  */
 export async function createConversation(formData: FormData) {
+    await requireUser();
     const projectId = formData.get("projectId")?.toString() || null;
 
     const empty = await prisma.conversation.findFirst({
@@ -46,6 +48,7 @@ export async function createConversation(formData: FormData) {
 }
 
 export async function renameConversation(conversationId: string, title: string) {
+    await requireUser();
     const trimmed = title.trim().slice(0, MAX_TITLE_LENGTH);
     if (!trimmed) return;
 
@@ -55,6 +58,7 @@ export async function renameConversation(conversationId: string, title: string) 
 
 /** Moves the conversation into a project, or out of any project with null. */
 export async function moveConversation(conversationId: string, projectId: string | null) {
+    await requireUser();
     await prisma.conversation.update({ where: { id: conversationId }, data: { projectId } });
     revalidateConversations();
 }
@@ -64,6 +68,7 @@ export async function moveConversation(conversationId: string, projectId: string
  * the conversation does not end with a question and its answer.
  */
 export async function removeLastExchange(conversationId: string): Promise<string | null> {
+    await requireUser();
     const [answer, question] = await prisma.message.findMany({
         where: { conversationId },
         orderBy: { createdAt: "desc" },
@@ -78,20 +83,11 @@ export async function removeLastExchange(conversationId: string): Promise<string
 }
 
 /**
- * The first message as title, until the generated one: an untitled conversation only, a title given by hand stays.
- */
-export async function setProvisionalTitle(conversationId: string, message: string) {
-    await prisma.conversation.updateMany({
-        where: { id: conversationId, title: null },
-        data: { title: provisionalTitle(message) },
-    });
-}
-
-/**
  * Titles the conversation with the small model once its first answer is complete.
  * Only replaces the provisional title: a title given by hand meanwhile stays. Returns the title, null when unchanged.
  */
 export async function generateConversationTitle(conversationId: string): Promise<string | null> {
+    await requireUser();
     const conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
         select: {
@@ -138,6 +134,7 @@ export async function generateConversationTitle(conversationId: string): Promise
  * The model can only be changed before the first message: a conversation keeps the model it was started with.
  */
 export async function updateConversationModel(conversationId: string, modelId: string) {
+    await requireUser();
     const { count } = await prisma.conversation.updateMany({
         where: { id: conversationId, messages: { none: {} } },
         data: { modelId },
@@ -150,6 +147,7 @@ export async function updateConversationModel(conversationId: string, modelId: s
 
 /** Deletes the conversation and its messages (cascade). */
 export async function deleteConversation(conversationId: string) {
+    await requireUser();
     await prisma.conversation.delete({ where: { id: conversationId } });
     revalidateConversations();
 }

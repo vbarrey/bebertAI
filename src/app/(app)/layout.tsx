@@ -1,5 +1,3 @@
-"use server";
-
 import { connection } from "next/server";
 
 import { MainLayout } from "@/components/layout/MainLayout"

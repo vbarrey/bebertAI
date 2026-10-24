@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { connectGoogleDrive, STATE_COOKIE } from "@/lib/google-drive/auth";
+import { apiUser } from "@/lib/session";
 
 // Back to the documents page, the result in the query for the import dialog.
 function redirectToDocuments(request: NextRequest, result: "connected" | "error") {
@@ -12,6 +13,9 @@ function redirectToDocuments(request: NextRequest, result: "connected" | "error"
 }
 
 export async function GET(request: NextRequest) {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     const code = request.nextUrl.searchParams.get("code");
     const state = request.nextUrl.searchParams.get("state");
 

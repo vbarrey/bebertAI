@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
 import { getDocumentFilePath, deleteDocumentFile } from "@/lib/documents/storage";
 import { deleteDocumentEmbeddings } from "@/lib/qdrant/points";
+import { apiUser } from "@/lib/session";
 
 type RouteContext = {
     params: Promise<{
@@ -22,6 +23,9 @@ export async function GET(
     _request: Request,
     { params }: RouteContext,
 ) {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     const { documentId } = await params;
 
     const document = await prisma.document.findUnique({
@@ -121,6 +125,9 @@ export async function DELETE(
     _request: Request,
     { params }: RouteContext,
 ) {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     const { documentId } = await params;
 
     try {

@@ -9,7 +9,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { authClient, authErrorMessage } from "@/lib/auth-client";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
@@ -30,7 +30,7 @@ export function LoginForm() {
       return;
     }
 
-    router.replace("/");
+    router.replace(next);
     router.refresh();
   }
 

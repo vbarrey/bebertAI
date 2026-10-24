@@ -12,6 +12,7 @@ import { VoyageProvider } from "@/lib/ai/voyage/provider";
 import { GoogleProvider } from "@/lib/ai/google/provider";
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 import { createProviderClient, loadProvider, syncProviderModels } from "@/lib/ai/provider-factory";
+import { requireAdmin } from "@/lib/session";
 
 const ApiKeyProviderSchema = z.object({
   name: z.string().trim().min(1, "Le nom est requis."),
@@ -33,6 +34,7 @@ export async function createApiKeyProvider(
   type: ApiKeyProviderType,
   input: CreateApiKeyProviderInput,
 ): Promise<{ error: string } | undefined> {
+  await requireAdmin();
   // A server action takes any value: Ollama local comes from the .env and is never created here.
   if (!API_KEY_PROVIDER_TYPES.includes(type)) {
     return { error: "Ce type de fournisseur ne peut pas être créé." };
@@ -92,6 +94,7 @@ function errorMessage(error: unknown): string {
  * Lists the models of the provider again, with whether they need usage credits.
  */
 export async function synchronizeProviderModels(providerId: string): Promise<{ error: string } | undefined> {
+  await requireAdmin();
   const provider = await prisma.aIProvider.findUnique({ where: { id: providerId } });
   if (!provider) {
     return { error: "Fournisseur introuvable." };
@@ -112,6 +115,7 @@ export async function synchronizeProviderModels(providerId: string): Promise<{ e
  * steps still set on it fail with a message saying so.
  */
 export async function setProviderEnabled(providerId: string, enabled: boolean): Promise<void> {
+  await requireAdmin();
   await prisma.aIProvider.update({ where: { id: providerId }, data: { enabled } });
   revalidatePath("/", "layout");
 }

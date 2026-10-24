@@ -24,6 +24,7 @@ import {
 import type {
     DocumentImportConflictAction,
 } from "@/types/document-import";
+import { apiUser } from "@/lib/session";
 
 type ImportedFile = {
     file: File;
@@ -214,6 +215,9 @@ class ImportConflictError extends Error {
 export async function POST(
     request: Request,
 ): Promise<NextResponse<ImportResponse>> {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     try {
         const formData = await request.formData();
 

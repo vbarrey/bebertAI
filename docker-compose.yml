@@ -33,7 +33,7 @@ services:
 
     # Ready once the migrations ran and the AI providers were initialized.
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/projects"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 10s
       start_period: 60s
 

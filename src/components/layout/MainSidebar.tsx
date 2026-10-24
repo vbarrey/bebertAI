@@ -83,9 +83,11 @@ export function MainSidebar({ tree, user }: MainSidebarProps) {
               <Link href="/documents" aria-label="Documents" title="Documents"><Files /></Link>
             </Button>
 
-            <Button variant="ghost" size="icon" asChild className={cn(pathname.startsWith("/settings") && "bg-accent")}>
-              <Link href="/settings" aria-label="Réglages" title="Réglages"><Settings /></Link>
-            </Button>
+            {user.role === "admin" && (
+              <Button variant="ghost" size="icon" asChild className={cn(pathname.startsWith("/settings") && "bg-accent")}>
+                <Link href="/settings" aria-label="Réglages" title="Réglages"><Settings /></Link>
+              </Button>
+            )}
 
             <Button variant="ghost" size="icon" onClick={theme.cycle} aria-label={theme.label} title={theme.label}>
               <theme.Icon />

@@ -20,6 +20,7 @@ import type {
     DocumentImportFile,
     DocumentImportIgnoredFile,
 } from "@/types/document-import";
+import { apiUser } from "@/lib/session";
 
 // Files downloaded at once to compute their checksum.
 const DOWNLOAD_CONCURRENCY = 4;
@@ -65,6 +66,9 @@ async function collectFiles(fileIds: string[], folderIds: string[]): Promise<Can
  * Same analysis as the local import, the checksum computed from the file streamed from Drive (nothing is stored).
  */
 export async function POST(request: Request) {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     const parsed = AnalyzeRequestSchema.safeParse(await request.json().catch(() => undefined));
 
     if (!parsed.success) {

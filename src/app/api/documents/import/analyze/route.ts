@@ -12,8 +12,12 @@ import type {
   DocumentImportFile,
   DocumentImportIgnoredFile,
 } from "@/types/document-import";
+import { apiUser } from "@/lib/session";
 
 export async function POST(request: Request) {
+  const { error: authError } = await apiUser();
+  if (authError) return authError;
+
   try {
     const formData = await request.formData();
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { GoogleDriveAuthError } from "@/lib/google-drive/auth";
 import { DriveFolderPage, GoogleDriveApiError, listDriveFolder, searchDrive } from "@/lib/google-drive/client";
+import { apiUser } from "@/lib/session";
 
 type FilesResponse = { error: string } | DriveFolderPage;
 
@@ -12,6 +13,9 @@ const MAX_SEARCH_LENGTH = 200;
  * or the files and folders matching ?search= in every folder; ?pageToken= for the next page.
  */
 export async function GET(request: NextRequest): Promise<NextResponse<FilesResponse>> {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     const folderId = request.nextUrl.searchParams.get("folderId") || "root";
     const search = request.nextUrl.searchParams.get("search")?.trim();
     const pageToken = request.nextUrl.searchParams.get("pageToken") || undefined;

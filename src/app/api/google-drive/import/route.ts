@@ -6,6 +6,7 @@ import { pipelineCapabilities } from "@/lib/pipeline/capabilities";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 import { importDocuments } from "@/lib/documents/import";
 import { isDriveId } from "@/lib/google-drive/client";
+import { apiUser } from "@/lib/session";
 
 /**
  * The files of the analysis, sent back as they were analyzed: nothing is downloaded again before the indexing.
@@ -27,6 +28,9 @@ const ImportRequestSchema = z.object({
 });
 
 export async function POST(request: Request) {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     const parsed = ImportRequestSchema.safeParse(await request.json().catch(() => undefined));
 
     if (!parsed.success) {

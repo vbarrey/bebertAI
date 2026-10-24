@@ -1,7 +1,11 @@
 import { streamConversation } from "@/lib/ai/chat/stream";
 import { generatorToHttpStream } from "@/lib/utils";
+import { apiUser } from "@/lib/session";
 
 export async function POST(req: Request) {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     const { conversationId, message } = await req.json();
 
     if (!conversationId || !message ) {

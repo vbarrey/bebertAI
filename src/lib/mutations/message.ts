@@ -1,6 +1,6 @@
-"use server";
-
+// Called by the chat stream on the server only: not server actions, the client cannot call them.
 import { prisma } from "../prisma";
+import { provisionalTitle } from "../ai/chat/title";
 
 import { MessageRole, MessageStatus } from "@prisma/client";
 import type { ChatSource } from "../ai/types";
@@ -51,10 +51,12 @@ export async function updateMessage({messageId, content, status, sources}: Updat
     await prisma.message.update({where: {id: messageId}, data: {content: content, status: status, sources: sources}});
 }
 
-export async function deleteMessage(formData: FormData) {
-    const messageId = formData.get("messageId")?.toString();
-
-    if(!messageId) return; // TODO : Handle validation error
-
-    await prisma.message.delete({where: {id: messageId}});
+/**
+ * The first message as title, until the generated one: an untitled conversation only, a title given by hand stays.
+ */
+export async function setProvisionalTitle(conversationId: string, message: string) {
+    await prisma.conversation.updateMany({
+        where: { id: conversationId, title: null },
+        data: { title: provisionalTitle(message) },
+    });
 }

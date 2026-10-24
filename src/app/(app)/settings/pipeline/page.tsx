@@ -4,8 +4,12 @@ import { PipelineSettings } from "@/components/settings/pipeline/PipelineSetting
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
 import { getEnableProvidersWithModels } from "@/lib/queries/aiProvider";
 import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
+import { requireAdmin } from "@/lib/session";
 
 export default async function PipelineSettingsPage() {
+  // Shared by every user until each one has their own (phase 4).
+  await requireAdmin();
+
   // Rendered per request: installed OCR languages can change without a rebuild.
   await connection();
 

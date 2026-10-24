@@ -4,6 +4,7 @@ import { JobStatus, IndexingStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { enqueueIndexingJob } from "@/lib/queue/indexing";
 import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { apiUser } from "@/lib/session";
 
 const INDEXABLE_STATUSES: IndexingStatus[] = [
     IndexingStatus.UNPLANNED,
@@ -27,6 +28,9 @@ export async function POST(
     _request: Request,
     { params }: RouteContext,
 ): Promise<NextResponse<IndexResponse>> {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     const { documentId } = await params;
 
     try {

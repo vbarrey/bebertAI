@@ -1,7 +1,6 @@
 import { MessageRole, MessageStatus } from "@prisma/client";
 
-import { createMessage, updateMessage } from "../../mutations/message";
-import { setProvisionalTitle } from "../../mutations/conversation";
+import { createMessage, setProvisionalTitle, updateMessage } from "../../mutations/message";
 import { getConversationMessages } from "../../queries/message";
 import { generateAssistantResponse } from "./engine";
 import { ChatSource, ChatStreamEvent } from "../types";

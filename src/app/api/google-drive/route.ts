@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { disconnectGoogleDrive, getGoogleDriveConnection } from "@/lib/google-drive/auth";
+import { apiUser } from "@/lib/session";
 
 type ConnectionResponse =
     | { error: string }
@@ -8,6 +9,9 @@ type ConnectionResponse =
     | { connected: true; email: string };
 
 export async function GET(): Promise<NextResponse<ConnectionResponse>> {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     try {
         const connection = await getGoogleDriveConnection();
 
@@ -27,6 +31,9 @@ export async function GET(): Promise<NextResponse<ConnectionResponse>> {
 }
 
 export async function DELETE() {
+    const { error: authError } = await apiUser();
+    if (authError) return authError;
+
     try {
         await disconnectGoogleDrive();
 
