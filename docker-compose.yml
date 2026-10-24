@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    image: bebert-ai:latest
     ports:
       - "${APP_PORT:-3000}:3000"
 
@@ -38,6 +39,7 @@ services:
 
   worker:
     build: .
+    image: bebert-ai:latest
     command: ["npm", "run", "start:worker"]
 
     env_file:
