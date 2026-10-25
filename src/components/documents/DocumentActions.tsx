@@ -37,6 +37,13 @@ import {
 
 import { type Document } from "@prisma/client";
 
+// Server actions: run on the server, called like functions.
+import {
+  deleteDocument as deleteDocumentAction,
+  indexDocument as indexDocumentAction,
+  reindexDocument as reindexDocumentAction,
+} from "@/lib/mutations/document-actions";
+
 type Props = {
   document: Document;
   onIndexingStarted: (jobId: string) => void;
@@ -55,31 +62,25 @@ export function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Une erreur inattendue est survenue.";
 }
 
-async function readError(response: Response, fallback: string): Promise<Error> {
-  const data = await response.json().catch(() => null);
-  return new Error(data?.error ?? fallback);
-}
+async function startIndexing(action: typeof indexDocumentAction, documentId: string): Promise<string> {
+  const result = await action(documentId);
 
-async function startIndexing(documentId: string, action: "index" | "reindex"): Promise<string> {
-  const response = await fetch(`/api/documents/${documentId}/${action}`, { method: "POST" });
-
-  if (!response.ok) {
-    throw await readError(response, "Impossible de lancer l'indexation.");
+  if ("error" in result) {
+    throw new Error(result.error);
   }
 
-  const data: { indexingJobId: string } = await response.json();
-  return data.indexingJobId;
+  return result.indexingJobId;
 }
 
-/** Each returns the id of the created indexing job. */
-export const indexDocument = (documentId: string) => startIndexing(documentId, "index");
-export const reindexDocument = (documentId: string) => startIndexing(documentId, "reindex");
+/** Each returns the id of the created indexing job, or throws the reason given by the server. */
+export const indexDocument = (documentId: string) => startIndexing(indexDocumentAction, documentId);
+export const reindexDocument = (documentId: string) => startIndexing(reindexDocumentAction, documentId);
 
 export async function deleteDocument(documentId: string): Promise<void> {
-  const response = await fetch(`/api/documents/${documentId}`, { method: "DELETE" });
+  const result = await deleteDocumentAction(documentId);
 
-  if (!response.ok) {
-    throw await readError(response, "Impossible de supprimer le document.");
+  if (result) {
+    throw new Error(result.error);
   }
 }
 

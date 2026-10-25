@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import type { PipelineConfig } from "@/lib/pipeline/config";
+import { savePipelineParameters } from "@/lib/mutations/pipeline";
 import { requiresReindex, type PipelineParameters } from "@/lib/pipeline/parameters";
 
 import type { PipelineItem } from "./types";
@@ -84,27 +85,14 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
       }
     }
 
-    const response = await fetch("/api/pipeline", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(nextParameters),
-    });
+    // A server action: called like a function, run on the server.
+    const result = await savePipelineParameters(nextParameters);
 
-    const payload = (await response.json()) as
-      | PipelineConfig
-      | { error: string };
-
-    if (!response.ok) {
-      throw new Error(
-        "error" in payload
-          ? payload.error
-          : "Impossible d'enregistrer les paramètres du pipeline.",
-      );
+    if ("error" in result) {
+      throw new Error(result.error);
     }
 
-    if ("parameters" in payload) setParameters(payload.parameters);
+    setParameters(result.parameters);
   }
 
   // Shown under the forms of the steps listed in REINDEX_STEPS.

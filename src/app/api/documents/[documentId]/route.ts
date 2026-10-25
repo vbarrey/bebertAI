@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
-import { getDocumentFilePath, deleteDocumentFile } from "@/lib/documents/storage";
-import { deleteDocumentEmbeddings } from "@/lib/qdrant/points";
+import { getDocumentFilePath } from "@/lib/documents/storage";
 import { apiUser } from "@/lib/session";
 
 type RouteContext = {
@@ -117,70 +116,6 @@ export async function GET(
             },
             {
                 status: 404,
-            },
-        );
-    }
-}
-
-export async function DELETE(
-    _request: Request,
-    { params }: RouteContext,
-) {
-    const { user, error: authError } = await apiUser();
-    if (authError) return authError;
-
-    const { documentId } = await params;
-
-    try {
-        const document = await prisma.document.findUnique({
-            where: {
-                id: documentId,
-                userId: user.id,
-            },
-            select: {
-                id: true,
-                storagePath: true,
-            },
-        });
-
-        if (!document) {
-            return NextResponse.json(
-                {
-                    error: "Document introuvable.",
-                },
-                {
-                    status: 404,
-                },
-            );
-        }
-
-        await prisma.document.delete({
-            where: {
-                id: document.id,
-            },
-        });
-
-        await deleteDocumentFile(document.storagePath);
-
-        await deleteDocumentEmbeddings(user.id, document.id).catch((error) =>
-            console.error(`Failed to delete embeddings of document ${document.id}:`, error),
-        );
-
-        return new NextResponse(null, {
-            status: 204,
-        });
-    } catch (error) {
-        console.error(
-            `Failed to delete document ${documentId}:`,
-            error,
-        );
-
-        return NextResponse.json(
-            {
-                error: "Impossible de supprimer le document.",
-            },
-            {
-                status: 500,
             },
         );
     }
