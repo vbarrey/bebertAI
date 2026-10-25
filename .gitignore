@@ -32,3 +32,4 @@ CLAUDE.md
 
 # Server backups (docker compose backup service)
 /backups
+*.tar
