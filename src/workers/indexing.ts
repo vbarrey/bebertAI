@@ -1,6 +1,6 @@
 import { UnrecoverableError, Worker, type Job } from "bullmq";
 
-import { createWorkerConnection } from "@/lib/queue/redis";
+import { createRedisConnection } from "@/lib/queue/redis";
 import {
   completeIndexingJob,
   failIndexingJob,
@@ -241,7 +241,7 @@ async function initialize() {
       }
     },
     {
-      connection: createWorkerConnection(),
+      connection: createRedisConnection(),
       concurrency: CONCURRENCY,
     },
   );

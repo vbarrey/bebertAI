@@ -2,8 +2,8 @@ import { QueueEvents } from "bullmq";
 import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { createQueueConnection } from "@/lib/queue/redis";
-import { indexingQueue } from "@/lib/queue/indexing";
+import { createRedisConnection } from "@/lib/queue/redis";
+import { getIndexingQueue } from "@/lib/queue/indexing";
 import { apiUser } from "@/lib/session";
 
 const FINISHED_STATUSES = ["COMPLETED", "FAILED", "CANCELLED"];
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   const queueEvents = new QueueEvents(
     "document-indexing",
     {
-      connection: createQueueConnection(),
+      connection: createRedisConnection(),
     },
   );
 
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
           await Promise.all(
             jobs
               .filter((job) => !FINISHED_STATUSES.includes(job.status))
-              .map(async (job) => [job.id, (await indexingQueue.getJob(job.id))?.progress] as const),
+              .map(async (job) => [job.id, (await getIndexingQueue().getJob(job.id))?.progress] as const),
           ),
         );
 

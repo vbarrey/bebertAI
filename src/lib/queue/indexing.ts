@@ -1,15 +1,20 @@
 import { Queue } from "bullmq";
-import { createQueueConnection } from "./redis";
+import { createRedisConnection } from "./redis";
 import { IndexingJobData } from "@/workers/indexing";
 import { JobStatus } from "@prisma/client";
 
 import { PipelineConfig } from "../pipeline/config";
 import { prisma } from "@/lib/prisma";
 
-export const indexingQueue = new Queue(
-  "document-indexing",
-  {
-    connection: createQueueConnection(),
+const globalForQueue = globalThis as unknown as { indexingQueue?: Queue };
+
+/**
+ * Created at its first use, not when the module is imported: the build imports the routes without Redis.
+ * On globalThis: one connection per process, kept across hot reloads in development.
+ */
+export function getIndexingQueue() {
+  return (globalForQueue.indexingQueue ??= new Queue("document-indexing", {
+    connection: createRedisConnection(),
     defaultJobOptions: {
       attempts: 3,
       backoff: {
@@ -17,8 +22,8 @@ export const indexingQueue = new Queue(
         delay: 1000,
       },
     },
-  },
-);
+  }));
+}
 
 /**
  * Queues the job behind its owner's queued jobs only: its priority is 1 + their number, so that the first document
@@ -37,7 +42,7 @@ export async function enqueueIndexingJob(
     where: { status: JobStatus.QUEUED, document: { userId: job.document.userId }, createdAt: { lt: job.createdAt } },
   });
 
-  return indexingQueue.add(
+  return getIndexingQueue().add(
     "index-document",
     {
       indexingJobId,

@@ -42,11 +42,9 @@ export function createPrismaClient(url = process.env["DATABASE_URL"]) {
   }));
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// On globalThis: one client per process, shared by the pages, the routes and instrumentation, each bundled with its
+// own copy of this module, and kept across hot reloads in development.
+export const prisma = (globalForPrisma.prisma ??= createPrismaClient());
 
 // Not in WAL mode: Prisma's migrations take an exclusive lock, which WAL refuses while another process keeps the
 // database open, so the app could no longer restart while the worker runs. A write waits for another one (5 s,
