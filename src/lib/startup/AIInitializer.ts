@@ -2,7 +2,7 @@ export interface AIInitializer {
     name: string;
 
     /**
-     * Init provider DB and runtime (registry).
+     * Init provider in DB.
      */
     initializeProvider() : Promise<void>;
 

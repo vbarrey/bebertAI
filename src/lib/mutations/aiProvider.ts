@@ -5,13 +5,12 @@ import { z } from "zod";
 import { AIProviderSource, AIProviderType } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { aiProviderRegistry } from "@/lib/ai/registry";
 import { OllamaCloudProvider } from "@/lib/ai/ollama-cloud/provider";
 import { AnthropicProvider } from "@/lib/ai/anthropic/provider";
 import { VoyageProvider } from "@/lib/ai/voyage/provider";
 import { GoogleProvider } from "@/lib/ai/google/provider";
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
-import { createProviderClient, loadProvider, syncProviderModels } from "@/lib/ai/provider-factory";
+import { createProviderClient, syncProviderModels } from "@/lib/ai/provider-factory";
 import { requireUser } from "@/lib/session";
 import { encryptApiKey, manageableProviders } from "@/lib/ai/provider-access";
 
@@ -29,7 +28,7 @@ export type ApiKeyProviderType = (typeof API_KEY_PROVIDER_TYPES)[number];
 export type CreateApiKeyProviderInput = z.input<typeof ApiKeyProviderSchema>;
 
 /**
- * Creates a provider reached with an API key once the key is accepted, then registers it and stores its models.
+ * Creates a provider reached with an API key once the key is accepted, then stores its models.
  */
 export async function createApiKeyProvider(
   type: ApiKeyProviderType,
@@ -76,9 +75,7 @@ export async function createApiKeyProvider(
   }
 
   try {
-    const client = createProviderClient(provider);
-    aiProviderRegistry.register(client);
-    await syncProviderModels(provider, client);
+    await syncProviderModels(provider, createProviderClient(provider));
   } catch (error) {
     console.error("Provider model synchronization failed:", error);
     return { error: `Fournisseur créé, mais ses modèles n'ont pas pu être synchronisés : ${errorMessage(error)}. Réessayez avec « Synchroniser ».` };
@@ -102,8 +99,7 @@ export async function synchronizeProviderModels(providerId: string): Promise<{ e
   }
 
   try {
-    const client = aiProviderRegistry.get(providerId) ?? (await loadProvider(providerId))!;
-    await syncProviderModels(provider, client);
+    await syncProviderModels(provider, createProviderClient(provider));
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Synchronisation impossible." };
   }

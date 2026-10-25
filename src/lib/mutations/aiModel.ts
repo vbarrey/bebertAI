@@ -5,8 +5,7 @@ import { z } from "zod";
 import { AIProviderSource, AIProviderType, Capability } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { aiProviderRegistry } from "@/lib/ai/registry";
-import { loadProvider } from "@/lib/ai/provider-factory";
+import { createProviderClient } from "@/lib/ai/provider-factory";
 import { OllamaRequestError } from "@/lib/ai/ollama-local/errors";
 import { isOllamaLocalDefaultModel } from "@/lib/ai/ollama-local/config";
 import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
@@ -112,8 +111,7 @@ export async function deleteModel(modelId: string): Promise<{ error: string } | 
   }
 
   try {
-    const client = aiProviderRegistry.get(model.providerId) ?? (await loadProvider(model.providerId));
-    await client?.remove?.(model.name);
+    await createProviderClient(model.provider).remove?.(model.name);
   } catch (error) {
     // Already gone from Ollama: only the app still lists it.
     if (!(error instanceof OllamaRequestError && error.status === 404)) {

@@ -18,8 +18,6 @@ import { getDocumentById } from "@/lib/queries/document";
 import { getDocumentEmbedder } from "@/lib/rag/embedding/embedder-factory";
 import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
 
-import { aiProviderRegistry } from "@/lib/ai/registry";
-import { initializeAI } from "@/lib/startup/initialize-ai";
 import { deleteDocumentEmbeddings, upsertChunkEmbeddings } from "@/lib/qdrant/points";
 import {
   chunksCollectionLacksSparseVectors,
@@ -57,12 +55,6 @@ function serializeCollectionWrites<T>(write: () => Promise<T>): Promise<T> {
 }
 
 async function initialize() {
-  /*
-   * Initialisation du registry une seule fois au démarrage
-   * du processus worker.
-   */
-  await initializeAI({ synchronizeModels: false });
-
   const worker = new Worker<IndexingJobData>(
     "document-indexing",
     async (job: Job<IndexingJobData>) => {
@@ -282,7 +274,7 @@ async function initialize() {
   });
 
   console.log(
-    `[${NAME}] Started with ${aiProviderRegistry.getNbProvider()} providers`,
+    `[${NAME}] Started`,
   );
 }
 

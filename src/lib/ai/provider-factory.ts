@@ -1,7 +1,6 @@
 import { AIProvider, AIProviderType, Capability } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AIProviderClient } from "./provider";
-import { aiProviderRegistry } from "./registry";
 import { OllamaLocalProvider } from "./ollama-local/provider";
 import { parseOllamaLocalConfig } from "./ollama-local/config";
 import { OllamaCloudProvider } from "./ollama-cloud/provider";
@@ -101,17 +100,4 @@ async function checkModelsAccess(
   };
   await Promise.all(Array.from({ length: ACCESS_CHECK_CONCURRENCY }, worker));
   return results;
-}
-
-/**
- * Registers a provider stored in database but missing from this process registry:
- * the indexing worker has its own registry, filled at its start only.
- */
-export async function loadProvider(id: string): Promise<AIProviderClient | undefined> {
-  const provider = await prisma.aIProvider.findUnique({ where: { id } });
-  if (!provider) return undefined;
-
-  const client = createProviderClient(provider);
-  aiProviderRegistry.register(client);
-  return client;
 }

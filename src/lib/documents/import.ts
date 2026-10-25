@@ -1,7 +1,7 @@
 import { Document, DocumentSourceType, JobStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { getPipelineConfig } from "@/lib/pipeline/runtime";
 import { createDocument } from "@/lib/mutations/document";
 import { deleteDocumentFile } from "@/lib/documents/storage";
 import { deleteDocumentEmbeddings } from "@/lib/qdrant/points";
@@ -223,7 +223,7 @@ export async function importDocuments(
 
     if (result.createdJobIds.length > 0) {
         const pipelineConfig =
-            await pipelineRuntime.getConfig(userId);
+            await getPipelineConfig(userId);
 
         await Promise.all(
             result.createdJobIds.map(

@@ -1,7 +1,7 @@
 import { ChatMessage } from "@/types/chat";
 import { getEnableProvidersWithModels } from "@/lib/queries/aiProvider";
 import { Chat } from "./Chat";
-import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { getPipelineConfig } from "@/lib/pipeline/runtime";
 import { prisma } from "@/lib/prisma";
 import { documentScopeWhere, getConversationScope } from "@/lib/rag/retrieval/document-scope";
 
@@ -18,7 +18,7 @@ export async function ChatPanel({ conversationId, userId, title, messages, model
 
   const [providersModels, pipelineConfig, scope] = await Promise.all([
     getEnableProvidersWithModels(userId),
-    pipelineRuntime.getConfig(userId),
+    getPipelineConfig(userId),
     getConversationScope(conversationId),
   ]);
   // In the documents the conversation searches.

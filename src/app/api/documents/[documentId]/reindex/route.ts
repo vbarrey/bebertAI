@@ -3,7 +3,7 @@ import { JobStatus, IndexingStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { enqueueIndexingJob } from "@/lib/queue/indexing";
-import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { getPipelineConfig } from "@/lib/pipeline/runtime";
 import { apiUser } from "@/lib/session";
 
 type RouteContext = {
@@ -79,7 +79,7 @@ export async function POST(
         );
 
         const pipelineConfig =
-            await pipelineRuntime.getConfig(user.id);
+            await getPipelineConfig(user.id);
 
         await enqueueIndexingJob(
             indexingJob.id,

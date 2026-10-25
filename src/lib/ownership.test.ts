@@ -138,17 +138,17 @@ describe("ownership: a user sees nothing of another user's", () => {
     const alices = await prisma.aIProvider.findFirstOrThrow({ where: { userId: a.user.id } });
 
     // A new user starts from the default pipeline on the shared Ollama local.
-    const bobs = (await runtime.pipelineRuntime.getConfig(b.user.id)).parameters;
+    const bobs = (await runtime.getPipelineConfig(b.user.id)).parameters;
     assert.equal(await prisma.pipelineParameters.count({ where: { userId: b.user.id } }), 1);
 
     const onAlicesProvider = { ...bobs, generation: { ...bobs.generation, providerId: alices.id, modelName: "m" } };
-    await assert.rejects(runtime.pipelineRuntime.updateParameters(b.user.id, onAlicesProvider), /Fournisseur inconnu/);
+    await assert.rejects(runtime.updatePipelineParameters(b.user.id, onAlicesProvider), /Fournisseur inconnu/);
 
     const onShared = { ...bobs, generation: { ...bobs.generation, providerId: shared.id, modelName: "m", temperature: 0.2 } };
-    await runtime.pipelineRuntime.updateParameters(b.user.id, onShared);
-    assert.equal((await runtime.pipelineRuntime.getConfig(b.user.id)).parameters.generation.temperature, 0.2);
+    await runtime.updatePipelineParameters(b.user.id, onShared);
+    assert.equal((await runtime.getPipelineConfig(b.user.id)).parameters.generation.temperature, 0.2);
     // Alice's pipeline is her own.
-    assert.notEqual((await runtime.pipelineRuntime.getConfig(a.user.id)).parameters.generation.temperature, 0.2);
+    assert.notEqual((await runtime.getPipelineConfig(a.user.id)).parameters.generation.temperature, 0.2);
   });
 
   it("a reindex flag only touches the user's own documents", async () => {

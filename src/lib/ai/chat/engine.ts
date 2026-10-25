@@ -6,7 +6,7 @@ import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
 import { usesLexicalSearch } from "@/lib/rag/retrieval/hybrid-query";
 import { translateQuery, untranslatedQuery } from "@/lib/rag/retrieval/query-translator";
 import { buildExcerpts, buildRagContext } from "@/lib/rag/context";
-import { pipelineRuntime } from "@/lib/pipeline/runtime";
+import { getPipelineConfig } from "@/lib/pipeline/runtime";
 import { chunksCollection } from "@/lib/qdrant/collections";
 import { getPipelineProvider } from "@/lib/pipeline/config";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/pipeline/default";
@@ -65,7 +65,7 @@ export async function* generateAssistantResponse({
 }): AsyncGenerator<ChatStreamEvent> {
   yield { type: "step", step: "ANALYZING" };
 
-  const config = await pipelineRuntime.getConfig(userId);
+  const config = await getPipelineConfig(userId);
   const { chunking, embedding, retrieval, generation } = config.parameters;
 
   const { generationModel, smallModel: translationModel } = await getConversationModels(conversationId, config.parameters);
