@@ -8,7 +8,8 @@ import { Toaster } from "@/components/ui/sonner";
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "Archivist BebertAI",
+  // The pages below give their own title, shown before the app name.
+  title: { template: "%s · Bebert AI", default: "Bebert AI" },
   description: "Assistant de recherche pour archives personnelles",
 };
 

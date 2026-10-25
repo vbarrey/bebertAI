@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -10,6 +11,16 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 type ConversationPageProps = {
   params: Promise<{ conversationId: string }>;
 };
+
+// The conversation read once for the title and the page: getConversationWithMessages is cached per request.
+// Its generated title shows once the first answer refreshes the page.
+export async function generateMetadata({ params }: ConversationPageProps): Promise<Metadata> {
+  const { conversationId } = await params;
+  const conversation = await getConversationWithMessages(conversationId, (await requireUser()).id);
+
+  // Missing: the page shows the not found page. Without a title yet: like its heading.
+  return { title: !conversation ? "Page introuvable" : conversation.title ?? "Nouvelle conversation" };
+}
 
 export default async function ConversationPage({ params }: ConversationPageProps) {
   const { conversationId } = await params;

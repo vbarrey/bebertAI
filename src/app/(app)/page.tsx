@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { ProjectGrid } from "@/components/projects/ProjectGrid";
 import { getProjects } from "@/lib/queries/project";
 import { requireUser } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Mes projets" };
 
 export default async function Home() {
   const user = await requireUser();

@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { findValidInvitation } from "@/lib/invitations";
 import { InvitationForm } from "./InvitationForm";
+
+export const metadata: Metadata = { title: "Invitation" };
 
 export default async function InvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

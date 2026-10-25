@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { UsersSettings } from "@/components/settings/users/UsersSettings";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Utilisateurs" };
 
 export default async function UsersSettingsPage() {
   const admin = await requireAdmin();

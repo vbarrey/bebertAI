@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { updateProject } from "@/lib/mutations/projects";
@@ -31,6 +32,15 @@ type ProjectPageProps = {
   // The tab shown: the conversations unless "documents".
   searchParams: Promise<{ tab?: string }>;
 };
+
+// The project read once for the title and the page: getProjectWithConversations is cached per request.
+export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
+  const { projectId } = await params;
+  const project = await getProjectWithConversations(projectId, (await requireUser()).id);
+
+  // Missing: the page shows the not found page.
+  return { title: project?.name ?? "Page introuvable" };
+}
 
 export default async function ProjectPage({ params, searchParams }: ProjectPageProps) {
   const { projectId } = await params;

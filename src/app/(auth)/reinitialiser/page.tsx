@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ResetPasswordForm } from "./ResetPasswordForm";
 
 // Reached from the email link: Better Auth checks the token, then redirects here with it, or with an error.
+export const metadata: Metadata = { title: "Nouveau mot de passe" };
+
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;
 

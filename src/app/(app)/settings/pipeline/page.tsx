@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { connection } from "next/server";
 
 import { PipelineSettings } from "@/components/settings/pipeline/PipelineSettings";
@@ -5,6 +6,8 @@ import { getPipelineConfig } from "@/lib/pipeline/runtime";
 import { getEnableProvidersWithModels } from "@/lib/queries/aiProvider";
 import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
 import { requireUser } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Pipeline" };
 
 export default async function PipelineSettingsPage() {
   const user = await requireUser();
