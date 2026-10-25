@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { Capability } from "@prisma/client";
 import { AIModelInfo, ChatRequestInput, ChatChunk, EmbedRequest, Embedding } from "../types";
 import { OllamaModel, OllamaChatRequest, OllamaChatChunk, OllamaEmbedRequest, OllamaEmbedResponse} from "./types";

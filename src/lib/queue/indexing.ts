@@ -1,19 +1,20 @@
 import { Queue } from "bullmq";
 import { createRedisConnection } from "./redis";
-import { IndexingJobData } from "@/workers/indexing";
+// A type only: the app does not load the worker module.
+import type { IndexingJobData } from "@/workers/indexing";
 import { JobStatus } from "@prisma/client";
 
 import { PipelineConfig } from "../pipeline/config";
 import { prisma } from "@/lib/prisma";
 
-const globalForQueue = globalThis as unknown as { indexingQueue?: Queue };
+const globalForQueue = globalThis as unknown as { indexingQueue?: Queue<IndexingJobData> };
 
 /**
  * Created at its first use, not when the module is imported: the build imports the routes without Redis.
  * On globalThis: one connection per process, kept across hot reloads in development.
  */
 export function getIndexingQueue() {
-  return (globalForQueue.indexingQueue ??= new Queue("document-indexing", {
+  return (globalForQueue.indexingQueue ??= new Queue<IndexingJobData>("document-indexing", {
     connection: createRedisConnection(),
     defaultJobOptions: {
       attempts: 3,

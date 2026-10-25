@@ -44,6 +44,8 @@ export function cleanTitle(answer: string): string | null {
         .replace(/^#+\s*/, "")
         .replace(/[*_`]/g, "")
         .replace(/^(titre|title)\s*:\s*/i, "")
+        // Citations of sources copied from the answer, "[1]" or "[2, 3]", with the commas around them.
+        .replace(/\s*,?\s*\[\d+(?:\s*,\s*\d+)*\](?:\s*,)?/g, "")
         .replace(/^["'«“‘\s]+/, "")
         // Closing quotes and final punctuation, in any order.
         .replace(/["'»”’.!?:;,\s]+$/, "")

@@ -41,6 +41,11 @@ describe("cleanTitle", () => {
         assert.equal(cleanTitle("<think>Le sujet est l'huile.</think>\n\nHuile de la Celtaquatre\nAutre ligne"), "Huile de la Celtaquatre");
     });
 
+    it("drops the citations of sources copied from the answer", () => {
+        assert.equal(cleanTitle("La meule du moulin, [1], pesait 1 200 kilos"), "La meule du moulin pesait 1 200 kilos");
+        assert.equal(cleanTitle("Moulin reconstruit en 1953 [2, 3]."), "Moulin reconstruit en 1953");
+    });
+
     it("returns null without a title", () => {
         assert.equal(cleanTitle(""), null);
         assert.equal(cleanTitle(" \n « » \n"), null);

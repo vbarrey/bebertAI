@@ -269,7 +269,7 @@ export function DocumentActions({ document, onIndexingStarted, onDeleted }: Prop
               <strong>
                 {document.displayName}
               </strong>{" "}
-              ainsi que ses données d'indexation
+              ainsi que ses données d&apos;indexation
               seront définitivement supprimés.
             </AlertDialogDescription>
           </AlertDialogHeader>

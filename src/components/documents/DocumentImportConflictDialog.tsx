@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -48,15 +48,18 @@ export function DocumentImportConflictDialog({
       Map<string, DocumentImportConflictAction>
     >(new Map());
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
+  // Starts over at each opening, during the render rather than in an effect: no render with the former choices.
+  const [wasOpen, setWasOpen] = useState(open);
 
-    setIndex(0);
-    setApplyToAll(false);
-    setDecisions(new Map());
-  }, [open]);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+
+    if (open) {
+      setIndex(0);
+      setApplyToAll(false);
+      setDecisions(new Map());
+    }
+  }
 
   if (conflicts.length === 0) {
     return null;
