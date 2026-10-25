@@ -30,6 +30,7 @@ import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 import { withDocumentFile } from "@/lib/documents/storage";
 import { isPermanentDriveError } from "@/lib/google-drive/client";
+import { env } from "@/lib/env";
 
 export type IndexingJobData = {
   indexingJobId: string;
@@ -39,7 +40,7 @@ export type IndexingJobData = {
 const NAME = "Document-Indexing-Worker";
 
 // Documents indexed at once: by default one OCRs on the CPU while the other one is embedded on the GPU.
-const CONCURRENCY = Number(process.env.INDEXING_CONCURRENCY) || 2;
+const CONCURRENCY = env.INDEXING_CONCURRENCY;
 
 let collectionWrites: Promise<unknown> = Promise.resolve();
 
@@ -252,7 +253,7 @@ async function initialize() {
     );
   });
 
-  worker.on("completed", (job, result) => {
+  worker.on("completed", (job) => {
     console.log(
       `[${NAME}] Job ${job.id} completed`,
     );

@@ -1,3 +1,6 @@
+// Never in a browser bundle: importing it from a Client Component fails the build.
+import "server-only";
+
 import { AIProviderType, type Prisma } from "@prisma/client";
 
 import { decryptToken, encryptToken } from "@/lib/encryption";

@@ -59,7 +59,7 @@ ajouté comme utilisateur de test (100 au plus) et sa connexion expire au bout d
 ## 3. Mise à jour
 
 ```sh
-docker compose exec backup npx tsx scripts/backup.ts    # une sauvegarde avant
+docker compose exec backup npm run backup    # une sauvegarde avant
 git pull
 docker compose up -d --build
 ```
@@ -77,7 +77,7 @@ Le service `backup` sauvegarde chaque nuit à 3 h (UTC), dans `./backups/<date>`
 Sont gardées les **4 dernières sauvegardes et les 2 derniers dimanches**. Une sauvegarde à la main :
 
 ```sh
-docker compose exec backup npx tsx scripts/backup.ts
+docker compose exec backup npm run backup
 ```
 
 Les sauvegardes restent sur le serveur : elles ne protègent pas d'une panne de son disque. Les copier ailleurs

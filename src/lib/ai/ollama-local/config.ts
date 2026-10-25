@@ -1,4 +1,5 @@
 
+import { env } from "@/lib/env";
 export interface OllamaLocalConfiguration {
   host: string;
   defaultModel: string;
@@ -24,5 +25,5 @@ export function parseOllamaLocalConfig(config: unknown): OllamaLocalConfiguratio
  * downloads them, so they cannot be deleted from the app.
  */
 export function isOllamaLocalDefaultModel(modelName: string): boolean {
-  return [process.env.OLLAMA_DEFAULT_MODEL, process.env.OLLAMA_EMBEDDING_MODEL].includes(modelName);
+  return [env.OLLAMA_DEFAULT_MODEL, env.OLLAMA_EMBEDDING_MODEL].includes(modelName);
 }

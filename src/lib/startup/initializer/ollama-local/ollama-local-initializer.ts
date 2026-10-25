@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AIProviderSource, AIProviderType } from "@prisma/client";
 import { AIInitializer } from "../../AIInitializer";
 import { createProviderClient, syncProviderModels } from "@/lib/ai/provider-factory";
+import { env } from "@/lib/env";
 
 export class OllamaLocalInitializer implements AIInitializer {
   name: string = "OLLAMA LOCAL INIT";
@@ -23,8 +24,8 @@ export class OllamaLocalInitializer implements AIInitializer {
           source: AIProviderSource.LOCAL,
           name: "OLLAMA LOCAL",
           configuration: {
-            host: process.env["OLLAMA_HOST"],
-            defaultModel: process.env["OLLAMA_DEFAULT_MODEL"],
+            host: env.OLLAMA_HOST,
+            defaultModel: env.OLLAMA_DEFAULT_MODEL,
           },
           enabled: true,
           isDefault: true,

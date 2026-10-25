@@ -87,7 +87,7 @@ services:
 
   # Every night at 3:00 UTC, the database, the documents and the Qdrant collections into ./backups on the server
   # (scripts/backup.ts: the 4 latest backups and the 2 latest Sunday ones are kept). By hand:
-  # docker compose exec backup npx tsx scripts/backup.ts
+  # docker compose exec backup npm run backup (the script needs the react-server condition: see package.json)
   backup:
     image: bebert-ai:latest
     restart: unless-stopped
@@ -95,7 +95,7 @@ services:
     command:
       - sh
       - -c
-      - while true; do sleep $$(( (97200 - $$(date +%s) % 86400) % 86400 + 1 )); npx tsx scripts/backup.ts; done
+      - while true; do sleep $$(( (97200 - $$(date +%s) % 86400) % 86400 + 1 )); npm run backup; done
     environment:
       <<: *services-env
       BACKUP_PATH: /app/backups

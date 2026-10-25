@@ -1,11 +1,20 @@
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { describe, it } from "node:test";
+import { before, describe, it } from "node:test";
 
-import { decryptApiKey, encryptApiKey, hasClearApiKey, isManageable } from "./provider-access";
+// Set before the modules reading it are loaded: the environment is read once, when env.ts loads.
+process.env.ENCRYPTION_KEY = randomBytes(32).toString("base64");
+
+// Loaded in before(): the project compiles to CommonJS, without top-level await.
+let decryptApiKey: typeof import("./provider-access").decryptApiKey;
+let encryptApiKey: typeof import("./provider-access").encryptApiKey;
+let hasClearApiKey: typeof import("./provider-access").hasClearApiKey;
+let isManageable: typeof import("./provider-access").isManageable;
 
 describe("provider API keys", () => {
-  process.env.ENCRYPTION_KEY = randomBytes(32).toString("base64");
+  before(async () => {
+    ({ decryptApiKey, encryptApiKey, hasClearApiKey, isManageable } = await import("./provider-access"));
+  });
 
   it("stores the key encrypted and gives it back decrypted to the client", () => {
     const stored = encryptApiKey({ apiKey: "sk-secret-key", defaultModel: "m" });

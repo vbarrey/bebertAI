@@ -9,15 +9,9 @@ export async function register() {
     return;
   }
 
-  // Better Auth refuses its default secret in production: stop at start-up rather than fail on every page.
-  if (process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_SECRET) {
-    throw new Error("BETTER_AUTH_SECRET doit être défini (32 caractères ou plus : openssl rand -base64 32).");
-  }
-
-  // The providers' API keys and the Google Drive tokens are stored encrypted with it.
-  if (process.env.NODE_ENV === "production" && !process.env.ENCRYPTION_KEY && !process.env.GOOGLE_TOKEN_ENCRYPTION_KEY) {
-    throw new Error("ENCRYPTION_KEY doit être défini (openssl rand -base64 32), et ne plus changer : les clés API stockées en dépendent.");
-  }
+  // Every environment variable checked, and the ones production cannot run without.
+  const { checkProductionEnv } = await import("@/lib/env");
+  checkProductionEnv();
 
   const { initializeAI } = await import("@/lib/startup/initialize-ai");
   const { adoptLegacyChunksCollection } = await import("@/lib/qdrant/collections");

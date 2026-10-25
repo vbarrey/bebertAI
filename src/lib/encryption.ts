@@ -1,8 +1,12 @@
+// Never in a browser bundle: importing it from a Client Component fails the build.
+import "server-only";
+
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { env } from "@/lib/env";
 
 // The Google Drive tokens and the API keys of the providers. GOOGLE_TOKEN_ENCRYPTION_KEY: its name before the API keys.
 function encryptionKey(): Buffer {
-    const key = Buffer.from(process.env.ENCRYPTION_KEY ?? process.env.GOOGLE_TOKEN_ENCRYPTION_KEY ?? "", "base64");
+    const key = Buffer.from(env.ENCRYPTION_KEY ?? env.GOOGLE_TOKEN_ENCRYPTION_KEY ?? "", "base64");
 
     if (key.length !== 32) {
         throw new Error("ENCRYPTION_KEY doit contenir 32 octets encodés en base64 (openssl rand -base64 32).");

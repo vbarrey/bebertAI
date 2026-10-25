@@ -1,3 +1,6 @@
+// Never in a browser bundle: importing it from a Client Component fails the build.
+import "server-only";
+
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
@@ -5,12 +8,13 @@ import { admin } from "better-auth/plugins";
 
 import { sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { env } from "@/lib/env";
 
 // Secret from BETTER_AUTH_SECRET. Sessions last 7 days, extended once a day while the app is used.
 export const auth = betterAuth({
-  // The build loads this module without the secret, which is only given at run time (and required by instrumentation.ts).
+  // The build loads this module without the secret, which is only given at run time (and required at the start of the server).
   ...(process.env.NEXT_PHASE === "phase-production-build" && { secret: "build-only-placeholder-never-used-at-run-time" }),
-  baseURL: process.env.APP_URL,
+  baseURL: env.APP_URL,
   database: prismaAdapter(prisma, { provider: "sqlite" }),
 
   emailAndPassword: {

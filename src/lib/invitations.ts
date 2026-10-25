@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { env } from "@/lib/env";
 
 const VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -10,7 +11,7 @@ function hashToken(token: string) {
 }
 
 export function invitationUrl(token: string) {
-  return `${process.env.APP_URL ?? "http://localhost:3000"}/invitation/${token}`;
+  return `${env.APP_URL ?? "http://localhost:3000"}/invitation/${token}`;
 }
 
 /** Invites `email`, replacing its pending invitations: only the latest link works. */
@@ -58,7 +59,7 @@ export async function claimInvitation(id: string) {
 export async function inviteFirstAdmin() {
   if (await prisma.user.count()) return;
 
-  const email = process.env.ADMIN_EMAIL;
+  const email = env.ADMIN_EMAIL;
 
   if (!email) {
     console.warn("Aucun compte : définissez ADMIN_EMAIL pour recevoir l'invitation du premier administrateur.");

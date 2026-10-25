@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 import { decryptToken, encryptToken } from "@/lib/encryption";
+import { env } from "@/lib/env";
 
 const AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -34,9 +35,7 @@ type TokenResponse = {
 };
 
 function oauthClient() {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const { GOOGLE_CLIENT_ID: clientId, GOOGLE_CLIENT_SECRET: clientSecret, GOOGLE_REDIRECT_URI: redirectUri } = env;
 
     if (!clientId || !clientSecret || !redirectUri) {
         throw new Error("GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET et GOOGLE_REDIRECT_URI doivent être définis.");

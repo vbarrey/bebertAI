@@ -7,10 +7,10 @@ import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import type { Document } from "@prisma/client";
 
+import { env } from "@/lib/env";
 import { downloadDriveFile } from "@/lib/google-drive/client";
 
-const DOCUMENTS_STORAGE_PATH =
-  process.env.DOCUMENTS_STORAGE_PATH ?? "./data/documents";
+const DOCUMENTS_STORAGE_PATH = env.DOCUMENTS_STORAGE_PATH;
 
 export async function ensureDocumentStorage() {
   await mkdir(DOCUMENTS_STORAGE_PATH, {

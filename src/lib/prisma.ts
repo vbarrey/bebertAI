@@ -1,7 +1,10 @@
-import "dotenv/config"; // needed for workers
+// Never in a browser bundle: importing it from a Client Component fails the build.
+import "server-only";
 
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { Prisma, PrismaClient } from "@prisma/client";
+
+import { env } from "@/lib/env";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -35,9 +38,9 @@ function retryBusyTransactions(client: PrismaClient): PrismaClient {
   return client;
 }
 
-export function createPrismaClient(url = process.env["DATABASE_URL"]) {
+export function createPrismaClient(url = env.DATABASE_URL) {
   return retryBusyTransactions(new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    log: env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
     adapter: new PrismaBetterSqlite3({ url }),
   }));
 }

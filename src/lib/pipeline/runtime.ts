@@ -9,6 +9,7 @@ import { AIProviderType, IndexingStatus } from "@prisma/client";
 import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
 import { z } from "zod";
 import { usableProviders } from "@/lib/ai/provider-access";
+import { env } from "@/lib/env";
 
 /**
  * Each user's pipeline, read from the database every time: no copy kept in memory, which the pages, the routes and
@@ -109,7 +110,7 @@ async function withLocalDefaultModels(parameters: PipelineParameters): Promise<P
     return parameters;
   }
 
-  const embeddingModel = process.env.OLLAMA_EMBEDDING_MODEL;
+  const embeddingModel = env.OLLAMA_EMBEDDING_MODEL;
 
   return withDefaultModels(parameters, {
     providerId: provider.id,
