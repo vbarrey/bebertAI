@@ -151,6 +151,16 @@ describe("ownership: a user sees nothing of another user's", () => {
     assert.notEqual((await runtime.getPipelineConfig(a.user.id)).parameters.generation.temperature, 0.2);
   });
 
+  it("pipeline provider: a model gone from the provider or disabled fails with a message saying so", async () => {
+    const { getPipelineProvider } = await import("@/lib/pipeline/config");
+    const shared = await prisma.aIProvider.findFirstOrThrow({ where: { type: "OLLAMA_LOCAL" } });
+    await prisma.aIModel.create({ data: { providerId: shared.id, name: "off", enabled: false } });
+
+    await assert.rejects(getPipelineProvider({ providerId: "...", modelName: "..." }, "génération"), /Pipeline non configuré/);
+    await assert.rejects(getPipelineProvider({ providerId: shared.id, modelName: "gone" }, "génération"), /n'est plus proposé/);
+    await assert.rejects(getPipelineProvider({ providerId: shared.id, modelName: "off" }, "génération"), /est désactivé/);
+  });
+
   it("a reindex flag only touches the user's own documents", async () => {
     await documentMutations.flagIndexedDocumentsForReindex(b.user.id);
 

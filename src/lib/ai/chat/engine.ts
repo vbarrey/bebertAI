@@ -1,7 +1,6 @@
 import type { Message as PrismaMessage } from "@prisma/client";
 import { ChatRequestInput, ChatStreamEvent, Message } from "../types";
 import { messageRoleToString } from "@/lib/utils";
-import { getDocumentRetriever } from "@/lib/rag/retrieval/retriever-factory";
 import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
 import { usesLexicalSearch } from "@/lib/rag/retrieval/hybrid-query";
 import { translateQuery, untranslatedQuery } from "@/lib/rag/retrieval/query-translator";
@@ -13,6 +12,7 @@ import { DEFAULT_SYSTEM_PROMPT } from "@/lib/pipeline/default";
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
 import { getConversationModel } from "@/lib/queries/conversation";
 import { getSearchableDocumentIds } from "@/lib/rag/retrieval/document-scope";
+import { DocumentRetriever } from "@/lib/rag/retrieval/retriever";
 
 const PREVIEW_LENGTH = 300;
 
@@ -73,7 +73,7 @@ export async function* generateAssistantResponse({
   const generationProvider = await getPipelineProvider(generationModel, "génération");
   const embeddingProvider = await getPipelineProvider(embedding, "embedding");
 
-  const retriever = await getDocumentRetriever(
+  const retriever = new DocumentRetriever(
     embeddingProvider,
     embedding.modelName,
     embeddingContextLength(chunking.chunkSize),

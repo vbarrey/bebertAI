@@ -45,9 +45,6 @@ export class VoyageProvider implements AIProviderClient {
     return VOYAGE_MODELS;
   }
 
-  async hasModel(modelName: string): Promise<boolean> {
-    return VOYAGE_MODELS.some((model) => model.name === modelName);
-  }
 
   async *chat(): AsyncGenerator<ChatChunk> {
     throw new VoyageError("Voyage ne propose que des modèles d'embedding. Choisissez un autre fournisseur pour la génération.");

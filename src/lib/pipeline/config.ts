@@ -12,7 +12,8 @@ export type PipelineConfig = {
 /**
  * The client of the provider configured for a pipeline step, built from the database at each call: a provider
  * created or changed since the start of this process is the one used. With an explicit error when the pipeline was
- * never configured (default "..." placeholders) or points to an unknown provider.
+ * never configured (default "..." placeholders) or points to an unknown provider or model. The models are the
+ * synchronized ones: the provider itself is not asked at each request.
  */
 export async function getPipelineProvider(
     { providerId, modelName }: { providerId: string; modelName: string },
@@ -35,7 +36,11 @@ export async function getPipelineProvider(
         throw new Error(`Le fournisseur « ${stored.name} » (étape « ${step} ») est désactivé : activez-le dans Réglages > Fournisseurs, ou choisissez-en un autre.`);
     }
 
-    if (stored.models[0] && !stored.models[0].enabled) {
+    if (!stored.models[0]) {
+        throw new Error(`Le modèle « ${modelName} » (étape « ${step} ») n'est plus proposé par « ${stored.name} » : synchronisez ses modèles dans Réglages > Fournisseurs, ou choisissez-en un autre.`);
+    }
+
+    if (!stored.models[0].enabled) {
         throw new Error(`Le modèle « ${modelName} » (étape « ${step} ») est désactivé : activez-le dans Réglages > Fournisseurs, ou choisissez-en un autre.`);
     }
 

@@ -39,10 +39,6 @@ export class AnthropicProvider implements AIProviderClient {
     return models;
   }
 
-  async hasModel(modelName: string): Promise<boolean> {
-    const models = await this.models();
-    return models.some((model) => model.name === modelName);
-  }
 
   async *chat(appInput: ChatRequestInput): AsyncGenerator<ChatChunk> {
     const stream = this.client.messages.stream(toAnthropicChatRequest(appInput));

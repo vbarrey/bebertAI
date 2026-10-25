@@ -15,8 +15,7 @@ import { flagIndexedDocumentsForReindex, setDocumentLanguage } from "@/lib/mutat
 import { detectLanguage } from "@/lib/rag/indexing/language";
 import { normalizeExtractedText } from "@/lib/rag/indexing/text";
 import { getDocumentById } from "@/lib/queries/document";
-import { getDocumentEmbedder } from "@/lib/rag/embedding/embedder-factory";
-import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
+import { DocumentEmbedder, embeddingContextLength } from "@/lib/rag/embedding/embedder";
 
 import { deleteDocumentEmbeddings, upsertChunkEmbeddings } from "@/lib/qdrant/points";
 import {
@@ -154,10 +153,10 @@ async function initialize() {
 
         await setDocumentLanguage(document.id, documentLanguage);
 
-        const embedder = await getDocumentEmbedder(
+        const embedder = new DocumentEmbedder(
           embeddingProvider,
           parameters.embedding.modelName,
-          embeddingContextLength(parameters.chunking.chunkSize),
+          { contextLength: embeddingContextLength(parameters.chunking.chunkSize) },
         );
 
         await updateProgress(IndexingStage.EMBEDDING);

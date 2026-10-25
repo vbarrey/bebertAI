@@ -25,10 +25,6 @@ export class OllamaCloudProvider implements AIProviderClient {
     return models.map(toAppModel);
   }
 
-  async hasModel(modelName: string): Promise<boolean> {
-    const models = await this.client.models();
-    return models.some(m => m.name === modelName);
-  }
 
   async *chat(appInput: ChatRequestInput): AsyncGenerator<ChatChunk> {
     const input = await toOlllamaChatRequest(appInput);

@@ -57,9 +57,6 @@ export class GoogleProvider implements AIProviderClient {
     return GOOGLE_MODELS;
   }
 
-  async hasModel(modelName: string): Promise<boolean> {
-    return GOOGLE_MODELS.some((model) => model.name === modelName);
-  }
 
   async *chat(): AsyncGenerator<ChatChunk> {
     throw new GoogleError("Seul l'embedding Gemini est disponible. Choisissez un autre fournisseur pour la génération.");
