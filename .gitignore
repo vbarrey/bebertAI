@@ -29,3 +29,6 @@ CLAUDE.md
 /.playwright-mcp
 # Retrieval evaluation data, generated from the local documents
 /scripts/eval-retrieval/data
+
+# Server backups (docker compose backup service)
+/backups

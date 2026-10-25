@@ -31,6 +31,7 @@ export function safeNext(next: string | undefined) {
 }
 
 export const config = {
-  // Not the build files nor the public images.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)"],
+  // Not the build files nor the public images. Nor the import uploads: the proxy would buffer their body and keep
+  // only its first 10 MB; those routes check the session themselves.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/documents/import|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)"],
 };

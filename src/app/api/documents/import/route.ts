@@ -24,6 +24,7 @@ import type {
     DocumentImportConflictAction,
 } from "@/types/document-import";
 import { apiUser } from "@/lib/session";
+import { uploadLimitError, uploadTooLarge } from "@/lib/documents/upload-limits";
 import { addToProjectSelection } from "@/lib/mutations/document";
 
 type ImportedFile = {
@@ -219,6 +220,10 @@ export async function POST(
     const { user, error: authError } = await apiUser();
     if (authError) return authError;
 
+    if (uploadTooLarge(request)) {
+        return NextResponse.json({ error: "Envoi trop volumineux : importez les fichiers en plusieurs fois." }, { status: 413 });
+    }
+
     try {
         const formData = await request.formData();
 
@@ -238,6 +243,11 @@ export async function POST(
                     status: 400,
                 },
             );
+        }
+
+        const limitError = uploadLimitError(files);
+        if (limitError) {
+            return NextResponse.json({ error: limitError }, { status: 413 });
         }
 
         const indexImmediately =

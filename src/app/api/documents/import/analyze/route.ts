@@ -13,10 +13,15 @@ import type {
   DocumentImportIgnoredFile,
 } from "@/types/document-import";
 import { apiUser } from "@/lib/session";
+import { uploadLimitError, uploadTooLarge } from "@/lib/documents/upload-limits";
 
 export async function POST(request: Request) {
   const { user, error: authError } = await apiUser();
   if (authError) return authError;
+
+  if (uploadTooLarge(request)) {
+    return NextResponse.json({ error: "Envoi trop volumineux : importez les fichiers en plusieurs fois." }, { status: 413 });
+  }
 
   try {
     const formData = await request.formData();
@@ -24,6 +29,11 @@ export async function POST(request: Request) {
     const files = formData
       .getAll("files")
       .filter((entry): entry is File => entry instanceof File);
+
+    const limitError = uploadLimitError(files);
+    if (limitError) {
+      return NextResponse.json({ error: limitError }, { status: 413 });
+    }
 
     const relativePaths = formData
       .getAll("relativePaths")

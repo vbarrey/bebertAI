@@ -7,7 +7,9 @@ import { after, describe, it } from "node:test";
 
 import { createPrismaClient } from "./prisma";
 
-// A database of its own, created by the migrations, in WAL mode like the app's.
+// A database of its own, created by the migrations. In WAL mode the conflict is certain: a transaction reading before
+// another process commits cannot write. In the default mode, the app's, the same transactions fail as a deadlock;
+// both are SQLITE_BUSY, retried the same way.
 const directory = mkdtempSync(path.join(tmpdir(), "bebert-busy-"));
 const url = `file:${path.join(directory, "test.db").replaceAll("\\", "/")}`;
 execSync("npx prisma migrate deploy", { env: { ...process.env, DATABASE_URL: url }, stdio: "ignore" });

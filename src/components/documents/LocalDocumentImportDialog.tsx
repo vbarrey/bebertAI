@@ -33,6 +33,7 @@ import type {
 import { DocumentImportConflictDialog } from "./DocumentImportConflictDialog";
 import { DocumentImportReview } from "./DocumentImportReview";
 import { Document } from "@prisma/client";
+import { uploadLimitError } from "@/lib/documents/upload-limits";
 
 type ImportFile = {
   file: File;
@@ -327,6 +328,12 @@ export function LocalDocumentImportDialog({
 
   async function analyzeFiles() {
     if (files.length === 0) {
+      return;
+    }
+
+    const limitError = uploadLimitError(files.map((item) => item.file));
+    if (limitError) {
+      setAnalysisError(limitError);
       return;
     }
 

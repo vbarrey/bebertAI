@@ -7,7 +7,6 @@ import {
   startIndexingJob,
 } from "@/lib/mutations/indexing-job";
 import { getIndexingJobById } from "@/lib/queries/indexing-job";
-import { enableWriteAheadLog } from "@/lib/prisma";
 
 import { getDocumentExtractor } from "@/lib/rag/indexing/extractor-factory";
 import { getDocumentChunker } from "@/lib/rag/indexing/chunker-factory";
@@ -63,7 +62,6 @@ async function initialize() {
    * du processus worker.
    */
   await initializeAI({ synchronizeModels: false });
-  await enableWriteAheadLog();
 
   const worker = new Worker<IndexingJobData>(
     "document-indexing",

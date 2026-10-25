@@ -19,9 +19,6 @@ export async function register() {
     throw new Error("ENCRYPTION_KEY doit être défini (openssl rand -base64 32), et ne plus changer : les clés API stockées en dépendent.");
   }
 
-  const { enableWriteAheadLog } = await import("@/lib/prisma");
-  await enableWriteAheadLog();
-
   const { initializeAI } = await import("@/lib/startup/initialize-ai");
   const { adoptLegacyChunksCollection } = await import("@/lib/qdrant/collections");
 

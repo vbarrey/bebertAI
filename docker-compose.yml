@@ -1,9 +1,34 @@
+# Logs kept to 3 files of 10 MB per service: they never fill the disk.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
+  # The only service reached from outside: HTTPS on DOMAIN (docker/Caddyfile), the app behind it.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
   app:
     build: .
     image: bebert-ai:latest
-    ports:
-      - "${APP_PORT:-3000}:3000"
+    restart: unless-stopped
+    logging: *logging
 
     # Google Drive keys; the values below override the localhost addresses of the .env.
     env_file:
@@ -42,6 +67,8 @@ services:
   worker:
     build: .
     image: bebert-ai:latest
+    restart: unless-stopped
+    logging: *logging
     command: ["npm", "run", "start:worker"]
 
     env_file:
@@ -58,16 +85,44 @@ services:
       app:
         condition: service_healthy
 
+  # Every night at 3:00 UTC, the database, the documents and the Qdrant collections into ./backups on the server
+  # (scripts/backup.ts: the 4 latest backups and the 2 latest Sunday ones are kept). By hand:
+  # docker compose exec backup npx tsx scripts/backup.ts
+  backup:
+    image: bebert-ai:latest
+    restart: unless-stopped
+    logging: *logging
+    command:
+      - sh
+      - -c
+      - while true; do sleep $$(( (97200 - $$(date +%s) % 86400) % 86400 + 1 )); npx tsx scripts/backup.ts; done
+    environment:
+      <<: *services-env
+      BACKUP_PATH: /app/backups
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+    volumes:
+      - data:/app/data
+      - ./backups:/app/backups
+    depends_on:
+      app:
+        condition: service_healthy
+
   redis:
     image: redis:alpine
+    restart: unless-stopped
+    logging: *logging
 
   qdrant:
     image: qdrant/qdrant
+    restart: unless-stopped
+    logging: *logging
     volumes:
       - qdrant:/qdrant/storage
 
   ollama:
     image: ollama/ollama
+    restart: unless-stopped
+    logging: *logging
     volumes:
       - ollama:/root/.ollama
 
@@ -113,3 +168,5 @@ volumes:
   data:
   qdrant:
   ollama:
+  caddy_data:
+  caddy_config:

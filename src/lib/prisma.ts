@@ -48,10 +48,6 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-/**
- * In WAL mode the reads no longer wait for a write, and a write waits for another one (5 s, better-sqlite3's default
- * timeout) instead of failing. Kept in the database file, set at each start of the app and of the worker.
- */
-export async function enableWriteAheadLog() {
-  await prisma.$queryRawUnsafe("PRAGMA journal_mode = WAL");
-}
+// Not in WAL mode: Prisma's migrations take an exclusive lock, which WAL refuses while another process keeps the
+// database open, so the app could no longer restart while the worker runs. A write waits for another one (5 s,
+// better-sqlite3's default timeout) in the default journal mode too.

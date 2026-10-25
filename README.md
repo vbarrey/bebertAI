@@ -181,7 +181,9 @@ docker compose up -d --build
 
 Au démarrage, le service `ollama-pull` télécharge le modèle de génération (`OLLAMA_DEFAULT_MODEL`, `qwen3:0.6b` par défaut) et le modèle d’embedding (`OLLAMA_EMBEDDING_MODEL`, `qwen3-embedding:0.6b` par défaut) s’ils manquent, avant de lancer l’app : le premier démarrage attend la fin du téléchargement. Tant que les étapes Vectorisation et Génération n’ont pas été configurées dans Réglages > Pipeline, l’app les règle sur ces deux modèles. Les modèles restent dans le volume `ollama`. D’autres modèles se téléchargent avec `docker compose exec ollama ollama pull <modèle>`, puis `docker compose restart app` pour les synchroniser.
 
-L’application est sur `http://localhost:3000` (`APP_PORT=3001 docker compose up -d` pour un autre port), à configurer ensuite dans Réglages > Pipeline. La base et les documents sont dans le volume `data`, séparé du dossier `data/` local. Ollama utilise le GPU NVIDIA (Docker Desktop avec WSL 2, ou le NVIDIA Container Toolkit sous Linux) : sur une machine sans GPU NVIDIA, retirer le bloc `deploy` du service `ollama`, il tourne alors sur le CPU.
+L’application est servie par Caddy en HTTPS sur `DOMAIN` : `https://localhost` par défaut, avec un certificat local que le navigateur signale à la première visite. Elle se configure ensuite dans Réglages > Pipeline. La base et les documents sont dans le volume `data`, séparé du dossier `data/` local. Ollama utilise le GPU NVIDIA (Docker Desktop avec WSL 2, ou le NVIDIA Container Toolkit sous Linux) : sur une machine sans GPU NVIDIA, retirer le bloc `deploy` du service `ollama`, il tourne alors sur le CPU.
+
+Pour un serveur exposé sur Internet (domaine, secrets, premier administrateur, sauvegardes, restauration, mises à jour) : voir [DEPLOY.md](DEPLOY.md).
 
 ## Stockage des documents
 
