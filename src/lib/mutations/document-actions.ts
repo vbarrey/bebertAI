@@ -1,8 +1,10 @@
 "use server";
 
 // The document actions of the documents page and of the projects. Apart from document.ts: every export of a
-// "use server" file can be called from the browser, the helpers of document.ts must not.
+// "use server" file can be called from the browser, the helpers of document.ts must not. The functions not
+// exported below are not reachable from the browser.
 
+import { revalidatePath } from "next/cache";
 import { IndexingStatus, JobStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -12,17 +14,58 @@ import { deleteDocumentEmbeddings } from "@/lib/qdrant/points";
 import { enqueueIndexingJob } from "@/lib/queue/indexing";
 import { requireUser } from "@/lib/session";
 
-type IndexingResult = { indexingJobId: string } | { error: string };
+/** The outcome for each document given, in the same order: what the action returns, or why it failed. */
+export type DocumentActionResult<T = object> = { documentId: string } & ((T & { error?: undefined }) | { error: string });
 
 const INDEXABLE_STATUSES: IndexingStatus[] = [IndexingStatus.UNPLANNED, IndexingStatus.FAILED, IndexingStatus.CANCELLED];
 
-/** Indexes a document never indexed, or whose last indexing failed or was cancelled. */
-export async function indexDocument(documentId: string): Promise<IndexingResult> {
+/** Indexes the documents never indexed, or whose last indexing failed or was cancelled. */
+export async function indexDocuments(documentIds: string[]): Promise<DocumentActionResult<{ indexingJobId: string }>[]> {
   const user = await requireUser();
+  return runOnEach(documentIds, (documentId) => indexDocument(user.id, documentId));
+}
 
+/** Indexes the documents again, their chunks replaced; not while they are being indexed. */
+export async function reindexDocuments(documentIds: string[]): Promise<DocumentActionResult<{ indexingJobId: string }>[]> {
+  const user = await requireUser();
+  return runOnEach(documentIds, (documentId) => reindexDocument(user.id, documentId));
+}
+
+/** Deletes the documents, their files and their vectors. */
+export async function deleteDocuments(documentIds: string[]): Promise<DocumentActionResult[]> {
+  const user = await requireUser();
+  return runOnEach(documentIds, (documentId) => deleteDocument(user.id, documentId));
+}
+
+/**
+ * One request and one new rendering of the page for a whole selection. One after the other: SQLite transactions.
+ * The pages listing the documents are rendered again, and sent back with the result to the page that called.
+ */
+async function runOnEach<T>(
+  documentIds: unknown,
+  run: (documentId: string) => Promise<T | { error: string }>,
+): Promise<DocumentActionResult<T>[]> {
+  // Any value can be sent to a server action.
+  if (!Array.isArray(documentIds) || !documentIds.every((id) => typeof id === "string")) {
+    throw new Error("Liste de documents invalide.");
+  }
+
+  const results: DocumentActionResult<T>[] = [];
+
+  for (const documentId of documentIds) {
+    results.push({ documentId, ...(await run(documentId)) });
+  }
+
+  revalidatePath("/documents");
+  revalidatePath("/projects/[projectId]", "page");
+
+  return results;
+}
+
+async function indexDocument(userId: string, documentId: string): Promise<{ indexingJobId: string } | { error: string }> {
   try {
     const document = await prisma.document.findUnique({
-      where: { id: documentId, userId: user.id },
+      where: { id: documentId, userId },
       select: { id: true, indexingStatus: true },
     });
 
@@ -40,7 +83,7 @@ export async function indexDocument(documentId: string): Promise<IndexingResult>
       return job;
     });
 
-    await enqueueIndexingJob(indexingJob.id, await getPipelineConfig(user.id));
+    await enqueueIndexingJob(indexingJob.id, await getPipelineConfig(userId));
 
     return { indexingJobId: indexingJob.id };
   } catch (error) {
@@ -50,14 +93,11 @@ export async function indexDocument(documentId: string): Promise<IndexingResult>
   }
 }
 
-/** Indexes a document again, its chunks replaced; not while it is being indexed. */
-export async function reindexDocument(documentId: string): Promise<IndexingResult> {
-  const user = await requireUser();
-
+async function reindexDocument(userId: string, documentId: string): Promise<{ indexingJobId: string } | { error: string }> {
   try {
     const indexingJob = await prisma.$transaction(async (tx) => {
       const document = await tx.document.findUnique({
-        where: { id: documentId, userId: user.id },
+        where: { id: documentId, userId },
         select: { id: true, indexingStatus: true },
       });
 
@@ -79,7 +119,7 @@ export async function reindexDocument(documentId: string): Promise<IndexingResul
       return indexingJob;
     }
 
-    await enqueueIndexingJob(indexingJob.id, await getPipelineConfig(user.id));
+    await enqueueIndexingJob(indexingJob.id, await getPipelineConfig(userId));
 
     return { indexingJobId: indexingJob.id };
   } catch (error) {
@@ -88,13 +128,10 @@ export async function reindexDocument(documentId: string): Promise<IndexingResul
   }
 }
 
-/** Deletes the document, its file and its vectors. */
-export async function deleteDocument(documentId: string): Promise<{ error: string } | undefined> {
-  const user = await requireUser();
-
+async function deleteDocument(userId: string, documentId: string): Promise<object | { error: string }> {
   try {
     const document = await prisma.document.findUnique({
-      where: { id: documentId, userId: user.id },
+      where: { id: documentId, userId },
       select: { id: true, storagePath: true },
     });
 
@@ -105,9 +142,11 @@ export async function deleteDocument(documentId: string): Promise<{ error: strin
     await prisma.document.delete({ where: { id: document.id } });
     await deleteDocumentFile(document.storagePath);
 
-    await deleteDocumentEmbeddings(user.id, document.id).catch((error) =>
+    await deleteDocumentEmbeddings(userId, document.id).catch((error) =>
       console.error(`Failed to delete embeddings of document ${document.id}:`, error),
     );
+
+    return {};
   } catch (error) {
     console.error(`Failed to delete document ${documentId}:`, error);
     return { error: "Impossible de supprimer le document." };

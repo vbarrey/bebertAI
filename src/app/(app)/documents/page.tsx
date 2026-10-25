@@ -14,6 +14,6 @@ export default async function DocumentPage({ searchParams }: Props) {
   const { googleDrive } = await searchParams;
 
   return (
-    <DocumentsDisplay initialDocuments={documents} googleDriveResult={googleDrive} />
+    <DocumentsDisplay documents={documents} googleDriveResult={googleDrive} />
   );
 }

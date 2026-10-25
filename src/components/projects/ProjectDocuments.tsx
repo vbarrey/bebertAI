@@ -63,7 +63,8 @@ export function ProjectDocuments({ projectId, scope, documents }: ProjectDocumen
     }
   }
 
-  // The document actions and the import change the documents: the page reads them again.
+  // The imports go through API routes, which cannot send the page back like a server action: it asks for it.
+  // The document actions need not: they render the project pages again.
   const refresh = () => router.refresh();
 
   function documentRow(document: DocumentRow, action: React.ReactNode) {
@@ -129,7 +130,7 @@ export function ProjectDocuments({ projectId, scope, documents }: ProjectDocumen
         ) : (
           <ul className="divide-y rounded-xl border">
             {documents.owned.map((document) =>
-              documentRow(document, <DocumentActions document={document} onIndexingStarted={refresh} onDeleted={refresh} />))}
+              documentRow(document, <DocumentActions document={document} />))}
           </ul>
         )}
       </section>

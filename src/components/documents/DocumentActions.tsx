@@ -37,17 +37,15 @@ import {
 
 import { type Document } from "@prisma/client";
 
-// Server actions: run on the server, called like functions.
-import {
-  deleteDocument as deleteDocumentAction,
-  indexDocument as indexDocumentAction,
-  reindexDocument as reindexDocumentAction,
-} from "@/lib/mutations/document-actions";
+// Server actions: run on the server, called like functions. They render the pages listing the documents again:
+// the page gets them from the server, nothing to update here.
+import { deleteDocuments, indexDocuments, reindexDocuments } from "@/lib/mutations/document-actions";
 
 type Props = {
   document: Document;
-  onIndexingStarted: (jobId: string) => void;
-  onDeleted: (documentId: string) => void;
+  // Followed live by the documents page.
+  onIndexingStarted?: (jobId: string) => void;
+  onDeleted?: (documentId: string) => void;
 };
 
 export function canBeIndexed(doc: Document) {
@@ -62,38 +60,22 @@ export function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Une erreur inattendue est survenue.";
 }
 
-async function startIndexing(action: typeof indexDocumentAction, documentId: string): Promise<string> {
-  const result = await action(documentId);
-
-  if ("error" in result) {
-    throw new Error(result.error);
-  }
-
-  return result.indexingJobId;
-}
-
-/** Each returns the id of the created indexing job, or throws the reason given by the server. */
-export const indexDocument = (documentId: string) => startIndexing(indexDocumentAction, documentId);
-export const reindexDocument = (documentId: string) => startIndexing(reindexDocumentAction, documentId);
-
-export async function deleteDocument(documentId: string): Promise<void> {
-  const result = await deleteDocumentAction(documentId);
-
-  if (result) {
-    throw new Error(result.error);
-  }
-}
-
 export function DocumentActions({ document, onIndexingStarted, onDeleted }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  async function handleIndexing(start: (documentId: string) => Promise<string>) {
+  async function handleIndexing(start: typeof indexDocuments) {
     setLoading(true);
 
     try {
-      onIndexingStarted(await start(document.id));
+      const [result] = await start([document.id]);
+
+      if (result.error !== undefined) {
+        toast.error(result.error);
+      } else {
+        onIndexingStarted?.(result.indexingJobId);
+      }
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -105,8 +87,14 @@ export function DocumentActions({ document, onIndexingStarted, onDeleted }: Prop
     setLoading(true);
 
     try {
-      await deleteDocument(document.id);
-      onDeleted(document.id);
+      const [result] = await deleteDocuments([document.id]);
+
+      if (result.error !== undefined) {
+        toast.error(result.error);
+        return;
+      }
+
+      onDeleted?.(document.id);
       setDeleteOpen(false);
       toast.success("Document supprimé.");
     } catch (error) {
@@ -151,7 +139,7 @@ export function DocumentActions({ document, onIndexingStarted, onDeleted }: Prop
                 loading ||
                 !canBeIndexed(document)
               }
-              onClick={() => handleIndexing(indexDocument)}
+              onClick={() => handleIndexing(indexDocuments)}
             >
               <Play className="size-4" />
               Indexer
@@ -162,7 +150,7 @@ export function DocumentActions({ document, onIndexingStarted, onDeleted }: Prop
               size="sm"
               className="w-full justify-start gap-2"
               disabled={loading || !canBeReindexed(document)}
-              onClick={() => handleIndexing(reindexDocument)}
+              onClick={() => handleIndexing(reindexDocuments)}
             >
               <RotateCcw className="size-4" />
               Réindexer

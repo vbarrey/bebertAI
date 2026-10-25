@@ -21,14 +21,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { canBeIndexed, canBeReindexed, getErrorMessage } from "@/components/documents/DocumentActions";
 import {
-  canBeIndexed,
-  canBeReindexed,
-  deleteDocument,
-  getErrorMessage,
-  indexDocument,
-  reindexDocument,
-} from "@/components/documents/DocumentActions";
+  deleteDocuments,
+  indexDocuments,
+  reindexDocuments,
+  type DocumentActionResult,
+} from "@/lib/mutations/document-actions";
 
 type Props = {
   documents: Document[];
@@ -38,27 +37,27 @@ type Props = {
   onCancel: () => void;
 };
 
-type BulkResult<T> = { document: Document; value: T }[];
-
 /**
- * Runs the action on each document and reports the failures in a single toast.
- * Sequential on purpose (SQLite transactions): parallelize if bulk actions get slow.
+ * Runs the server action on the whole selection in a single request, and reports the failures in a single toast.
+ * Returns the documents that succeeded.
  */
 async function runBulk<T>(
   documents: Document[],
-  action: (documentId: string) => Promise<T>,
+  action: (documentIds: string[]) => Promise<DocumentActionResult<T>[]>,
   label: string,
-): Promise<BulkResult<T>> {
-  const succeeded: BulkResult<T> = [];
-  const failures: string[] = [];
+): Promise<(T & { documentId: string; error?: undefined })[]> {
+  let results: DocumentActionResult<T>[];
 
-  for (const document of documents) {
-    try {
-      succeeded.push({ document, value: await action(document.id) });
-    } catch (error) {
-      failures.push(`${document.displayName} : ${getErrorMessage(error)}`);
-    }
+  try {
+    results = await action(documents.map((document) => document.id));
+  } catch (error) {
+    toast.error(getErrorMessage(error));
+    return [];
   }
+
+  const names = new Map(documents.map((document) => [document.id, document.displayName]));
+  const succeeded = results.flatMap((result) => (result.error === undefined ? [result] : []));
+  const failures = results.flatMap((result) => (result.error !== undefined ? [`${names.get(result.documentId)} : ${result.error}`] : []));
 
   if (succeeded.length > 0) {
     toast.success(`${label} : ${succeeded.length} document(s).`);
@@ -87,7 +86,7 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
 
   async function handleIndexing(
     targets: Document[],
-    start: (documentId: string) => Promise<string>,
+    start: typeof indexDocuments,
     label: string,
   ) {
     setMenuOpen(false);
@@ -95,7 +94,7 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
 
     try {
       const started = await runBulk(targets, start, label);
-      started.forEach(({ value: jobId }) => onIndexingStarted(jobId));
+      started.forEach(({ indexingJobId }) => onIndexingStarted(indexingJobId));
       onDone();
     } finally {
       setLoading(false);
@@ -106,8 +105,8 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
     setLoading(true);
 
     try {
-      const deleted = await runBulk(documents, deleteDocument, "Supprimés");
-      deleted.forEach(({ document }) => onDeleted(document.id));
+      const deleted = await runBulk(documents, deleteDocuments, "Supprimés");
+      deleted.forEach(({ documentId }) => onDeleted(documentId));
       setDeleteOpen(false);
       onDone();
     } finally {
@@ -145,7 +144,7 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
               size="sm"
               className="w-full justify-start gap-2"
               disabled={indexable.length === 0}
-              onClick={() => handleIndexing(indexable, indexDocument, "Indexation lancée")}
+              onClick={() => handleIndexing(indexable, indexDocuments, "Indexation lancée")}
             >
               <Play className="size-4" />
               Indexer
@@ -159,7 +158,7 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
               size="sm"
               className="w-full justify-start gap-2"
               disabled={reindexable.length === 0}
-              onClick={() => handleIndexing(reindexable, reindexDocument, "Réindexation lancée")}
+              onClick={() => handleIndexing(reindexable, reindexDocuments, "Réindexation lancée")}
             >
               <RotateCcw className="size-4" />
               Réindexer

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,13 +88,28 @@ type DocumentRow = Document & {
 type LocationFilter = "ALL" | "LIBRARY" | string;
 
 type Props = {
-    initialDocuments: DocumentRow[]
+    // Rendered by the server again after each document action and import: never copied into a state.
+    documents: DocumentRow[]
     googleDriveResult?: string
 }
 
+// What the indexing events tell before the server renders the documents again.
+type LiveStatus = Pick<DocumentRow, "indexingStatus" | "indexingError">;
+
+function without<T>(record: Record<string, T>, key: string): Record<string, T> {
+    const next = { ...record };
+    delete next[key];
+    return next;
+}
+
 // ----- Page ----
-export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props) {
-    const [documents, setDocuments] = useState<DocumentRow[]>(initialDocuments);
+export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult }: Props) {
+    const router = useRouter();
+    const [, startTransition] = useTransition();
+    const [liveStatus, setLiveStatus] = useState<Record<string, LiveStatus>>({});
+    const documents = serverDocuments.map((document) =>
+        liveStatus[document.id] ? { ...document, ...liveStatus[document.id] } : document,
+    );
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | IndexingStatus>("ALL");
     const [locationFilter, setLocationFilter] = useState<LocationFilter>("ALL");
@@ -153,13 +169,12 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
         setSelectedIds(new Set());
     }
 
-    const addDocuments = (newDocuments: Document[]) => {
-        setDocuments((prev) => [...prev, ...newDocuments]);
-    };
+    // The imports go through API routes, which cannot send the page back like a server action: it asks for it.
+    const refresh = () => router.refresh();
 
     // Jobs already queued or running when the page opens are followed too.
     const [activeJobIds, setActiveJobIds] = useState<string[]>(() =>
-        initialDocuments.flatMap((document) => (document.activeJobId ? [document.activeJobId] : [])),
+        serverDocuments.flatMap((document) => (document.activeJobId ? [document.activeJobId] : [])),
     );
     const [progressByDocument, setProgressByDocument] = useState<Record<string, IndexingSteps>>({});
     useEffect(() => {
@@ -188,8 +203,6 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                 displayName: string;
                 status: JobStatus;
                 errorMessage?: string;
-                // Sent with COMPLETED only.
-                language?: string | null;
             };
 
             const status = jobStatusToIndexingStatus[data.status];
@@ -198,24 +211,19 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                 return;
             }
 
-            setDocuments((documents) =>
-                documents.map((document) =>
-                    document.id === data.documentId
-                        ? {
-                            ...document,
-                            indexingStatus: status,
-                            indexingError: data.errorMessage ?? null,
-                            language: data.language !== undefined ? data.language : document.language,
-                        }
-                        : document,
-                ),
-            );
+            setLiveStatus((live) => ({
+                ...live,
+                [data.documentId]: { indexingStatus: status, indexingError: data.errorMessage ?? null },
+            }));
 
             if (finishedJobStatuses.includes(data.status)) {
-                setProgressByDocument((progress) => {
-                    const next = { ...progress };
-                    delete next[data.documentId];
-                    return next;
+                // Changed by the worker, not by an action of this page: the server renders the documents again
+                // (status, language, date of indexing). In a transition: the live status is dropped together with
+                // the arrival of the new rendering, the former status never shows in between.
+                startTransition(() => {
+                    setLiveStatus((live) => without(live, data.documentId));
+                    setProgressByDocument((progress) => without(progress, data.documentId));
+                    router.refresh();
                 });
 
                 if (data.status === JobStatus.FAILED) {
@@ -246,7 +254,7 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
         return () => {
             eventSource.close();
         };
-    }, [activeJobIds]);
+    }, [activeJobIds, router]);
 
     function onIndexingStarted(jobId: string) {
         setActiveJobIds((jobIds) => [
@@ -255,10 +263,8 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
         ]);
     };
 
+    // Gone from the documents the server sends back with the action's result.
     function onDocumentDeleted(documentId: string) {
-        setDocuments((documents) =>
-            documents.filter((document) => document.id !== documentId)
-        );
         toggleSelected(documentId, false);
     }
 
@@ -271,7 +277,7 @@ export function DocumentsDisplay({ initialDocuments, googleDriveResult }: Props)
                     <p className="text-muted-foreground mt-1">Gestion et suivi de vos documents indexés.</p>
                 </div>
                 <div className="mt-4 lg:mt-0">
-                    <DocumentImportPopover addDocuments={addDocuments} onIndexingStarted={onIndexingStarted} googleDriveResult={googleDriveResult} />
+                    <DocumentImportPopover addDocuments={refresh} onIndexingStarted={onIndexingStarted} googleDriveResult={googleDriveResult} />
                 </div>
             </div>
 
