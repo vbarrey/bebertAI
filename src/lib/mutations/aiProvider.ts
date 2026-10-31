@@ -81,6 +81,8 @@ export async function createApiKeyProvider(
     return { error: `Fournisseur créé, mais ses modèles n'ont pas pu être synchronisés : ${errorMessage(error)}. Réessayez avec « Synchroniser ».` };
   } finally {
     revalidatePath("/settings", "layout");
+    // The welcome page lists the provider too, with its « Synchroniser » button when its models failed.
+    revalidatePath("/bienvenue");
   }
 }
 

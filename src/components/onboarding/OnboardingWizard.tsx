@@ -55,11 +55,16 @@ export function OnboardingWizard({ providers }: { providers: Provider[] }) {
 
   async function synchronize(providerId: string) {
     setSynchronizing(providerId);
-    const result = await synchronizeProviderModels(providerId);
-    setSynchronizing(null);
+    try {
+      const result = await synchronizeProviderModels(providerId);
 
-    if (result?.error) toast.error(result.error);
-    else router.refresh();
+      if (result?.error) toast.error(result.error);
+      else router.refresh();
+    } catch {
+      toast.error("Impossible de synchroniser les modèles.");
+    } finally {
+      setSynchronizing(null);
+    }
   }
 
   function start() {
