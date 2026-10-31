@@ -31,6 +31,9 @@ model User {
   banReason     String?
   banExpires    DateTime?
 
+  // Set once the user finished or postponed the welcome page (src/lib/onboarding.ts).
+  onboardedAt   DateTime?
+
   sessions      Session[]
   accounts      Account[]
   invitations   Invitation[]
@@ -298,9 +301,9 @@ model IndexingJob {
 model AIProvider {
   id        String @id @default(cuid())
 
-  // The user who added it, with their API key. Null for Ollama local, shared by everyone and managed by the admin.
-  userId    String?
-  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // The user who added it, with their API key.
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name      String
   type      AIProviderType
@@ -369,7 +372,6 @@ enum Capability {
 }
 
 enum AIProviderType {
-  OLLAMA_LOCAL
   OLLAMA_CLOUD
   VOYAGE
   GOOGLE
