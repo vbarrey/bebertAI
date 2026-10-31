@@ -5,6 +5,10 @@
 
 */
 -- Ollama local is gone: its models, and the providers without owner nobody could see.
+-- The pipeline steps on them are unset first, so their users can choose again ("..." unset, "" for the translation).
+UPDATE "PipelineParameters" SET "parameters" = json_set("parameters", '$.generation.providerId', '...', '$.generation.modelName', '...') WHERE json_extract("parameters", '$.generation.providerId') IN (SELECT "id" FROM "AIProvider" WHERE "type" = 'OLLAMA_LOCAL' OR "userId" IS NULL);
+UPDATE "PipelineParameters" SET "parameters" = json_set("parameters", '$.embedding.providerId', '...', '$.embedding.modelName', '...') WHERE json_extract("parameters", '$.embedding.providerId') IN (SELECT "id" FROM "AIProvider" WHERE "type" = 'OLLAMA_LOCAL' OR "userId" IS NULL);
+UPDATE "PipelineParameters" SET "parameters" = json_set("parameters", '$.retrieval.hybrid.translation.providerId', '', '$.retrieval.hybrid.translation.modelName', '') WHERE json_extract("parameters", '$.retrieval.hybrid.translation.providerId') IN (SELECT "id" FROM "AIProvider" WHERE "type" = 'OLLAMA_LOCAL' OR "userId" IS NULL);
 UPDATE "Conversation" SET "modelId" = NULL WHERE "modelId" IN (SELECT "m"."id" FROM "AIModel" "m" JOIN "AIProvider" "p" ON "m"."providerId" = "p"."id" WHERE "p"."type" = 'OLLAMA_LOCAL' OR "p"."userId" IS NULL);
 UPDATE "AIProvider" SET "defaultModelId" = NULL WHERE "type" = 'OLLAMA_LOCAL' OR "userId" IS NULL;
 DELETE FROM "_AIModelToAIModelCapability" WHERE "A" IN (SELECT "m"."id" FROM "AIModel" "m" JOIN "AIProvider" "p" ON "m"."providerId" = "p"."id" WHERE "p"."type" = 'OLLAMA_LOCAL' OR "p"."userId" IS NULL);

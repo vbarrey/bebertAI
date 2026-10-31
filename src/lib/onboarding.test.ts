@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { after, before, describe, it, mock } from "node:test";
+import { after, before, describe, it } from "node:test";
 
 // A database of its own, created by the migrations: set before the modules reading DATABASE_URL are loaded.
 const directory = mkdtempSync(path.join(tmpdir(), "bebert-onboarding-"));
@@ -93,10 +93,7 @@ describe("onboarding", () => {
   });
 
   it("completeOnboarding sets both steps on the user's own models only", async () => {
-    // Choosing an embedding model resets the user's vector collection: no Qdrant in this test.
-    const { qdrant } = await import("@/lib/qdrant/client");
-    mock.method(qdrant, "getAliases", async () => ({ aliases: [] }));
-    mock.method(qdrant, "collectionExists", async () => ({ exists: false }));
+    // Dave has no documents: choosing his embedding model does not need Qdrant.
     const dave = await prisma.user.create({ data: { id: "user-dave", name: "dave", email: "dave@example.com" } });
     const bobs = await ownModels("user-bob");
     const daves = await ownModels(dave.id);
@@ -105,5 +102,32 @@ describe("onboarding", () => {
     const { parameters } = await runtime.getPipelineConfig(dave.id);
     assert.deepEqual([parameters.generation.modelName, parameters.embedding.modelName], ["g", "e"]);
     assert.equal(await onboarding.needsOnboarding(dave.id), false);
+  });
+});
+
+describe("pipeline save with a provider gone", () => {
+  it("a step left on a deleted provider does not block saving the others", async () => {
+    const erin = await prisma.user.create({ data: { id: "user-erin", name: "erin", email: "erin@example.com" } });
+    const provider = await prisma.aIProvider.create({
+      data: {
+        userId: erin.id, name: "Cloud", type: "OLLAMA_CLOUD", source: "REMOTE",
+        configuration: { apiKey: "key" },
+        models: { create: [{ name: "g" }] },
+      },
+    });
+    const config = await runtime.getPipelineConfig(erin.id);
+    config.parameters.embedding = { ...config.parameters.embedding, providerId: "deleted-provider", modelName: "e" };
+    await prisma.pipelineParameters.update({ where: { userId: erin.id }, data: { parameters: JSON.stringify(config.parameters) } });
+
+    const parameters = { ...config.parameters, generation: { ...config.parameters.generation, providerId: provider.id, modelName: "g" } };
+    const saved = await runtime.updatePipelineParameters(erin.id, parameters);
+    assert.equal(saved.parameters.generation.providerId, provider.id);
+  });
+
+  it("a step on another user's provider is still refused", async () => {
+    const bobs = await prisma.aIProvider.findFirstOrThrow({ where: { userId: "user-bob" } });
+    const { parameters } = await runtime.getPipelineConfig("user-erin");
+    const onBobs = { ...parameters, generation: { ...parameters.generation, providerId: bobs.id, modelName: "g" } };
+    await assert.rejects(runtime.updatePipelineParameters("user-erin", onBobs), /Fournisseur inconnu/);
   });
 });

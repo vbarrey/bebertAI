@@ -39,14 +39,15 @@ export async function updatePipelineParameters(userId: string, parameters: unkno
 
   const validatedParameters = parseParameters(parameters);
 
-  // A step on another user's provider would run on their API key.
-  const providerIds = [...new Set([
+  // A step on another user's provider would run on their API key. A step on a provider gone since does not block
+  // saving the others: getPipelineProvider says so when it runs.
+  const providerIds = [
     validatedParameters.embedding.providerId,
     validatedParameters.generation.providerId,
     validatedParameters.retrieval.hybrid.translation.providerId,
-  ].filter((providerId) => providerId && providerId !== UNSET))];
+  ].filter((providerId) => providerId && providerId !== UNSET);
 
-  if (await prisma.aIProvider.count({ where: { id: { in: providerIds }, ...usableProviders(userId) } }) !== providerIds.length) {
+  if (await prisma.aIProvider.count({ where: { id: { in: providerIds }, NOT: usableProviders(userId) } }) > 0) {
     throw new Error("Fournisseur inconnu : choisissez l'un de vos fournisseurs.");
   }
 
@@ -75,8 +76,11 @@ export async function updatePipelineParameters(userId: string, parameters: unkno
     }
 
     // Every vector of the user is stale, including leftovers of failed runs; the worker recreates their
-    // collection with the new embedding dimension. The other users' collections are not touched.
-    await deleteChunksCollection(userId);
+    // collection with the new embedding dimension. The other users' collections are not touched. A user without
+    // documents has no vector: Qdrant is not needed to choose their first embedding model.
+    if (await prisma.document.count({ where: { userId } }) > 0) {
+      await deleteChunksCollection(userId);
+    }
   }
 
   await prisma.$transaction([
