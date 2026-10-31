@@ -2,9 +2,9 @@
 
 Bebert AI est une application desktop personnelle destinée à centraliser et exploiter une documentation technique à l’aide de l’IA.
 
-L’objectif est de regrouper des documents (PDF, TXT, DOCX, etc.), de les indexer automatiquement et de dialoguer avec un modèle de langage local en s’appuyant sur un moteur RAG.
+L’objectif est de regrouper des documents (PDF, TXT, DOCX, etc.), de les indexer automatiquement et de dialoguer avec un modèle de langage en s’appuyant sur un moteur RAG. Les modèles viennent de fournisseurs d’IA externes que chaque utilisateur ajoute avec sa clé API : Anthropic ou Ollama Cloud pour la génération, Voyage AI ou Google Gemini pour l’embedding.
 
-L’application est conçue pour fonctionner principalement en local, avec une interface simple destinée à un usage quotidien et une configuration avancée séparée.
+Documents, base et vecteurs restent sur le serveur de l’application, avec une interface simple destinée à un usage quotidien et une configuration avancée séparée.
 
 ## Fonctionnalités
 
@@ -19,7 +19,7 @@ L’application est conçue pour fonctionner principalement en local, avec une i
 - Génération d’embeddings
 - Stockage des vecteurs dans Qdrant
 - Recherche sémantique
-- Chat avec un modèle de langage local
+- Chat avec le modèle de génération choisi par l’utilisateur
 - Réponses générées avec contexte documentaire (RAG)
 - Streaming des réponses
 - Indexation asynchrone avec BullMQ
@@ -176,7 +176,7 @@ Les tests utilisant le vrai moteur OCR sont ignorés si `tesseract` ou `pdftoppm
 docker compose up -d --build
 ```
 
-À sa première connexion, chaque utilisateur ajoute ses fournisseurs dans Réglages > Fournisseurs : une clé API Anthropic ou Ollama Cloud pour la génération, Voyage AI ou Google Gemini pour l’embedding. Les étapes Vectorisation et Génération restent à choisir dans Réglages > Pipeline : aucun modèle n’est réglé par défaut.
+À sa première connexion, chaque utilisateur arrive sur la page de bienvenue (`/bienvenue`) : il y ajoute ses fournisseurs avec leur clé API (Anthropic ou Ollama Cloud pour la génération, Voyage AI ou Google Gemini pour l’embedding) et choisit ses modèles de génération et d’embedding, aucun n’étant réglé par défaut. Il peut remettre cette étape à plus tard et la faire ensuite dans Réglages > Fournisseurs et Réglages > Pipeline.
 
 L’application est servie par Caddy en HTTPS sur `DOMAIN` : `https://localhost` par défaut, avec un certificat local que le navigateur signale à la première visite. Elle se configure ensuite dans Réglages > Pipeline. La base et les documents sont dans le volume `data`, séparé du dossier `data/` local.
 

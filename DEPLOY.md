@@ -48,9 +48,10 @@ Ouvrir le lien, choisir un mot de passe. Les autres comptes s'invitent ensuite d
 
 ### Fournisseurs d'IA
 
-À sa première connexion, chaque utilisateur ajoute ses fournisseurs dans Réglages > Fournisseurs : une clé API
-Anthropic ou Ollama Cloud pour la génération, Voyage AI ou Google Gemini pour l'embedding. Il les choisit ensuite dans
-Réglages > Pipeline.
+À sa première connexion, chaque utilisateur arrive sur la page de bienvenue (`/bienvenue`) : il y ajoute ses
+fournisseurs avec leur clé API (Anthropic ou Ollama Cloud pour la génération, Voyage AI ou Google Gemini pour
+l'embedding) et choisit ses modèles. Il peut remettre cette étape à plus tard et la faire ensuite dans Réglages >
+Fournisseurs et Réglages > Pipeline.
 
 ### Google Drive (facultatif)
 

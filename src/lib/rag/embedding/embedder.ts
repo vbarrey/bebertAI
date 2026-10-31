@@ -14,16 +14,14 @@ export type EmbeddingCache = {
 // Reports the distinct chunk texts embedded so far, the cached ones included.
 export type EmbeddingProgress = (current: number, total: number) => Promise<void> | void;
 
-// Small enough to report progress on long documents, large enough to keep the GPU busy.
+// Small enough to report progress on long documents, large enough to keep the requests few.
 const BATCH_SIZE = 32;
-// Ollama embeds one sequence at a time whatever OLLAMA_NUM_PARALLEL (it starts embedding models with -np 1):
-// a second request in flight only keeps the GPU busy between two requests.
+// A second request in flight hides the round trip to the provider between two batches.
 const PARALLEL_BATCHES = 2;
 
 /**
- * Context of the embedding requests, chunks and queries alike (Ollama reloads the model when it changes).
- * A token holds at least one character, so chunkSize tokens fit any chunk. The model default, 40960 tokens for
- * qwen3-embedding, takes 9.3 GB of VRAM against 3.8 GB at 2048: room left for the chat model.
+ * Context of the embedding requests, chunks and queries alike. A token holds at least one character, so
+ * chunkSize tokens fit any chunk.
  */
 export function embeddingContextLength(chunkSize: number): number {
   return Math.ceil(chunkSize / 1024) * 1024;

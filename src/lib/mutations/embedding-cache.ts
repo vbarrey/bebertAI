@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 /**
- * Stores embeddings as float32, the precision Ollama computes and Qdrant stores them in.
+ * Stores embeddings as float32, the precision Qdrant stores them in.
  * Upserts: two documents indexed at once may share a chunk text.
  */
 export async function cacheEmbeddings(entries: Map<string, number[]>): Promise<void> {

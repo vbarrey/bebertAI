@@ -40,7 +40,7 @@ export class DocumentRetriever {
     constructor(
         private readonly embeddingProvider: AIProviderClient,
         private readonly embeddingModelName: string,
-        // Same as the indexing requests, or Ollama reloads the model.
+        // Same as the indexing requests.
         private readonly contextLength?: number,
     ) { }
 
@@ -49,8 +49,6 @@ export class DocumentRetriever {
             model: this.embeddingModelName,
             input: [query],
             contextLength: this.contextLength,
-            // A query embeds in 0.15 s on the CPU. On the GPU, Ollama evicts the chat model when it does not leave
-            // room for the embedding model, then reloads it for the answer (25 s for a 36B model).
             cpuOnly: true,
             inputType: "query",
         });

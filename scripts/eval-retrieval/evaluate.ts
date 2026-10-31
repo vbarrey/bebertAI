@@ -68,7 +68,7 @@ type Score = {
 async function prepareQuestions(items: EvaluationItem[], parameters: PipelineParameters): Promise<PreparedCache> {
     const { translation } = parameters.retrieval.hybrid;
     // Same models as the chat; the conversation model translates when none is set, here the pipeline one.
-    const translationStep = translation.modelName ? translation : parameters.generation;
+    const translationStep = translation.providerId && translation.modelName ? translation : parameters.generation;
     const translationModel = translationStep.modelName;
     const embeddingModel = parameters.embedding.modelName;
 
