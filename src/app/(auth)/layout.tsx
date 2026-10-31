@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-// The pages reached without a session: sign-in, password reset, invitation.
+// The pages reached without a session: sign-in, password reset, invitation; also the welcome page after the first sign-in.
 export default function AuthLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted/40 p-4">
