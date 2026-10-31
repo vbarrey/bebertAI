@@ -130,8 +130,7 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
         </div>
 
         <div className="mt-4">
-          {/* A remote provider lists the models it serves: they cannot be deleted. */}
-          <ModelList models={provider.models ?? []} removable={provider.source === "LOCAL"} manageable={!!provider.manageable} />
+          <ModelList models={provider.models ?? []} manageable={!!provider.manageable} />
         </div>
       </section>
     </div>

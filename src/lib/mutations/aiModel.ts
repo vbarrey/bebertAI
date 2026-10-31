@@ -2,13 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { AIProviderSource, AIProviderType, Capability } from "@prisma/client";
+import { Capability } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { createProviderClient } from "@/lib/ai/provider-factory";
-import { OllamaRequestError } from "@/lib/ai/ollama-local/errors";
-import { isOllamaLocalDefaultModel } from "@/lib/ai/ollama-local/config";
-import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
 import { requireUser } from "@/lib/session";
 import { manageableProviders } from "@/lib/ai/provider-access";
 
@@ -23,7 +19,7 @@ export type ModelUpdateInput = z.input<typeof ModelUpdateSchema>;
 
 export async function updateModel(modelId: string, input: ModelUpdateInput): Promise<{ error: string } | undefined> {
   const user = await requireUser();
-  // The models of the providers the user can manage (the shared Ollama local: the admin).
+  // The models of the user's own providers.
   const manageable = { provider: manageableProviders(user) };
   if (!(await prisma.aIModel.count({ where: { id: modelId, ...manageable } }))) {
     return { error: "Modèle introuvable." };
@@ -52,7 +48,7 @@ export async function updateModel(modelId: string, input: ModelUpdateInput): Pro
 
 export async function setModelFavorite(modelId: string, favorite: boolean): Promise<void> {
   const user = await requireUser();
-  // The models of the providers the user can manage (the shared Ollama local: the admin).
+  // The models of the user's own providers.
   const manageable = { provider: manageableProviders(user) };
   await prisma.aIModel.updateMany({ where: { id: modelId, ...manageable }, data: { favorite } });
   revalidatePath("/settings", "layout");
@@ -61,65 +57,9 @@ export async function setModelFavorite(modelId: string, favorite: boolean): Prom
 // Same as a disabled provider, for one of its models.
 export async function setModelEnabled(modelId: string, enabled: boolean): Promise<void> {
   const user = await requireUser();
-  // The models of the providers the user can manage (the shared Ollama local: the admin).
+  // The models of the user's own providers.
   const manageable = { provider: manageableProviders(user) };
   await prisma.aIModel.updateMany({ where: { id: modelId, ...manageable }, data: { enabled } });
   revalidatePath("/", "layout");
 }
 
-/**
- * Deletes a model of a local provider from the provider itself, then from the app: a model only removed from
- * the app would come back with the next synchronization. The conversations that used it keep going with the
- * pipeline model.
- */
-export async function deleteModel(modelId: string): Promise<{ error: string } | undefined> {
-  const user = await requireUser();
-  // The models of the providers the user can manage (the shared Ollama local: the admin).
-  const manageable = { provider: manageableProviders(user) };
-  const model = await prisma.aIModel.findFirst({ where: { id: modelId, ...manageable }, include: { provider: true } });
-  if (!model) {
-    return { error: "Modèle introuvable." };
-  }
-
-  // A remote provider lists the models it serves: they cannot be deleted.
-  if (model.provider.source === AIProviderSource.REMOTE) {
-    return { error: "Les modèles d'un fournisseur distant ne peuvent pas être supprimés." };
-  }
-
-  if (model.provider.type === AIProviderType.OLLAMA_LOCAL && isOllamaLocalDefaultModel(model.name)) {
-    return { error: "Ce modèle est un modèle par défaut défini dans le .env (génération ou embedding) : il ne peut pas être supprimé." };
-  }
-
-  const pipelines = await prisma.pipelineParameters.findMany({ select: { parameters: true } });
-  const usedBy = [...new Set(pipelines.flatMap(({ parameters: stored }) => {
-    const parsed = PipelineParametersSchema.safeParse(JSON.parse(stored));
-    if (!parsed.success) return [];
-
-    const parameters = parsed.data;
-    const steps = [
-      ["génération", parameters.generation],
-      ["embedding", parameters.embedding],
-      ["traduction", parameters.retrieval.hybrid.translation],
-    ] as const;
-    return steps
-      .filter(([, step]) => step.providerId === model.providerId && step.modelName === model.name)
-      .map(([name]) => name);
-  }))];
-
-  if (usedBy.length > 0) {
-    return { error: `Ce modèle est utilisé par le pipeline (${usedBy.join(", ")}) : choisissez-en un autre dans Réglages > Pipeline avant de le supprimer.` };
-  }
-
-  try {
-    await createProviderClient(model.provider).remove?.(model.name);
-  } catch (error) {
-    // Already gone from Ollama: only the app still lists it.
-    if (!(error instanceof OllamaRequestError && error.status === 404)) {
-      return { error: error instanceof Error ? error.message : "Suppression impossible." };
-    }
-  }
-
-  await prisma.aIModel.delete({ where: { id: modelId } });
-
-  revalidatePath("/settings", "layout");
-}

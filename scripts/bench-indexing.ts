@@ -9,9 +9,9 @@
  */
 import type { Chunk } from "@prisma/client";
 
-import { OllamaLocalProvider } from "@/lib/ai/ollama-local/provider";
 import { withDocumentFile } from "@/lib/documents/storage";
 import { prisma } from "@/lib/prisma";
+import { getPipelineProvider } from "@/lib/pipeline/config";
 import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
 import { DocumentEmbedder, embeddingContextLength, type EmbeddingCache } from "@/lib/rag/embedding/embedder";
 import { PdfExtractor } from "@/lib/rag/indexing/extractors/pdf-extractor";
@@ -56,8 +56,8 @@ async function main() {
             new PdfExtractor(extraction).extract(filePath, scan, (_, total) => { pages = total; })));
     console.log(`  ${pages} pages OCR`);
 
-    // Embedding: the model is loaded first so the timing is the embedding alone.
-    const provider = new OllamaLocalProvider("ollama", "Ollama", { host: process.env["OLLAMA_BASE_URL"] ?? "http://localhost:11434", defaultModel: "" });
+    // Embedding, on the provider of the pipeline: a first request warms it up so the timing is the embedding alone.
+    const provider = await getPipelineProvider(parameters.embedding, "embedding");
     const contextLength = embeddingContextLength(parameters.chunking.chunkSize);
     const document = await prisma.document.findFirstOrThrow({
         where: { displayName: { startsWith: argument("embedded", "PR 236") } },

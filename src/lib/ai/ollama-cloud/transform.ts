@@ -1,6 +1,6 @@
 import { Capability } from "@prisma/client";
-import { AIModelInfo, ChatRequestInput, ChatChunk, EmbedRequest, Embedding } from "../types";
-import { OllamaModel, OllamaChatRequest, OllamaChatChunk, OllamaEmbedRequest, OllamaEmbedResponse} from "./types";
+import { AIModelInfo, ChatRequestInput, ChatChunk } from "../types";
+import { OllamaModel, OllamaChatRequest, OllamaChatChunk } from "./types";
 
 export function toAppModel(ollamaModel: OllamaModel): AIModelInfo {
     return {
@@ -38,19 +38,4 @@ export async function toOlllamaChatRequest(appChatRequest: ChatRequestInput): Pr
 
 export function toAppChatChunk(ollamaChatChunk: OllamaChatChunk): ChatChunk {
     return ollamaChatChunk.message;
-}
-
-export function toOllamaEmbedRequest(appInput: EmbedRequest): OllamaEmbedRequest{
-    return {
-        model: appInput.model,
-        input: appInput.input,
-        options: {
-            ...(appInput.contextLength ? { num_ctx: appInput.contextLength } : {}),
-            ...(appInput.cpuOnly ? { num_gpu: 0 } : {}),
-        },
-    };
-}
-
-export function toAppEmbeddings(ollamaResponse: OllamaEmbedResponse): Embedding[]{
-    return ollamaResponse.embeddings;
 }

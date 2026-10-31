@@ -13,11 +13,11 @@ import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
 import { buildHybridQuery } from "@/lib/rag/retrieval/hybrid-query";
 import { translateQuery } from "@/lib/rag/retrieval/query-translator";
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
+import { getPipelineProvider } from "@/lib/pipeline/config";
 
 import {
     loadPipelineParameters,
     evaluationUserId,
-    ollama,
     prisma,
     PREPARED_FILE,
     QUESTION_STYLES,
@@ -68,7 +68,8 @@ type Score = {
 async function prepareQuestions(items: EvaluationItem[], parameters: PipelineParameters): Promise<PreparedCache> {
     const { translation } = parameters.retrieval.hybrid;
     // Same models as the chat; the conversation model translates when none is set, here the pipeline one.
-    const translationModel = translation.modelName || parameters.generation.modelName;
+    const translationStep = translation.modelName ? translation : parameters.generation;
+    const translationModel = translationStep.modelName;
     const embeddingModel = parameters.embedding.modelName;
 
     const cached = await readJson<PreparedCache>(PREPARED_FILE);
@@ -76,14 +77,16 @@ async function prepareQuestions(items: EvaluationItem[], parameters: PipelinePar
         ? cached
         : { embeddingModel, translationModel, questions: {} };
 
-    const provider = ollama();
+    // The evaluated user's providers, with their API keys.
+    const embedder = await getPipelineProvider(parameters.embedding, "embedding");
+    const translator = await getPipelineProvider(translationStep, "traduction");
     const missing = items.flatMap((item) => QUESTION_STYLES.map((style) => item.questions[style]))
         .filter((question) => !cache.questions[question]);
 
     for (const [index, question] of missing.entries()) {
         process.stdout.write(`\rPréparation des questions ${index + 1}/${missing.length}…`);
 
-        const [vector] = await provider.embed({
+        const [vector] = await embedder.embed({
             model: embeddingModel,
             input: [question.normalize("NFC")],
             contextLength: embeddingContextLength(parameters.chunking.chunkSize),
@@ -92,7 +95,7 @@ async function prepareQuestions(items: EvaluationItem[], parameters: PipelinePar
 
         cache.questions[question] = {
             vector: vector!,
-            translations: await translateQuery(provider, translationModel, question.normalize("NFC")),
+            translations: await translateQuery(translator, translationModel, question.normalize("NFC")),
         };
     }
 

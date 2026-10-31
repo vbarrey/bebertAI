@@ -1,27 +1,24 @@
 // Never in a browser bundle: importing it from a Client Component fails the build.
 import "server-only";
 
-import { AIProviderType, type Prisma } from "@prisma/client";
+import { type Prisma } from "@prisma/client";
 
 import { decryptToken, encryptToken } from "@/lib/encryption";
 
 type User = { id: string; role?: string | null };
 
-// Ollama local: one provider for every user, created from the .env.
-const SHARED: Prisma.AIProviderWhereInput = { type: AIProviderType.OLLAMA_LOCAL, userId: null };
-
-/** The providers a user can use: their own, and the shared Ollama local. */
+/** The providers a user can use: their own, with their API keys. */
 export function usableProviders(userId: string): Prisma.AIProviderWhereInput {
-  return { OR: [{ userId }, SHARED] };
+  return { userId };
 }
 
-/** The providers a user can change: their own; the shared Ollama local too for the admin. */
+/** The providers a user can change: their own, the admin included. */
 export function manageableProviders(user: User): Prisma.AIProviderWhereInput {
-  return user.role === "admin" ? { OR: [{ userId: user.id }, SHARED] } : { userId: user.id };
+  return { userId: user.id };
 }
 
-export function isManageable(provider: { userId: string | null; type: AIProviderType }, user: User) {
-  return provider.userId === user.id || (user.role === "admin" && provider.userId === null && provider.type === AIProviderType.OLLAMA_LOCAL);
+export function isManageable(provider: { userId: string }, user: User) {
+  return provider.userId === user.id;
 }
 
 // Marks an encrypted API key: the keys stored before the encryption are encrypted at start-up.

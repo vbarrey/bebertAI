@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Model, Capability } from "@/types/augmented-prisma";
-import { Bot, Pencil, Star, Trash2Icon } from "lucide-react";
+import { Bot, Pencil, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -25,17 +25,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogMedia,
-} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -44,7 +33,7 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
-import { deleteModel, setModelEnabled, setModelFavorite, updateModel } from "@/lib/mutations/aiModel";
+import { setModelEnabled, setModelFavorite, updateModel } from "@/lib/mutations/aiModel";
 
 export const capabilityLabels: Record<Capability, string> = {
   GENERATION: "Génération",
@@ -54,16 +43,13 @@ export const capabilityLabels: Record<Capability, string> = {
 
 type Props = {
   model: Model;
-  // Only the models of a local provider: a remote one lists the models it serves.
-  removable: boolean;
   manageable: boolean;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
 };
 
-export function ModelListItem({ model, removable, manageable, expanded, onExpandedChange }: Props) {
+export function ModelListItem({ model, manageable, expanded, onExpandedChange }: Props) {
   const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [displayName, setDisplayName] = useState(model.displayName ?? "");
   const [description, setDescription] = useState(model.description ?? "");
@@ -71,7 +57,6 @@ export function ModelListItem({ model, removable, manageable, expanded, onExpand
   const [favorite, setFavorite] = useState(model.favorite);
   const [enabled, setEnabled] = useState(model.enabled);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -119,25 +104,6 @@ export function ModelListItem({ model, removable, manageable, expanded, onExpand
     } catch {
       setEnabled(!next);
       toast.error("Impossible de modifier l'activation du modèle.");
-    }
-  }
-
-  async function handleDelete(event: React.MouseEvent) {
-    // The dialog stays open until the model is deleted.
-    event.preventDefault();
-    setDeleting(true);
-    try {
-      const result = await deleteModel(model.id);
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(`Modèle « ${model.displayName ?? model.name} » supprimé.`);
-      setDeleteOpen(false);
-    } catch {
-      toast.error("Impossible de supprimer le modèle.");
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -268,17 +234,6 @@ export function ModelListItem({ model, removable, manageable, expanded, onExpand
                       <Pencil className="size-3.5" />
                       Modifier
                     </Button>
-
-                    {removable && !model.isDefault && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeleteOpen(true)}
-                      >
-                        <Trash2Icon className="size-3.5" />
-                        Supprimer
-                      </Button>
-                    )}
                   </div>
                 )}
               </div>
@@ -370,31 +325,6 @@ export function ModelListItem({ model, removable, manageable, expanded, onExpand
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader className="min-w-0">
-            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-              <Trash2Icon />
-            </AlertDialogMedia>
-            <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
-
-            <AlertDialogDescription className="w-full min-w-0">
-              Cette action est irréversible. Le modèle{" "}
-              <TruncatedText className="font-semibold">{model.displayName ?? model.name}</TruncatedText> sera
-              définitivement supprimé du fournisseur et de l&apos;application.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
-
-            <AlertDialogAction onClick={handleDelete} variant="destructive" disabled={deleting}>
-              {deleting ? "Suppression..." : "Supprimer"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

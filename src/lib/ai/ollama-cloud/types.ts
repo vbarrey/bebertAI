@@ -12,7 +12,7 @@ export interface OllamaModel {
     parameter_size: string;
     quantization_level: string;
   };
-  // "completion", "embedding", "tools", "thinking"... (Ollama local and Ollama Cloud alike).
+  // "completion", "embedding", "tools", "thinking"...
   capabilities?: string[];
 }
 
@@ -79,18 +79,4 @@ export interface OllamaChatChunk {
     content: string;
   };
   done: boolean;
-}
-
-export interface OllamaEmbedRequest {
-  model: string;
-  input: string[];
-  options?: {
-    num_ctx?: number;
-    // Layers offloaded to the GPU: 0 runs on the CPU.
-    num_gpu?: number;
-  };
-}
-
-export interface OllamaEmbedResponse {
-  embeddings: number[][];
 }

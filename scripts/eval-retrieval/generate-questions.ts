@@ -9,11 +9,12 @@
  */
 import { detectLanguage } from "@/lib/rag/indexing/language";
 import { countMeaningfulChars } from "@/lib/rag/indexing/text";
+import type { AIProviderClient } from "@/lib/ai/provider";
+import { getPipelineProvider } from "@/lib/pipeline/config";
 
 import {
     argument,
     loadPipelineParameters,
-    ollama,
     prisma,
     QUESTIONS_FILE,
     readJson,
@@ -46,10 +47,10 @@ function seededRandom(seed: number): () => number {
     return () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
 }
 
-async function ask(model: string, prompt: string, passage: string): Promise<string> {
+async function ask(provider: AIProviderClient, model: string, prompt: string, passage: string): Promise<string> {
     let answer = "";
 
-    for await (const chunk of ollama().chat({
+    for await (const chunk of provider.chat({
         modelName: model,
         temperature: 0,
         think: false,
@@ -69,7 +70,10 @@ async function main() {
     }
 
     const count = Number(argument("count", "40"));
-    const model = argument("model", (await loadPipelineParameters()).generation.modelName);
+    const { generation } = await loadPipelineParameters();
+    const model = argument("model", generation.modelName);
+    // The generation provider of the evaluated user's pipeline, with --model one of its models.
+    const provider = await getPipelineProvider({ providerId: generation.providerId, modelName: model }, "génération");
     const random = seededRandom(42);
 
     const documents = await prisma.document.findMany({ include: { chunks: { orderBy: { position: "asc" } } } });
@@ -96,8 +100,8 @@ async function main() {
                 pageNumber: passage.pageNumber,
                 language: passage.language,
                 questions: {
-                    precise: await ask(model, PROMPTS.precise, passage.text),
-                    vague: await ask(model, PROMPTS.vague, passage.text),
+                    precise: await ask(provider, model, PROMPTS.precise, passage.text),
+                    vague: await ask(provider, model, PROMPTS.vague, passage.text),
                 },
             };
 

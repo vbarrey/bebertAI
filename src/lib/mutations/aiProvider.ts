@@ -35,7 +35,7 @@ export async function createApiKeyProvider(
   input: CreateApiKeyProviderInput,
 ): Promise<{ error: string } | undefined> {
   const user = await requireUser();
-  // A server action takes any value: Ollama local comes from the .env and is never created here.
+  // A server action takes any value: only the provider types reached with an API key are created here.
   if (!API_KEY_PROVIDER_TYPES.includes(type)) {
     return { error: "Ce type de fournisseur ne peut pas être créé." };
   }

@@ -1,15 +1,14 @@
 import { PipelineConfig } from "./config";
-import { defaultPipelineParameters, UNSET, withDefaultModels } from "./default";
+import { defaultPipelineParameters, UNSET } from "./default";
 import { pipelineCapabilities } from "./capabilities";
 import { PipelineParametersSchema, PipelineParameters, requiresReindex } from "./parameters";
 import { prisma } from "@/lib/prisma";
 import { deleteChunksCollection } from "@/lib/qdrant/collections";
 import { flagIndexedDocumentsForReindex } from "@/lib/mutations/document";
-import { AIProviderType, IndexingStatus } from "@prisma/client";
+import { IndexingStatus } from "@prisma/client";
 import { listInstalledOcrLanguages } from "@/lib/rag/indexing/ocr";
 import { z } from "zod";
 import { usableProviders } from "@/lib/ai/provider-access";
-import { env } from "@/lib/env";
 
 /**
  * Each user's pipeline, read from the database every time: no copy kept in memory, which the pages, the routes and
@@ -19,15 +18,15 @@ import { env } from "@/lib/env";
 export async function getPipelineConfig(userId: string): Promise<PipelineConfig> {
   const stored = await prisma.pipelineParameters.findUnique({ where: { userId } });
 
-  const parsedParameters = parseParameters(stored?.parameters ?? defaultPipelineParameters);
-  const parameters = await withLocalDefaultModels(parsedParameters);
+  const parameters = parseParameters(stored?.parameters ?? defaultPipelineParameters);
 
-  // Stored once filled in: the default models chosen then stay, the documents indexed with them still match.
-  if (!stored || parameters !== parsedParameters) {
+  // Stored from the first read: a new pipeline starts with its generation and embedding steps unset.
+  if (!stored) {
+    // An upsert: two first reads at once (the page and a route) would create it twice.
     await prisma.pipelineParameters.upsert({
       where: { userId },
       create: { userId, parameters: JSON.stringify(parameters) },
-      update: { parameters: JSON.stringify(parameters) },
+      update: {},
     });
   }
 
@@ -48,7 +47,7 @@ export async function updatePipelineParameters(userId: string, parameters: unkno
   ].filter((providerId) => providerId && providerId !== UNSET))];
 
   if (await prisma.aIProvider.count({ where: { id: { in: providerIds }, ...usableProviders(userId) } }) !== providerIds.length) {
-    throw new Error("Fournisseur inconnu : choisissez l'un de vos fournisseurs ou l'Ollama local.");
+    throw new Error("Fournisseur inconnu : choisissez l'un de vos fournisseurs.");
   }
 
   // Checked on save only: stored parameters must still load if a language is removed later.
@@ -93,30 +92,6 @@ export async function updatePipelineParameters(userId: string, parameters: unkno
   ]);
 
   return { ...current, parameters: validatedParameters };
-}
-
-/**
- * Steps never configured use the local Ollama models when synchronized: the default model of the provider
- * for the generation, OLLAMA_EMBEDDING_MODEL for the embedding (both downloaded by docker compose).
- */
-async function withLocalDefaultModels(parameters: PipelineParameters): Promise<PipelineParameters> {
-  // The shared Ollama local.
-  const provider = await prisma.aIProvider.findFirst({
-    where: { type: AIProviderType.OLLAMA_LOCAL, userId: null },
-    select: { id: true, defaultModel: { select: { name: true } }, models: { select: { name: true } } },
-  });
-
-  if (!provider) {
-    return parameters;
-  }
-
-  const embeddingModel = env.OLLAMA_EMBEDDING_MODEL;
-
-  return withDefaultModels(parameters, {
-    providerId: provider.id,
-    generationModel: provider.defaultModel?.name,
-    embeddingModel: provider.models.some((model) => model.name === embeddingModel) ? embeddingModel : undefined,
-  });
 }
 
 function parseParameters(parameters: unknown): PipelineParameters {

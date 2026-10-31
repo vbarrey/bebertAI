@@ -29,9 +29,6 @@ const EnvSchema = z.object({
   REDIS_URL: z.string().default("redis://localhost:6379"),
   QDRANT_URL: z.url().default("http://localhost:6333"),
 
-  OLLAMA_HOST: z.url().optional(),
-  OLLAMA_DEFAULT_MODEL: z.string().optional(),
-  OLLAMA_EMBEDDING_MODEL: z.string().optional(),
   // Documents the worker indexes at once.
   INDEXING_CONCURRENCY: z.coerce.number().int().positive().default(2),
 

@@ -6,7 +6,6 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { OllamaLocalProvider } from "@/lib/ai/ollama-local/provider";
 import { prisma } from "@/lib/prisma";
 import { PipelineParametersSchema, type PipelineParameters } from "@/lib/pipeline/parameters";
 import type { QueryTranslations } from "@/lib/rag/retrieval/query-translator";
@@ -63,13 +62,6 @@ export async function loadPipelineParameters(): Promise<PipelineParameters> {
 export async function evaluationUserId(): Promise<string> {
     const admin = await prisma.user.findFirstOrThrow({ where: { role: "admin" }, orderBy: { createdAt: "asc" } });
     return admin.id;
-}
-
-export function ollama(): OllamaLocalProvider {
-    return new OllamaLocalProvider("ollama", "Ollama", {
-        host: process.env["OLLAMA_BASE_URL"] ?? "http://localhost:11434",
-        defaultModel: "",
-    });
 }
 
 /** Argument value of `--name value`, or the fallback. */

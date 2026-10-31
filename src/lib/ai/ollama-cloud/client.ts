@@ -1,11 +1,11 @@
-// Same API as Ollama local, behind a bearer API key.
-import { OllamaChatRequest, OllamaModel, OllamaChatChunk, OllamaChatResponse } from "../ollama-local/types";
+// The Ollama API on ollama.com, behind a bearer API key.
+import { OllamaChatRequest, OllamaModel, OllamaChatChunk, OllamaChatResponse } from "./types";
 import {
   OllamaError,
   OllamaConnectionError,
   OllamaRequestError,
   OllamaEmptyBodyResponseError,
-} from "../ollama-local/errors";
+} from "./errors";
 import { OllamaCloudConfiguration } from "./config";
 
 export class OllamaCloudClient {

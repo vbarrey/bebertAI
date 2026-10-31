@@ -79,7 +79,7 @@ export class AnthropicProvider implements AIProviderClient {
   }
 
   async embed(): Promise<Embedding[]> {
-    throw new AnthropicError("Anthropic ne propose pas d'API d'embedding. Choisissez Ollama local pour l'embedding dans Réglages > Pipeline.");
+    throw new AnthropicError("Anthropic ne propose pas d'API d'embedding. Choisissez Voyage AI ou Google Gemini pour l'embedding dans Réglages > Pipeline.");
   }
 }
 

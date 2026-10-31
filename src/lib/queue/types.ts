@@ -21,7 +21,7 @@ export const INDEXING_STAGE_LABELS: Partial<Record<IndexingStage, string>> = {
   [IndexingStage.EXTRACTING]: "Extraction du texte",
   [IndexingStage.CHUNKING]: "Découpage",
   [IndexingStage.PERSISTING_CHUNKS]: "Enregistrement des chunks",
-  [IndexingStage.EMBEDDING]: "Embedding (Ollama)",
+  [IndexingStage.EMBEDDING]: "Embedding",
   [IndexingStage.PERSISTING_EMBEDDINGS]: "Enregistrement des vecteurs (Qdrant)",
   [IndexingStage.COMPLETED]: "Terminé",
 };

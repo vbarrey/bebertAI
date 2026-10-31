@@ -115,37 +115,38 @@ describe("ownership: a user sees nothing of another user's", () => {
     assert.deepEqual(await scope.getSearchableDocumentIds("unknown"), []);
   });
 
-  it("providers: the user's own and the shared Ollama local, which only the admin manages", async () => {
+  it("providers: each user sees and manages their own only", async () => {
     const model = { name: "m", enabled: true };
-    const shared = await prisma.aIProvider.create({
-      data: { type: "OLLAMA_LOCAL", source: "LOCAL", name: "Ollama", configuration: {}, models: { create: model } },
-    });
     const alices = await prisma.aIProvider.create({
       data: { userId: a.user.id, type: "ANTHROPIC", source: "REMOTE", name: "Anthropic", configuration: {}, models: { create: model } },
     });
+    const bobs = await prisma.aIProvider.create({
+      data: { userId: b.user.id, type: "ANTHROPIC", source: "REMOTE", name: "Anthropic", configuration: {}, models: { create: model } },
+    });
 
-    assert.deepEqual((await providers.getEnableProvidersWithModels(b.user.id)).map((provider) => provider.id), [shared.id]);
-    assert.deepEqual((await providers.getEnableProvidersWithModels(a.user.id)).map((provider) => provider.id).sort(), [shared.id, alices.id].sort());
+    assert.deepEqual((await providers.getEnableProvidersWithModels(b.user.id)).map((provider) => provider.id), [bobs.id]);
+    assert.deepEqual((await providers.getEnableProvidersWithModels(a.user.id)).map((provider) => provider.id), [alices.id]);
 
-    const asUser = await providers.getProvidersWithModels({ id: b.user.id });
+    // The admin manages their own providers, never another user's.
     const asAdmin = await providers.getProvidersWithModels({ id: b.user.id, role: "admin" });
-    assert.deepEqual(asUser.map(({ id, manageable }) => ({ id, manageable })), [{ id: shared.id, manageable: false }]);
-    assert.deepEqual(asAdmin.map(({ id, manageable }) => ({ id, manageable })), [{ id: shared.id, manageable: true }]);
+    assert.deepEqual(asAdmin.map(({ id, manageable }) => ({ id, manageable })), [{ id: bobs.id, manageable: true }]);
   });
 
-  it("pipeline: each user's own, on their providers or the shared Ollama only", async () => {
-    const shared = await prisma.aIProvider.findFirstOrThrow({ where: { type: "OLLAMA_LOCAL" } });
+  it("pipeline: each user's own, on their own providers only", async () => {
     const alices = await prisma.aIProvider.findFirstOrThrow({ where: { userId: a.user.id } });
+    const bobsProvider = await prisma.aIProvider.findFirstOrThrow({ where: { userId: b.user.id } });
 
-    // A new user starts from the default pipeline on the shared Ollama local.
+    // A new pipeline starts unset: no default models.
     const bobs = (await runtime.getPipelineConfig(b.user.id)).parameters;
     assert.equal(await prisma.pipelineParameters.count({ where: { userId: b.user.id } }), 1);
+    assert.equal(bobs.generation.providerId, "...");
+    assert.equal(bobs.embedding.providerId, "...");
 
     const onAlicesProvider = { ...bobs, generation: { ...bobs.generation, providerId: alices.id, modelName: "m" } };
     await assert.rejects(runtime.updatePipelineParameters(b.user.id, onAlicesProvider), /Fournisseur inconnu/);
 
-    const onShared = { ...bobs, generation: { ...bobs.generation, providerId: shared.id, modelName: "m", temperature: 0.2 } };
-    await runtime.updatePipelineParameters(b.user.id, onShared);
+    const onOwn = { ...bobs, generation: { ...bobs.generation, providerId: bobsProvider.id, modelName: "m", temperature: 0.2 } };
+    await runtime.updatePipelineParameters(b.user.id, onOwn);
     assert.equal((await runtime.getPipelineConfig(b.user.id)).parameters.generation.temperature, 0.2);
     // Alice's pipeline is her own.
     assert.notEqual((await runtime.getPipelineConfig(a.user.id)).parameters.generation.temperature, 0.2);
@@ -153,12 +154,12 @@ describe("ownership: a user sees nothing of another user's", () => {
 
   it("pipeline provider: a model gone from the provider or disabled fails with a message saying so", async () => {
     const { getPipelineProvider } = await import("@/lib/pipeline/config");
-    const shared = await prisma.aIProvider.findFirstOrThrow({ where: { type: "OLLAMA_LOCAL" } });
-    await prisma.aIModel.create({ data: { providerId: shared.id, name: "off", enabled: false } });
+    const bobs = await prisma.aIProvider.findFirstOrThrow({ where: { userId: b.user.id } });
+    await prisma.aIModel.create({ data: { providerId: bobs.id, name: "off", enabled: false } });
 
     await assert.rejects(getPipelineProvider({ providerId: "...", modelName: "..." }, "génération"), /Pipeline non configuré/);
-    await assert.rejects(getPipelineProvider({ providerId: shared.id, modelName: "gone" }, "génération"), /n'est plus proposé/);
-    await assert.rejects(getPipelineProvider({ providerId: shared.id, modelName: "off" }, "génération"), /est désactivé/);
+    await assert.rejects(getPipelineProvider({ providerId: bobs.id, modelName: "gone" }, "génération"), /n'est plus proposé/);
+    await assert.rejects(getPipelineProvider({ providerId: bobs.id, modelName: "off" }, "génération"), /est désactivé/);
   });
 
   it("a reindex flag only touches the user's own documents", async () => {

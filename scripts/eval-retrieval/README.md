@@ -38,7 +38,8 @@ d'autres valeurs.
 
 ## Utilisation
 
-Depuis la racine du dépôt, avec Qdrant, Ollama et des documents indexés :
+Depuis la racine du dépôt, avec Qdrant, des documents indexés et le pipeline du premier administrateur configuré
+(ses fournisseurs d'embedding et de génération sont ceux de l'évaluation) :
 
 ```bash
 # 1. Une fois : échantillonne ~40 passages et écrit 2 questions par passage (quelques minutes)

@@ -2,9 +2,9 @@
 import { AIModelInfo, ChatChunk, ChatRequestInput, Embedding } from "../types";
 import { AIProviderClient } from "../provider";
 
-// Ollama types, shared with Ollama local
-import { toAppModel, toOlllamaChatRequest, toAppChatChunk } from "../ollama-local/transform";
-import { OllamaError } from "../ollama-local/errors";
+// Ollama types
+import { toAppModel, toOlllamaChatRequest, toAppChatChunk } from "./transform";
+import { OllamaError } from "./errors";
 
 import { OllamaCloudClient } from "./client";
 import { OllamaCloudConfiguration, parseOllamaCloudConfig } from "./config";
@@ -45,8 +45,8 @@ export class OllamaCloudProvider implements AIProviderClient {
     this.client = new OllamaCloudClient(parseOllamaCloudConfig(config));
   }
 
-  // Ollama Cloud has no embedding model (none listed by /api/tags): embeddings stay on Ollama local.
+  // Ollama Cloud has no embedding model (none listed by /api/tags).
   async embed(): Promise<Embedding[]> {
-    throw new OllamaError("Ollama Cloud ne propose pas de modèle d'embedding. Choisissez Ollama local pour l'embedding dans Réglages > Pipeline.");
+    throw new OllamaError("Ollama Cloud ne propose pas de modèle d'embedding. Choisissez Voyage AI ou Google Gemini pour l'embedding dans Réglages > Pipeline.");
   }
 }

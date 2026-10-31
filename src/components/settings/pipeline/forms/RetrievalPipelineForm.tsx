@@ -293,8 +293,7 @@ export function RetrievalPipelineForm({
 
         <FieldDescription>
           Traduit la question en français, anglais, russe et allemand pour la recherche lexicale. Un petit
-          modèle multilingue suffit, mais s&apos;il ne tient pas en mémoire à côté du modèle de conversation,
-          Ollama recharge ce dernier à chaque question.
+          modèle multilingue suffit.
         </FieldDescription>
       </Field>
 

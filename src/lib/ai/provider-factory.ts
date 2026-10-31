@@ -1,8 +1,6 @@
 import { AIProvider, AIProviderType, Capability } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AIProviderClient } from "./provider";
-import { OllamaLocalProvider } from "./ollama-local/provider";
-import { parseOllamaLocalConfig } from "./ollama-local/config";
 import { OllamaCloudProvider } from "./ollama-cloud/provider";
 import { parseOllamaCloudConfig } from "./ollama-cloud/config";
 import { AnthropicProvider } from "./anthropic/provider";
@@ -18,8 +16,6 @@ export function createProviderClient(stored: AIProvider): AIProviderClient {
   const provider = { ...stored, configuration: decryptApiKey(stored.configuration) };
 
   switch (provider.type) {
-    case AIProviderType.OLLAMA_LOCAL:
-      return new OllamaLocalProvider(provider.id, provider.name, parseOllamaLocalConfig(provider.configuration));
     case AIProviderType.OLLAMA_CLOUD:
       return new OllamaCloudProvider(provider.id, provider.name, parseOllamaCloudConfig(provider.configuration));
     case AIProviderType.ANTHROPIC:

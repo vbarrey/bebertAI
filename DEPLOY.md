@@ -1,16 +1,14 @@
 # Déploiement de Bebert AI
 
 Un serveur Linux, Docker et un nom de domaine. Tout tourne avec docker compose : l'app, le worker d'indexation,
-Redis, Qdrant, Ollama, Caddy (HTTPS) et les sauvegardes.
+Redis, Qdrant, Caddy (HTTPS) et les sauvegardes. Les modèles d'IA sont ceux des fournisseurs distants, ajoutés
+par chaque utilisateur avec sa clé API : aucun GPU n'est nécessaire.
 
 ## 1. Prérequis
 
 - Un serveur Linux (Ubuntu 24.04 par exemple) avec **Docker** et le plugin **docker compose**.
 - Un **nom de domaine** dont l'enregistrement A (et AAAA en IPv6) pointe vers le serveur.
 - Les ports **80 et 443 ouverts** : Caddy y obtient et renouvelle seul le certificat Let's Encrypt.
-- Un GPU NVIDIA est conseillé pour Ollama (avec le [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)).
-  Sans GPU, retirer le bloc `deploy:` du service `ollama` dans `docker-compose.yml` : Ollama tourne alors sur le CPU,
-  bien plus lentement ; les fournisseurs distants (clés API) restent possibles.
 
 ## 2. Installation
 
@@ -37,8 +35,6 @@ docker compose up -d --build
 docker compose ps    # tous les services « running », l'app « healthy »
 ```
 
-Le premier démarrage télécharge les modèles Ollama par défaut (plusieurs minutes).
-
 ### Premier administrateur
 
 Tant qu'aucun compte n'existe, chaque démarrage crée une invitation pour `ADMIN_EMAIL`. En attendant l'envoi des
@@ -49,6 +45,12 @@ docker compose logs app | grep invitation
 ```
 
 Ouvrir le lien, choisir un mot de passe. Les autres comptes s'invitent ensuite depuis Réglages > Utilisateurs.
+
+### Fournisseurs d'IA
+
+À sa première connexion, chaque utilisateur ajoute ses fournisseurs dans Réglages > Fournisseurs : une clé API
+Anthropic ou Ollama Cloud pour la génération, Voyage AI ou Google Gemini pour l'embedding. Il les choisit ensuite dans
+Réglages > Pipeline.
 
 ### Google Drive (facultatif)
 
@@ -99,16 +101,11 @@ La base, les documents et les collections Qdrant sont remplacés par ceux de la 
 
 ## 6. Charge
 
-Dans `.env` (valeurs prudentes par défaut, pour un GPU d'environ 12 Go) :
+Dans `.env` :
 
-- `OLLAMA_NUM_PARALLEL` (2) : requêtes servies en même temps par un même modèle ; chacune réserve son contexte en
-  mémoire vidéo.
-- `OLLAMA_MAX_LOADED_MODELS` (2) : modèles gardés chargés, en général un modèle de chat et le modèle d'embedding.
-- `OLLAMA_KEEP_ALIVE` (10m) : durée pendant laquelle un modèle inutilisé reste chargé.
 - `INDEXING_CONCURRENCY` (2) : documents indexés en même temps par le worker.
 
-Avec un GPU de 24 Go ou plus, `OLLAMA_NUM_PARALLEL=4` et `OLLAMA_MAX_LOADED_MODELS=3` sont raisonnables. Mesurer avec le
-test de charge (`npm run bench:load`, voir `scripts/load-test.ts`).
+Mesurer avec le test de charge (`npm run bench:load`, voir `scripts/load-test.ts`).
 
 Limites d'import : 100 Mo par fichier, 300 Mo par import.
 

@@ -57,25 +57,3 @@ export const defaultPipelineParameters: PipelineParameters = {
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
     },
 };
-
-/**
- * Points the embedding and generation steps never configured to the given models of a provider,
- * a model left undefined keeping its step unset. Returns the same parameters when nothing changes.
- */
-export function withDefaultModels(
-    parameters: PipelineParameters,
-    { providerId, embeddingModel, generationModel }: { providerId: string; embeddingModel?: string; generationModel?: string },
-): PipelineParameters {
-    const embedding = parameters.embedding.providerId === UNSET && embeddingModel;
-    const generation = parameters.generation.providerId === UNSET && generationModel;
-
-    if (!embedding && !generation) {
-        return parameters;
-    }
-
-    return {
-        ...parameters,
-        embedding: embedding ? { ...parameters.embedding, providerId, modelName: embedding } : parameters.embedding,
-        generation: generation ? { ...parameters.generation, providerId, modelName: generation } : parameters.generation,
-    };
-}

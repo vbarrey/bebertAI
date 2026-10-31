@@ -39,17 +39,10 @@ describe("provider API keys", () => {
 });
 
 describe("isManageable", () => {
-  const shared = { userId: null, type: "OLLAMA_LOCAL" as const };
-  const alices = { userId: "alice", type: "ANTHROPIC" as const };
-
-  it("a user manages their own providers, the admin also the shared Ollama local", () => {
+  it("a user manages their own providers only, the admin included", () => {
+    const alices = { userId: "alice" };
     assert.equal(isManageable(alices, { id: "alice" }), true);
+    assert.equal(isManageable(alices, { id: "bob" }), false);
     assert.equal(isManageable(alices, { id: "bob", role: "admin" }), false);
-    assert.equal(isManageable(shared, { id: "bob" }), false);
-    assert.equal(isManageable(shared, { id: "bob", role: "admin" }), true);
-  });
-
-  it("a remote provider without owner is nobody's", () => {
-    assert.equal(isManageable({ userId: null, type: "ANTHROPIC" }, { id: "bob", role: "admin" }), false);
   });
 });
