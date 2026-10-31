@@ -22,8 +22,7 @@ export default async function AppLayout({ children }: Readonly<{ children: React
     return (
         // Around the sidebar too: its truncated titles show the full text in a tooltip.
         <TooltipProvider>
-            <MainLayout tree={tree} user={user}>
-                <SetupWarning status={status} />
+            <MainLayout tree={tree} user={user} banner={<SetupWarning status={status} />}>
                 {children}
             </MainLayout>
         </TooltipProvider>

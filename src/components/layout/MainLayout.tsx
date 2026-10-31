@@ -9,12 +9,15 @@ type MainLayoutProps = {
   tree: SidebarTree;
   user: SidebarUser;
   children: ReactNode;
+  /** Above the scroll area: a page as tall as it (h-full) stays fully visible. */
+  banner?: ReactNode;
 };
 
 export function MainLayout({
   tree,
   user,
   children,
+  banner,
 }: MainLayoutProps) {
   return (
     <main className="flex h-screen bg-background">
@@ -22,6 +25,8 @@ export function MainLayout({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <MobileHeader tree={tree} user={user} />
+
+        {banner}
 
         {/* Relative: the hidden native inputs of the Radix fields (absolute) stay inside its scroll. */}
         <div className="relative min-h-0 w-full flex-1 overflow-y-auto">
