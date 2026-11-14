@@ -24,6 +24,14 @@ export function linkCitations(content: string, sourceCount: number): string {
       isSource(Number(number)) ? `[${word} ${number}](${CITATION_PREFIX}${number})` : match);
 }
 
+/**
+ * A previous answer without its "[n]": they point to the excerpts of its own question, which the model no longer
+ * sees, so it would read them against the new excerpts and retract answers that were right.
+ */
+export function stripCitations(content: string): string {
+  return content.replace(new RegExp(String.raw`\s*${BRACKETS.source}`, "g"), "");
+}
+
 /** The source number of a citation link, null for another link. */
 export function citedSource(href: string | undefined): number | null {
   return href?.startsWith(CITATION_PREFIX) ? Number(href.slice(CITATION_PREFIX.length)) || null : null;

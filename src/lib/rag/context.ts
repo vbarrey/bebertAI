@@ -4,6 +4,7 @@ import { RetrievedChunk } from "./retrieval/retriever";
 const MIN_OVERLAP = 20;
 
 const EXCERPTS_INSTRUCTIONS = `Contexte documentaire : extraits des documents de l'utilisateur, du plus au moins pertinent.
+Ils ont été retrouvés pour la dernière question seulement : tes réponses précédentes s'appuyaient sur d'autres extraits, qui ne sont plus affichés. Ne les remets pas en cause parce que tu ne les retrouves pas ici.
 Ce sont des passages partiels de documents plus longs : la fin d'un extrait n'est pas la fin du document.
 Ne dis jamais que la documentation s'interrompt ou que tu n'as pas accès à la suite. Si l'information semble incomplète, réponds avec ce qui est disponible et indique le document et la page où chercher la suite.`;
 

@@ -5,6 +5,7 @@ import { embeddingContextLength } from "@/lib/rag/embedding/embedder";
 import { usesLexicalSearch } from "@/lib/rag/retrieval/hybrid-query";
 import { translateQuery, untranslatedQuery } from "@/lib/rag/retrieval/query-translator";
 import { buildExcerpts, buildRagContext } from "@/lib/rag/context";
+import { stripCitations } from "./citations";
 import { getPipelineConfig } from "@/lib/pipeline/runtime";
 import { chunksCollection } from "@/lib/qdrant/collections";
 import { getPipelineProvider } from "@/lib/pipeline/config";
@@ -125,9 +126,10 @@ export async function* generateAssistantResponse({
   const ragContext = buildRagContext(excerpts);
 
   const formatMessages = history.map((msg) => {
+    const role = messageRoleToString(msg.role);
     return {
-      role: messageRoleToString(msg.role),
-      content: msg.content,
+      role,
+      content: role === "assistant" ? stripCitations(msg.content) : msg.content,
     };
   });
 

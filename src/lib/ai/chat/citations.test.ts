@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { citedSource, linkCitations } from "./citations";
+import { citedSource, linkCitations, stripCitations } from "./citations";
+
+describe("stripCitations", () => {
+  it("drops the source numbers and keeps the links", () => {
+    assert.equal(
+      stripCitations("Pas de suspension [1]. Deux constructeurs [2][3], voir [1, 3] et [la notice](https://x.fr)."),
+      "Pas de suspension. Deux constructeurs, voir et [la notice](https://x.fr).",
+    );
+  });
+});
 
 describe("linkCitations", () => {
   it("links bracketed source numbers, alone or grouped", () => {
