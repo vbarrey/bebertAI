@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { connectGoogleDrive, GoogleDriveAuthError, STATE_COOKIE } from "@/lib/google-drive/auth";
+import { env } from "@/lib/env";
 import { apiUser } from "@/lib/session";
 
-// Back to the documents page, the result in the query for the import dialog.
+// Back to the documents page, the result in the query for the import dialog. On APP_URL: behind the reverse proxy,
+// a route handler's request.url is the container's own address (http://localhost:3000).
 function redirectToDocuments(request: NextRequest, result: "connected" | "error" | "no-drive-access") {
-    const response = NextResponse.redirect(new URL(`/documents?googleDrive=${result}`, request.url));
+    const response = NextResponse.redirect(new URL(`/documents?googleDrive=${result}`, env.APP_URL ?? request.url));
 
     response.cookies.delete({ name: STATE_COOKIE, path: "/api/google-drive" });
 
