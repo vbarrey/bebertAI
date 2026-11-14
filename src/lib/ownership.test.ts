@@ -116,7 +116,10 @@ describe("ownership: a user sees nothing of another user's", () => {
   });
 
   it("providers: each user sees and manages their own only", async () => {
-    const model = { name: "m", enabled: true };
+    const model = {
+      name: "m", enabled: true,
+      capabilities: { connectOrCreate: { where: { name: "GENERATION" as const }, create: { name: "GENERATION" as const } } },
+    };
     const alices = await prisma.aIProvider.create({
       data: { userId: a.user.id, type: "ANTHROPIC", source: "REMOTE", name: "Anthropic", configuration: {}, models: { create: model } },
     });
@@ -124,8 +127,10 @@ describe("ownership: a user sees nothing of another user's", () => {
       data: { userId: b.user.id, type: "ANTHROPIC", source: "REMOTE", name: "Anthropic", configuration: {}, models: { create: model } },
     });
 
-    assert.deepEqual((await providers.getEnableProvidersWithModels(b.user.id)).map((provider) => provider.id), [bobs.id]);
-    assert.deepEqual((await providers.getEnableProvidersWithModels(a.user.id)).map((provider) => provider.id), [alices.id]);
+    assert.deepEqual((await providers.getEnableProvidersWithModels(b.user.id, "GENERATION")).map((provider) => provider.id), [bobs.id]);
+    assert.deepEqual((await providers.getEnableProvidersWithModels(a.user.id, "GENERATION")).map((provider) => provider.id), [alices.id]);
+    // A chat model is not offered to embed.
+    assert.deepEqual(await providers.getEnableProvidersWithModels(a.user.id, "EMBEDDING"), []);
 
     // The admin manages their own providers, never another user's.
     const asAdmin = await providers.getProvidersWithModels({ id: b.user.id, role: "admin" });

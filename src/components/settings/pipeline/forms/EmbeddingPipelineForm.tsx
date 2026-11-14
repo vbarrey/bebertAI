@@ -95,13 +95,13 @@ export function EmbeddingPipelineForm({
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <Field>
-        <FieldLabel>Fournisseur</FieldLabel>
+        <FieldLabel htmlFor="pipeline-embedding-provider">Fournisseur</FieldLabel>
 
         <Select
           value={values.providerId}
           onValueChange={setProvider}
         >
-          <SelectTrigger>
+          <SelectTrigger id="pipeline-embedding-provider">
             <SelectValue placeholder="Sélectionner un fournisseur" />
           </SelectTrigger>
 
@@ -119,7 +119,7 @@ export function EmbeddingPipelineForm({
       </Field>
 
       <Field>
-        <FieldLabel>Modèle</FieldLabel>
+        <FieldLabel htmlFor="pipeline-embedding-model">Modèle</FieldLabel>
 
         <Select
           value={values.modelName}
@@ -131,7 +131,7 @@ export function EmbeddingPipelineForm({
           }
           disabled={!values.providerId}
         >
-          <SelectTrigger>
+          <SelectTrigger id="pipeline-embedding-model">
             <SelectValue placeholder="Sélectionner un modèle" />
           </SelectTrigger>
 

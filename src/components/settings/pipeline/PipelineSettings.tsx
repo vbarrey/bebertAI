@@ -53,11 +53,13 @@ type Provider = {
 
 type Props = {
   initialConfig: PipelineConfig;
-  providers: readonly Provider[];
+  // The models able to answer (generation, translation) and the ones able to embed.
+  generationProviders: readonly Provider[];
+  embeddingProviders: readonly Provider[];
   ocrLanguages: readonly string[];
 };
 
-export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Props) {
+export function PipelineSettings({ initialConfig, generationProviders, embeddingProviders, ocrLanguages }: Props) {
   const [parameters, setParameters] = useState(initialConfig.parameters);
 
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
@@ -219,7 +221,7 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
         <div className="space-y-6">
           <EmbeddingPipelineForm
             initialValues={parameters.embedding}
-            providers={providers}
+            providers={embeddingProviders}
             onSave={(values) => updateStep("embedding", values)}
           />
 
@@ -242,7 +244,7 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
         <div>
           <RetrievalPipelineForm
             initialValues={parameters.retrieval}
-            providers={providers}
+            providers={generationProviders}
             onSave={(values) => updateStep("retrieval", values)}
           />
         </div>
@@ -263,7 +265,7 @@ export function PipelineSettings({ initialConfig, providers, ocrLanguages }: Pro
         <div>
           <GenerationPipelineForm
             initialValues={parameters.generation}
-            providers={providers}
+            providers={generationProviders}
             onSave={(values) => updateStep("generation", values)}
           />
         </div>

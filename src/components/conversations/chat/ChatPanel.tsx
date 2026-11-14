@@ -17,7 +17,7 @@ type ChatPanelProps = {
 export async function ChatPanel({ conversationId, userId, title, messages, model }: ChatPanelProps) {
 
   const [providersModels, pipelineConfig, scope] = await Promise.all([
-    getEnableProvidersWithModels(userId),
+    getEnableProvidersWithModels(userId, "GENERATION"),
     getPipelineConfig(userId),
     getConversationScope(conversationId),
   ]);

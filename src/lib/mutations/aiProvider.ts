@@ -14,6 +14,7 @@ import { createProviderClient, syncProviderModels } from "@/lib/ai/provider-fact
 import { requireUser } from "@/lib/session";
 import { encryptApiKey, manageableProviders } from "@/lib/ai/provider-access";
 import { removeProvider } from "@/lib/ai/provider-removal";
+import { userErrorMessage } from "@/lib/ai/chat/error-message";
 
 const NameSchema = z.string().trim().min(1, "Le nom est requis.").max(100, "Nom trop long (100 caractères au plus).");
 // Optional: an empty comment is stored as null.
@@ -65,7 +66,7 @@ export async function createApiKeyProvider(
           : new GoogleProvider("", name, credentials);
     await client.checkApiKey();
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Impossible de joindre le fournisseur." };
+    return { error: error instanceof Error ? userErrorMessage(error) : "Impossible de joindre le fournisseur." };
   }
 
   // The causes shown in the form: a thrown error only reaches it as a generic failure.
@@ -94,7 +95,7 @@ export async function createApiKeyProvider(
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return error instanceof Error ? userErrorMessage(error) : String(error);
 }
 
 /**
@@ -110,7 +111,7 @@ export async function synchronizeProviderModels(providerId: string): Promise<{ e
   try {
     await syncProviderModels(provider, createProviderClient(provider));
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Synchronisation impossible." };
+    return { error: error instanceof Error ? userErrorMessage(error) : "Synchronisation impossible." };
   }
 
   revalidatePath("/settings", "layout");
@@ -160,7 +161,7 @@ export async function updateProviderDetails(
       // A key without the "enc:" mark reaches the client as it is.
       await createProviderClient({ ...provider, configuration: { ...stored, apiKey } }).checkApiKey();
     } catch (error) {
-      return { error: error instanceof Error ? error.message : "Impossible de joindre le fournisseur." };
+      return { error: error instanceof Error ? userErrorMessage(error) : "Impossible de joindre le fournisseur." };
     }
     configuration = encryptApiKey({ ...stored, apiKey });
   }

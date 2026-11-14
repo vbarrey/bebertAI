@@ -48,9 +48,11 @@ export function OnboardingWizard({ providers }: { providers: Provider[] }) {
   const embeddingChoices = modelChoices(providers, "EMBEDDING");
   const [generationKey, setGenerationKey] = useState<string>();
   const [embeddingKey, setEmbeddingKey] = useState<string>();
-  // The first model of each list is preselected, also once the list fills after an addition.
-  const generation = generationChoices.find((choice) => choiceKey(choice) === generationKey) ?? generationChoices[0];
-  const embedding = embeddingChoices.find((choice) => choiceKey(choice) === embeddingKey) ?? embeddingChoices[0];
+  // Preselected only when it is the only one: among several, the first in name order is often the most expensive.
+  const chosen = (choices: ModelChoice[], key: string | undefined) =>
+    choices.find((choice) => choiceKey(choice) === key) ?? (choices.length === 1 ? choices[0] : undefined);
+  const generation = chosen(generationChoices, generationKey);
+  const embedding = chosen(embeddingChoices, embeddingKey);
 
   const [error, setError] = useState<string>();
 
@@ -229,7 +231,7 @@ function ModelSelect({ id, label, empty, choices, value, onChange }: ModelSelect
 
       <Select value={value ? choiceKey(value) : ""} onValueChange={onChange} disabled={choices.length === 0}>
         <SelectTrigger id={id} className="w-full min-w-0">
-          <SelectValue placeholder="Aucun modèle">{value?.label}</SelectValue>
+          <SelectValue placeholder={choices.length === 0 ? "Aucun modèle" : "Choisissez un modèle"}>{value?.label}</SelectValue>
         </SelectTrigger>
 
         <SelectContent>

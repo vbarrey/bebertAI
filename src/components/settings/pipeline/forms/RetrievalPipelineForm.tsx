@@ -264,10 +264,10 @@ export function RetrievalPipelineForm({
       </FieldDescription>
 
       <Field>
-        <FieldLabel>Modèle de traduction</FieldLabel>
+        <FieldLabel htmlFor="pipeline-translation-model">Modèle de traduction</FieldLabel>
 
         <Select value={translationValue} onValueChange={setTranslation} disabled={!hybrid.enabled}>
-          <SelectTrigger>
+          <SelectTrigger id="pipeline-translation-model">
             <SelectValue />
           </SelectTrigger>
 

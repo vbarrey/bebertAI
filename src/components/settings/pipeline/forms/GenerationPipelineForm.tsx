@@ -96,13 +96,13 @@ export function GenerationPipelineForm({
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <Field>
-        <FieldLabel>Fournisseur</FieldLabel>
+        <FieldLabel htmlFor="pipeline-generation-provider">Fournisseur</FieldLabel>
 
         <Select
           value={values.providerId}
           onValueChange={setProvider}
         >
-          <SelectTrigger>
+          <SelectTrigger id="pipeline-generation-provider">
             <SelectValue placeholder="Sélectionner un fournisseur" />
           </SelectTrigger>
 
@@ -120,7 +120,7 @@ export function GenerationPipelineForm({
       </Field>
 
       <Field>
-        <FieldLabel>Modèle</FieldLabel>
+        <FieldLabel htmlFor="pipeline-generation-model">Modèle</FieldLabel>
 
         <Select
           value={values.modelName}
@@ -132,7 +132,7 @@ export function GenerationPipelineForm({
           }
           disabled={!values.providerId}
         >
-          <SelectTrigger>
+          <SelectTrigger id="pipeline-generation-model">
             <SelectValue placeholder="Sélectionner un modèle" />
           </SelectTrigger>
 

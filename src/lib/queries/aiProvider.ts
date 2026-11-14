@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { type AIProvider, type Prisma } from "@prisma/client";
+import { type AIProvider, type Capability, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { decryptApiKey, isManageable, usableProviders } from "@/lib/ai/provider-access";
 
@@ -36,10 +36,12 @@ export const getProvidersWithModels = cache(async (user: { id: string; role?: st
   })));
 });
 
-export const getEnableProvidersWithModels = cache(async (userId: string) => {
+/** The enabled models able to do the step (an embedding model cannot answer, nor a chat model embed). */
+export const getEnableProvidersWithModels = cache(async (userId: string, capability: Capability) => {
+  const usable = { enabled: true, capabilities: { some: { name: capability } } };
   return prisma.aIProvider.findMany({
-    where: { AND: [usableProviders(userId), { enabled: true, models: { some: {enabled: true}} }] },
-    include: { models: { where: {enabled: true}} },
+    where: { AND: [usableProviders(userId), { enabled: true, models: { some: usable } }] },
+    include: { models: { where: usable } },
     orderBy: [{isDefault: 'desc'}, {name: 'asc'}],
   }).then((providers) => providers.map(maskApiKey));
 });
