@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
 // Reached without a session.
-const PUBLIC_PATHS = ["/login", "/mot-de-passe-oublie", "/reinitialiser", "/invitation", "/api/auth", "/api/health"];
+const PUBLIC_PATHS = ["/login", "/mot-de-passe-oublie", "/reinitialiser", "/invitation", "/confidentialite", "/api/auth", "/api/health"];
 
 /**
  * Turns away the requests without a session cookie: the sign-in page for a page, a 401 for the API.
