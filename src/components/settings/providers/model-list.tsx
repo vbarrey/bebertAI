@@ -99,7 +99,8 @@ export function ModelList({ models, manageable }: ModelListProps) {
         {shownModels.length} modèle{shownModels.length !== 1 ? "s" : ""} sur {models.length}
       </p>
 
-      <ScrollArea className="p-3 h-[56vh] border rounded-lg">
+      {/* Phone: no scroll inside the page scroll, the list is as long as its models. */}
+      <ScrollArea className="p-3 md:h-[56vh] border rounded-lg">
         {shownModels.length === 0 ? (
           <p className="p-8 text-center text-sm text-muted-foreground">
             Aucun modèle ne correspond à la recherche.

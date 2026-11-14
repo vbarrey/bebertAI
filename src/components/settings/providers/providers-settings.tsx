@@ -22,14 +22,15 @@ export function ProvidersSettings({ providers }: AISettingsProps) {
     providers.find((provider) => provider.id === selectedProviderId) ?? providers[0] ?? null;
 
   return (
-    <div className="flex h-full min-w-0 flex-col">
+    // Phone: the whole page scrolls, the providers with it, instead of staying over a third of the screen.
+    <div className="flex h-full min-w-0 flex-col max-md:overflow-y-auto">
       <ProviderCarousel
         providers={providers}
         selectedProviderId={selectedProviderId}
         onSelectProvider={setSelectedProviderId}
       />
 
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 flex-1 max-md:flex-none">
         {selectedProvider ? (
           // Keyed: the details of another provider start from its own state.
           <ProviderDetails key={selectedProvider.id} provider={selectedProvider} />

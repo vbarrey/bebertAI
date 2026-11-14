@@ -116,7 +116,8 @@ export function ModelListItem({ model, manageable, expanded, onExpandedChange }:
       >
         <Card
           className={cn(
-            "overflow-hidden transition-all duration-300",
+            // The header and the content have their own padding.
+            "gap-0 overflow-hidden py-0 transition-all duration-300",
             "cursor-pointer hover:border-primary/40 hover:shadow-md",
             expanded && "border-primary/30 shadow-md",
           )}

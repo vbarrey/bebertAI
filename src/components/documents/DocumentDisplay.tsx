@@ -131,6 +131,9 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
         documents.flatMap((d) => (d.ownerProject ? [[d.ownerProject.id, d.ownerProject.name] as const] : [])),
     )];
 
+    const statusCount = (status: string) =>
+        status === "ALL" ? documents.length : documents.filter((d) => d.indexingStatus === status).length;
+
     const totalPages = Math.ceil(filtered.length / PerPage);
     const paginated = filtered.slice((page - 1) * PerPage, page * PerPage);
 
@@ -282,22 +285,20 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
             </div>
 
             {/* Stats + Filters */}
-            {/* A row that scrolls sideways on a phone, a grid from md. */}
-            <div className="-mx-6 mb-8 flex gap-2 overflow-x-auto px-6 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-4 md:gap-4 md:overflow-visible md:px-0 md:pb-0">
+            {/* Phone: the status select below shows the same counts. */}
+            <div className="mb-8 hidden grid-cols-4 gap-4 md:grid">
                 {statusOptions.map((opt) => {
-                        const count = opt.value === "ALL"
-                            ? documents.length
-                            : documents.filter((d) => d.indexingStatus === opt.value).length;
+                        const count = statusCount(opt.value);
                         return (
                             <Card
                                 key={opt.value}
                                 className={cn(
-                                    "shrink-0 cursor-pointer flex-row items-center py-2 transition-all duration-200 hover:border-primary hover:shadow-md md:py-4",
+                                    "cursor-pointer flex-row items-center py-4 transition-all duration-200 hover:border-primary hover:shadow-md",
                                     statusFilter === opt.value && "border-primary",
                                 )}
                                 onClick={() => changeFilters(() => setStatusFilter(toIndexingStatus(opt.value as string)))}
                             >
-                                <CardContent className="flex items-center gap-2 whitespace-nowrap px-3 md:px-4">
+                                <CardContent className="flex items-center gap-2 whitespace-nowrap px-4">
                                     <Badge variant="outline">{count}</Badge> <span>{opt.label}</span>
                                 </CardContent>
                             </Card>
@@ -306,26 +307,26 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
             </div>
 
             {/* Search & Filters */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
+            <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
                 <Input
                     placeholder="Rechercher par nom"
                     value={search}
                     onChange={(e) => changeFilters(() => setSearch(e.target.value))}
-                    className="max-w-xs"
+                    className="w-full sm:max-w-xs"
                 />
                 <Select
                     onValueChange={(v) => changeFilters(() => setStatusFilter(toIndexingStatus(v as string)))}
                     value={statusFilter}
                 >
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="Statut">
                         <SelectValue placeholder="Statut">
-                            {statusOptions.find((opt) => opt.value === statusFilter)?.label}
+                            {statusFilter === "ALL" ? "Tous les statuts" : statusOptions.find((opt) => opt.value === statusFilter)?.label}
                         </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                         {statusOptions.map((opt) => (
                             <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
+                                {opt.label} ({statusCount(opt.value)})
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -352,7 +353,7 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                         </SelectContent>
                     </Select>
                 )}
-                <div className="sm:ml-auto">
+                <div className="ml-auto">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
                             key={selectionMode ? "bulk" : "select"}
