@@ -7,11 +7,12 @@ const AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 
-const SCOPES = [
-    "openid",
-    "email",
-    "https://www.googleapis.com/auth/drive.readonly",
-];
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+const SCOPES = ["openid", "email", DRIVE_SCOPE];
+
+// Google's consent screen lets the user untick the access to the files: the connection is then useless.
+export const NO_DRIVE_ACCESS =
+    "L'accès à vos fichiers Google Drive n'a pas été autorisé : reconnectez Google Drive en cochant l'accès à vos fichiers sur l'écran de Google.";
 
 // OAuth state of the flow in progress, checked by the callback.
 export const STATE_COOKIE = "google-drive-oauth-state";
@@ -32,6 +33,8 @@ type TokenResponse = {
     expires_in: number;
     refresh_token?: string;
     id_token?: string;
+    // The scopes granted, separated by spaces.
+    scope?: string;
 };
 
 function oauthClient() {
@@ -102,6 +105,11 @@ export async function connectGoogleDrive(userId: string, code: string): Promise<
 
     if (!tokens.refresh_token || !tokens.id_token) {
         throw new Error("Google n'a pas renvoyé de refresh token.");
+    }
+
+    // Not stored: every download would fail with a 403.
+    if (!tokens.scope?.split(" ").includes(DRIVE_SCOPE)) {
+        throw new GoogleDriveAuthError(NO_DRIVE_ACCESS);
     }
 
     // Received straight from Google over TLS: its payload is read without checking the signature.

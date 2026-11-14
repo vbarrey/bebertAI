@@ -53,7 +53,12 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
 
         if (googleDriveResult !== "connected") {
             // The id keeps a single toast when the effect runs twice in development.
-            toast.error("La connexion à Google Drive a échoué.", { id: "google-drive-connection" });
+            toast.error(
+                googleDriveResult === "no-drive-access"
+                    ? "Connexion refusée : l'accès à vos fichiers Google Drive n'a pas été autorisé. Reconnectez-vous en cochant l'accès à vos fichiers sur l'écran de Google."
+                    : "La connexion à Google Drive a échoué.",
+                { id: "google-drive-connection", duration: 10_000 },
+            );
         }
     }, [googleDriveResult, pathname, router]);
 

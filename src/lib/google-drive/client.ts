@@ -1,7 +1,9 @@
 import { pipelineCapabilities } from "@/lib/pipeline/capabilities";
 import { DocumentFormat, getDocumentFormat } from "@/lib/documents/format";
 
-import { getGoogleDriveAccessToken, GoogleDriveAuthError } from "./auth";
+import { prisma } from "@/lib/prisma";
+
+import { getGoogleDriveAccessToken, GoogleDriveAuthError, NO_DRIVE_ACCESS } from "./auth";
 
 const DRIVE_API_URL = "https://www.googleapis.com/drive/v3";
 
@@ -53,6 +55,12 @@ async function driveRequest(userId: string, path: string, parameters: Record<str
 
     if (!response.ok) {
         const body = await response.json().catch(() => undefined);
+
+        // A connection made with the access to the files unticked: to connect again, the error saying how.
+        if (response.status === 403 && /insufficient authentication scopes/i.test(body?.error?.message ?? "")) {
+            await prisma.googleDriveConnection.deleteMany({ where: { userId } });
+            throw new GoogleDriveAuthError(NO_DRIVE_ACCESS);
+        }
 
         throw new GoogleDriveApiError(
             response.status,

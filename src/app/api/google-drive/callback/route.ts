@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { connectGoogleDrive, STATE_COOKIE } from "@/lib/google-drive/auth";
+import { connectGoogleDrive, GoogleDriveAuthError, STATE_COOKIE } from "@/lib/google-drive/auth";
 import { apiUser } from "@/lib/session";
 
 // Back to the documents page, the result in the query for the import dialog.
-function redirectToDocuments(request: NextRequest, result: "connected" | "error") {
+function redirectToDocuments(request: NextRequest, result: "connected" | "error" | "no-drive-access") {
     const response = NextResponse.redirect(new URL(`/documents?googleDrive=${result}`, request.url));
 
     response.cookies.delete({ name: STATE_COOKIE, path: "/api/google-drive" });
@@ -36,6 +36,6 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error("Google Drive connection failed:", error);
 
-        return redirectToDocuments(request, "error");
+        return redirectToDocuments(request, error instanceof GoogleDriveAuthError ? "no-drive-access" : "error");
     }
 }
