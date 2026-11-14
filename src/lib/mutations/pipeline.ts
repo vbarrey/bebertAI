@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
 import { updatePipelineParameters } from "@/lib/pipeline/runtime";
 import { requireUser } from "@/lib/session";
@@ -12,7 +14,10 @@ export async function savePipelineParameters(parameters: unknown): Promise<{ par
   const user = await requireUser();
 
   try {
-    return { parameters: (await updatePipelineParameters(user.id, parameters)).parameters };
+    const { parameters: saved } = await updatePipelineParameters(user.id, parameters);
+    // The setup warning, in the layout of every page, reads the pipeline: shown again from the steps saved.
+    revalidatePath("/", "layout");
+    return { parameters: saved };
   } catch (error) {
     // Returned: a thrown error only reaches the browser as a generic message in production.
     return { error: error instanceof Error ? error.message : "Impossible d'enregistrer les paramètres du pipeline." };
