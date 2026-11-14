@@ -31,6 +31,7 @@ import { DocumentFormatSchema } from "@/lib/documents/format";
 import { withDocumentFile } from "@/lib/documents/storage";
 import { isPermanentDriveError } from "@/lib/google-drive/client";
 import { env } from "@/lib/env";
+import { userErrorMessage } from "@/lib/ai/chat/error-message";
 
 export type IndexingJobData = {
   indexingJobId: string;
@@ -216,7 +217,7 @@ async function initialize() {
       } catch (error) {
         const message = `${INDEXING_STAGE_LABELS[stage] ?? stage} : ${
           error instanceof Error
-            ? error.message
+            ? userErrorMessage(error)
             : "Erreur d'indexation inconnue"
         }`;
 
