@@ -6,6 +6,9 @@ export interface AIProviderClient {
 
   models(): Promise<AIModelInfo[]>;
 
+  // Throws with a message for the user when the provider refuses the API key.
+  checkApiKey(): Promise<void>;
+
   chat(appImput: ChatRequestInput): AsyncGenerator<ChatChunk>;
 
   // Paid remote models: true when the model is refused without usage credits, undefined when unknown.

@@ -13,6 +13,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 import { ApiKeyProviderType, createApiKeyProvider } from "@/lib/mutations/aiProvider";
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
@@ -39,6 +40,7 @@ export function ApiKeyProviderForm({
   const form = providerForms[type];
 
   const [name, setName] = useState(form.name);
+  const [description, setDescription] = useState("");
   const [host, setHost] = useState(OLLAMA_CLOUD_HOST);
   const [apiKey, setApiKey] = useState("");
   const [defaultModel, setDefaultModel] = useState("");
@@ -53,7 +55,7 @@ export function ApiKeyProviderForm({
     setLoading(true);
 
     try {
-      const result = await createApiKeyProvider(type, { name, host, apiKey, defaultModel });
+      const result = await createApiKeyProvider(type, { name, description, host, apiKey, defaultModel });
 
       if (result?.error) {
         setError(result.error);
@@ -85,6 +87,21 @@ export function ApiKeyProviderForm({
           <FieldDescription>
             Nom utilisé pour identifier ce fournisseur dans l&apos;application.
           </FieldDescription>
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="description">Commentaire</FieldLabel>
+
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Ex. : compte perso, clé de test, offre gratuite…"
+            maxLength={500}
+            rows={2}
+          />
+
+          <FieldDescription>Facultatif : pour distinguer vos fournisseurs entre eux.</FieldDescription>
         </Field>
 
         {form.hasHost && (

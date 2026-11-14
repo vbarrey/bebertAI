@@ -17,8 +17,9 @@ export function ProvidersSettings({ providers }: AISettingsProps) {
     providers[0]?.id ?? null,
   );
 
+  // The first one once the selected provider is deleted.
   const selectedProvider =
-    providers.find((provider) => provider.id === selectedProviderId) ?? null;
+    providers.find((provider) => provider.id === selectedProviderId) ?? providers[0] ?? null;
 
   return (
     <div className="flex h-full min-w-0 flex-col">

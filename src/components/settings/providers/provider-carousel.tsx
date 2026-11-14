@@ -54,6 +54,10 @@ export function ProviderCarousel({
                   <ProviderSourceIcon source={provider.source} focusable={false} />
                 </div>
 
+                {provider.description && (
+                  <TruncatedText className="text-xs">{provider.description}</TruncatedText>
+                )}
+
                 <p className="text-xs text-muted-foreground">
                   {provider.models?.length ?? 0} modèle
                   {provider.models?.length !== 1 ? "s" : ""}

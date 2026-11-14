@@ -16,12 +16,14 @@ let prisma: typeof import("@/lib/prisma").prisma;
 let runtime: typeof import("@/lib/pipeline/runtime");
 let setup: typeof import("@/lib/pipeline/setup");
 let onboarding: typeof import("@/lib/onboarding");
+let removal: typeof import("@/lib/ai/provider-removal");
 
 before(async () => {
   ({ prisma } = await import("@/lib/prisma"));
   runtime = await import("@/lib/pipeline/runtime");
   setup = await import("@/lib/pipeline/setup");
   onboarding = await import("@/lib/onboarding");
+  removal = await import("@/lib/ai/provider-removal");
   await prisma.user.create({ data: { id: "user-bob", name: "bob", email: "bob@example.com" } });
 });
 
@@ -129,5 +131,40 @@ describe("pipeline save with a provider gone", () => {
     const { parameters } = await runtime.getPipelineConfig("user-erin");
     const onBobs = { ...parameters, generation: { ...parameters.generation, providerId: bobs.id, modelName: "g" } };
     await assert.rejects(runtime.updatePipelineParameters("user-erin", onBobs), /Fournisseur inconnu/);
+  });
+});
+
+describe("provider removal", () => {
+  it("deletes the provider and its models, unsets the steps on it and keeps the others", async () => {
+    await prisma.user.create({ data: { id: "user-frank", name: "frank", email: "frank@example.com" } });
+    const create = (name: string) => prisma.aIProvider.create({
+      data: { userId: "user-frank", name, type: "OLLAMA_CLOUD", source: "REMOTE", configuration: { apiKey: "key" }, models: { create: [{ name: "m" }] } },
+      include: { models: true },
+    });
+    const gone = await create("Gone");
+    const kept = await create("Kept");
+    const conversation = await prisma.conversation.create({ data: { userId: "user-frank", title: "t", modelId: gone.models[0].id } });
+
+    const { parameters } = await runtime.getPipelineConfig("user-frank");
+    parameters.generation = { ...parameters.generation, providerId: gone.id, modelName: "m" };
+    parameters.embedding = { ...parameters.embedding, providerId: kept.id, modelName: "m" };
+    parameters.retrieval.hybrid.translation = { ...parameters.retrieval.hybrid.translation, providerId: gone.id, modelName: "m" };
+    await prisma.pipelineParameters.update({ where: { userId: "user-frank" }, data: { parameters: JSON.stringify(parameters) } });
+
+    assert.equal(await removal.removeProvider("user-frank", gone.id), true);
+
+    assert.equal(await prisma.aIProvider.count({ where: { id: gone.id } }), 0);
+    assert.equal(await prisma.aIModel.count({ where: { providerId: gone.id } }), 0);
+    assert.equal((await prisma.conversation.findUniqueOrThrow({ where: { id: conversation.id } })).modelId, null);
+    const after = (await runtime.getPipelineConfig("user-frank")).parameters;
+    assert.deepEqual([after.generation.providerId, after.generation.modelName], ["...", "..."]);
+    assert.deepEqual([after.embedding.providerId, after.embedding.modelName], [kept.id, "m"]);
+    assert.deepEqual([after.retrieval.hybrid.translation.providerId, after.retrieval.hybrid.translation.modelName], ["", ""]);
+  });
+
+  it("refuses another user's provider", async () => {
+    const bobs = await prisma.aIProvider.findFirstOrThrow({ where: { userId: "user-bob" } });
+    assert.equal(await removal.removeProvider("user-frank", bobs.id), false);
+    assert.equal(await prisma.aIProvider.count({ where: { id: bobs.id } }), 1);
   });
 });

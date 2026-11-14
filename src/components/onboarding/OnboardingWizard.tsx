@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, RefreshCw } from "lucide-react";
+import { Pencil, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 import { capabilityLabels } from "@/components/settings/providers/model-list-item";
 import { ProviderTypeSelector } from "@/components/settings/providers/provider-type-selector";
 import { ApiKeyProviderForm } from "@/components/settings/providers/provider-form/api-key-provider";
+import { ProviderInfoDialog } from "@/components/settings/providers/provider-info-dialog";
 
 import type { ApiKeyProviderType } from "@/lib/mutations/aiProvider";
 import { synchronizeProviderModels } from "@/lib/mutations/aiProvider";
@@ -103,7 +104,12 @@ export function OnboardingWizard({ providers }: { providers: Provider[] }) {
 
                   return (
                     <li key={provider.id} className="flex flex-wrap items-center gap-2 p-3">
-                      <TruncatedText className="flex-1 text-sm">{provider.name}</TruncatedText>
+                      <div className="min-w-0 flex-1">
+                        <TruncatedText className="text-sm">{provider.name}</TruncatedText>
+                        {provider.description && (
+                          <TruncatedText className="text-xs text-muted-foreground">{provider.description}</TruncatedText>
+                        )}
+                      </div>
 
                       {provider.models?.length ? (
                         capabilities.map((capability) => (
@@ -126,6 +132,12 @@ export function OnboardingWizard({ providers }: { providers: Provider[] }) {
                           </Button>
                         </>
                       )}
+
+                      <ProviderInfoDialog provider={provider}>
+                        <Button size="icon-sm" variant="ghost" aria-label={`Détails de « ${provider.name} »`}>
+                          <Pencil className="size-4" />
+                        </Button>
+                      </ProviderInfoDialog>
                     </li>
                   );
                 })}

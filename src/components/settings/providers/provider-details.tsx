@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { RefreshCw } from "lucide-react";
+import { Pencil, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -19,13 +19,11 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { ModelList } from "./model-list";
 
-import { Prisma } from "@prisma/client";
-
 import { toast } from "sonner";
 
 import { setProviderEnabled, synchronizeProviderModels } from "@/lib/mutations/aiProvider";
 
-import { ProviderConfigurationCard } from "./provider-config-card";
+import { ProviderInfoDialog } from "./provider-info-dialog";
 import { ProviderSourceIcon } from "./provider-source-icon";
 
 type ProviderDetailsProps = {
@@ -34,7 +32,6 @@ type ProviderDetailsProps = {
 
 export function ProviderDetails({ provider }: ProviderDetailsProps) {
   const [isRefreshing, setRefreshing] = useState<boolean>(false);
-  const [configuration, setConfiguration] = useState<Prisma.JsonValue>(provider.configuration);
 
   const refreshProviderModels = async () => {
     setRefreshing(true);
@@ -68,11 +65,24 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
   return (
     <div className="mx-auto max-w-4xl p-4 md:p-8">
       <header className="mb-8">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          {provider.name}
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="flex min-w-0 items-center gap-2 text-2xl font-semibold tracking-tight">
+            <span className="min-w-0 break-words">{provider.name}</span>
 
-          <ProviderSourceIcon source={provider.source} className="[&_svg]:size-5" />
-        </h1>
+            <ProviderSourceIcon source={provider.source} className="[&_svg]:size-5" />
+          </h1>
+
+          {provider.manageable && (
+            <ProviderInfoDialog provider={provider}>
+              <Button variant="outline" size="sm">
+                <Pencil className="size-3.5" />
+                Modifier
+              </Button>
+            </ProviderInfoDialog>
+          )}
+        </div>
+
+        {provider.description && <p className="mt-1 whitespace-pre-line text-sm">{provider.description}</p>}
 
         <p className="mt-1 text-sm text-muted-foreground">
           {provider.manageable
@@ -104,8 +114,6 @@ export function ProviderDetails({ provider }: ProviderDetailsProps) {
               </div>
             </CardHeader>
           </Card>
-
-          <ProviderConfigurationCard configuration={configuration} onConfigurationChange={setConfiguration}/>
         </div>
       </section>
 

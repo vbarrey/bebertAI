@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { AIProviderSource, AIProviderType } from "@prisma/client";
+import { AIProviderSource, AIProviderType, type Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { OllamaCloudProvider } from "@/lib/ai/ollama-cloud/provider";
@@ -13,9 +13,16 @@ import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 import { createProviderClient, syncProviderModels } from "@/lib/ai/provider-factory";
 import { requireUser } from "@/lib/session";
 import { encryptApiKey, manageableProviders } from "@/lib/ai/provider-access";
+import { removeProvider } from "@/lib/ai/provider-removal";
+
+const NameSchema = z.string().trim().min(1, "Le nom est requis.").max(100, "Nom trop long (100 caractères au plus).");
+// Optional: an empty comment is stored as null.
+const DescriptionSchema = z.string().trim().max(500, "Commentaire trop long (500 caractères au plus).").optional()
+  .transform((description) => description || null);
 
 const ApiKeyProviderSchema = z.object({
-  name: z.string().trim().min(1, "Le nom est requis."),
+  name: NameSchema,
+  description: DescriptionSchema,
   // Ollama Cloud only.
   host: z.url("Adresse invalide.").trim().default(OLLAMA_CLOUD_HOST),
   apiKey: z.string().trim().min(1, "La clé API est requise."),
@@ -45,7 +52,7 @@ export async function createApiKeyProvider(
     return { error: parsed.error.issues.map((issue) => issue.message).join(" ") };
   }
 
-  const { name, host, ...credentials } = parsed.data;
+  const { name, description, host, ...credentials } = parsed.data;
   const configuration = type === AIProviderType.OLLAMA_CLOUD ? { host, ...credentials } : credentials;
 
   try {
@@ -66,7 +73,7 @@ export async function createApiKeyProvider(
   try {
     provider = await prisma.aIProvider.create({
       // Every provider reached with an API key runs its models remotely.
-      data: { userId: user.id, type, source: AIProviderSource.REMOTE, name, configuration: encryptApiKey(configuration) },
+      data: { userId: user.id, type, source: AIProviderSource.REMOTE, name, description, configuration: encryptApiKey(configuration) },
     });
   } catch (error) {
     // The database error repeats the data sent, the API key included: it stays in the server logs.
@@ -116,5 +123,58 @@ export async function synchronizeProviderModels(providerId: string): Promise<{ e
 export async function setProviderEnabled(providerId: string, enabled: boolean): Promise<void> {
   const user = await requireUser();
   await prisma.aIProvider.updateMany({ where: { id: providerId, ...manageableProviders(user) }, data: { enabled } });
+  revalidatePath("/", "layout");
+}
+
+const ProviderDetailsSchema = z.object({
+  name: NameSchema,
+  description: DescriptionSchema,
+  // Empty: the stored key is kept.
+  apiKey: z.string().trim().optional().transform((apiKey) => apiKey || undefined),
+});
+
+/**
+ * Renames a provider of the user, changes the comment that tells it apart, or replaces its API key once the
+ * provider accepts the new one.
+ */
+export async function updateProviderDetails(
+  providerId: string,
+  input: z.input<typeof ProviderDetailsSchema>,
+): Promise<{ error: string } | undefined> {
+  const user = await requireUser();
+  const parsed = ProviderDetailsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues.map((issue) => issue.message).join(" ") };
+  }
+
+  const provider = await prisma.aIProvider.findFirst({ where: { id: providerId, ...manageableProviders(user) } });
+  if (!provider) {
+    return { error: "Fournisseur introuvable." };
+  }
+
+  const { apiKey, ...details } = parsed.data;
+  let configuration: Prisma.InputJsonValue | undefined;
+  if (apiKey) {
+    const stored = provider.configuration as Prisma.JsonObject;
+    try {
+      // A key without the "enc:" mark reaches the client as it is.
+      await createProviderClient({ ...provider, configuration: { ...stored, apiKey } }).checkApiKey();
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Impossible de joindre le fournisseur." };
+    }
+    configuration = encryptApiKey({ ...stored, apiKey });
+  }
+
+  await prisma.aIProvider.update({ where: { id: provider.id }, data: { ...details, configuration } });
+  // Its name shows in the settings, the welcome page, the setup warning and the chat model selector.
+  revalidatePath("/", "layout");
+}
+
+/** Deletes a provider of the user with its models; the pipeline steps on it are to be chosen again. */
+export async function deleteProvider(providerId: string): Promise<{ error: string } | undefined> {
+  const user = await requireUser();
+  if (!(await removeProvider(user.id, providerId))) {
+    return { error: "Fournisseur introuvable." };
+  }
   revalidatePath("/", "layout");
 }

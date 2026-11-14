@@ -1,15 +1,27 @@
 import { cache } from "react";
-import { type AIProvider } from "@prisma/client";
+import { type AIProvider, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { isManageable, usableProviders } from "@/lib/ai/provider-access";
+import { decryptApiKey, isManageable, usableProviders } from "@/lib/ai/provider-access";
 
-// These providers reach the browser: their API key is replaced, it only shows that a key is set.
+// These providers reach the browser: their API key is replaced by its last 4 characters, enough to tell two keys
+// apart, as the providers' own consoles show them.
 function maskApiKey<T extends AIProvider>(provider: T): T {
   const configuration = provider.configuration;
   if (typeof configuration !== "object" || configuration === null || Array.isArray(configuration) || !("apiKey" in configuration)) {
     return provider;
   }
-  return { ...provider, configuration: { ...configuration, apiKey: "••••••••" } };
+  return { ...provider, configuration: { ...configuration, apiKey: maskedKey(configuration) } };
+}
+
+function maskedKey(configuration: Prisma.JsonValue): string {
+  try {
+    const { apiKey } = decryptApiKey(configuration) as { apiKey?: unknown };
+    // A short key would be shown almost whole.
+    if (typeof apiKey === "string" && apiKey.length >= 16) return `••••${apiKey.slice(-4)}`;
+  } catch {
+    // Encrypted with another key: only that a key is set.
+  }
+  return "••••••••";
 }
 
 /** For the settings: `manageable` when the user can change the provider and its models. */
