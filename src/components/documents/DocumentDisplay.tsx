@@ -11,7 +11,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { DocumentStatusBadge } from "@/components/documents/DocumentStatusBadge";
 import { DocumentActions } from "@/components/documents/DocumentActions";
 import { DocumentBulkActions } from "@/components/documents/DocumentBulkActions";
-import { File, FolderOpen, ListChecks } from "lucide-react";
+import { File, FolderOpen, ListChecks, Upload } from "lucide-react";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { fr } from "date-fns/locale";
 import { Document, IndexingStatus, JobStatus } from "@prisma/client";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { DocumentImportPopover } from "./DocumentPopover";
+import { ExportDialog } from "./ExportDialog";
 import { Card, CardContent } from "../ui/card";
 import type { IndexingSteps } from "@/lib/queue/types";
 
@@ -91,6 +92,8 @@ type Props = {
     // Rendered by the server again after each document action and import: never copied into a state.
     documents: DocumentRow[]
     googleDriveResult?: string
+    // The user's projects, to export one.
+    projects: { id: string; name: string }[]
 }
 
 // What the indexing events tell before the server renders the documents again.
@@ -103,7 +106,10 @@ function without<T>(record: Record<string, T>, key: string): Record<string, T> {
 }
 
 // ----- Page ----
-export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult }: Props) {
+export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult, projects }: Props) {
+    const [exportOpen, setExportOpen] = useState(false);
+    // The documents picked for the export; null: chosen in the dialog.
+    const [exportIds, setExportIds] = useState<string[] | null>(null);
     const router = useRouter();
     const [, startTransition] = useTransition();
     const [liveStatus, setLiveStatus] = useState<Record<string, LiveStatus>>({});
@@ -279,9 +285,14 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                     <h1 className="text-3xl font-bold">Documents</h1>
                     <p className="text-muted-foreground mt-1">Gestion et suivi de vos documents indexés.</p>
                 </div>
-                <div className="mt-4 lg:mt-0">
+                <div className="mt-4 flex gap-2 lg:mt-0">
+                    <Button variant="outline" className="gap-2" onClick={() => { setExportIds(null); setExportOpen(true); }}>
+                        <Upload className="size-4" />
+                        Exporter
+                    </Button>
                     <DocumentImportPopover addDocuments={refresh} onIndexingStarted={onIndexingStarted} googleDriveResult={googleDriveResult} />
                 </div>
+                <ExportDialog open={exportOpen} onOpenChange={setExportOpen} projects={projects} documentIds={exportIds} />
             </div>
 
             {/* Stats + Filters */}
@@ -368,6 +379,7 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                                     onDeleted={onDocumentDeleted}
                                     onDone={() => setSelectedIds(new Set())}
                                     onCancel={exitSelection}
+                                    onExport={(documentIds) => { setExportIds(documentIds); setExportOpen(true); }}
                                 />
                             ) : (
                                 <Button variant="outline" size="sm" className="gap-2" onClick={() => setSelectionMode(true)}>

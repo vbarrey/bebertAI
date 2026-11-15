@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Play, RotateCcw, Trash2, X } from "lucide-react";
+import { ChevronDown, Play, RotateCcw, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { type Document } from "@prisma/client";
 
@@ -35,6 +35,7 @@ type Props = {
   onDeleted: (documentId: string) => void;
   onDone: () => void;
   onCancel: () => void;
+  onExport: (documentIds: string[]) => void;
 };
 
 /**
@@ -76,7 +77,7 @@ async function runBulk<T>(
   return succeeded;
 }
 
-export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, onDone, onCancel }: Props) {
+export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, onDone, onCancel, onExport }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -164,6 +165,22 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
               Réindexer
               <span className="ml-auto text-xs text-muted-foreground">
                 {reindexable.length}/{documents.length}
+              </span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={() => {
+                setMenuOpen(false);
+                onExport(documents.map((document) => document.id));
+              }}
+            >
+              <Upload className="size-4" />
+              Exporter
+              <span className="ml-auto text-xs text-muted-foreground">
+                {documents.filter((document) => document.indexingStatus === "PROCESSED").length}/{documents.length}
               </span>
             </Button>
 

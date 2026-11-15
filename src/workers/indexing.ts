@@ -32,6 +32,7 @@ import { withDocumentFile } from "@/lib/documents/storage";
 import { isPermanentDriveError } from "@/lib/google-drive/client";
 import { env } from "@/lib/env";
 import { userErrorMessage } from "@/lib/ai/chat/error-message";
+import { startBundleWorker } from "./bundle";
 
 export type IndexingJobData = {
   indexingJobId: string;
@@ -277,6 +278,9 @@ async function initialize() {
   console.log(
     `[${NAME}] Started`,
   );
+
+  // The exports and imports of .bebert bundles run in this process too.
+  startBundleWorker();
 }
 
 initialize().catch((error) => {

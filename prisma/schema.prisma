@@ -45,6 +45,7 @@ model User {
   aiProviders   AIProvider[]
   pipeline      PipelineParameters?
   googleDrive   GoogleDriveConnection?
+  bundleJobs    BundleJob[]
 }
 
 // Accounts are created from an invitation link sent by email (src/lib/invitations.ts).
@@ -299,6 +300,35 @@ model IndexingJob {
 
   @@index([documentId, createdAt])
   @@index([status, createdAt])
+}
+
+// An export or an import of a .bebert bundle (src/lib/bundle), run by the worker.
+model BundleJob {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind         BundleJobKind
+  status       JobStatus  @default(QUEUED)
+  // What the user chose (export: the selection and the files; import: nothing yet).
+  parameters   Json
+  // Shown while it runs.
+  label        String
+  progress     Int        @default(0)
+  // The bundle on disk under BUNDLES_PATH: written by an export, received by an import. Null once deleted.
+  filePath     String?
+  fileSize     BigInt?
+  // Counts and warnings once done, for the user.
+  result       Json?
+  errorMessage String?
+  createdAt    DateTime   @default(now())
+  finishedAt   DateTime?
+
+  @@index([userId, createdAt])
+}
+
+enum BundleJobKind {
+  EXPORT
+  IMPORT
 }
 
 model AIProvider {

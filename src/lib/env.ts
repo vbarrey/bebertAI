@@ -26,6 +26,8 @@ const EnvSchema = z.object({
 
   DATABASE_URL: z.string().default("file:./data/database/bebertai.db"),
   DOCUMENTS_STORAGE_PATH: z.string().default("./data/documents"),
+  // The .bebert bundles being exported or imported (src/lib/bundle), deleted after a day.
+  BUNDLES_PATH: z.string().default("./data/bundles"),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   QDRANT_URL: z.url().default("http://localhost:6333"),
   // Ollama on this machine (http://localhost:11434): unset, the "Ollama local" provider is not offered.

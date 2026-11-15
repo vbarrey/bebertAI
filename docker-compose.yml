@@ -38,6 +38,7 @@ services:
     environment: &services-env
       DATABASE_URL: file:/app/data/database/bebertai.db
       DOCUMENTS_STORAGE_PATH: /app/data/documents
+      BUNDLES_PATH: /app/data/bundles
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
       # Documents the worker indexes at once.
