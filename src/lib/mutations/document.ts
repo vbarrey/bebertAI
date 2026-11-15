@@ -18,6 +18,7 @@ export async function createDocument(data: {
   language?: string;
   sourceType: DocumentSourceType;
   sourceRef?: string | null;
+  driveAccountEmail?: string | null;
   indexingStatus: IndexingStatus;
   // Imported for this project only.
   ownerProjectId?: string | null;

@@ -47,6 +47,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Projet introuvable." }, { status: 404 });
     }
 
+    // The files were listed with this connection: the account they come from.
+    const connection = await prisma.googleDriveConnection.findUnique({ where: { userId: user.id }, select: { email: true } });
+
     try {
         const result = await importDocuments(
             user.id,
@@ -55,6 +58,7 @@ export async function POST(request: Request) {
                 id: crypto.randomUUID(),
                 storagePath: null,
                 sourceType: "GOOGLE_DRIVE",
+                driveAccountEmail: connection?.email ?? null,
             })),
             new Map(Object.entries(decisions)),
             indexImmediately,

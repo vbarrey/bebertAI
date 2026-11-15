@@ -23,6 +23,8 @@ export type DocumentToImport = {
     fileSize: number;
     sourceType: DocumentSourceType;
     sourceRef: string | null;
+    // Drive documents: the Google account they come from.
+    driveAccountEmail?: string | null;
 };
 
 type PersistResult = {
@@ -116,6 +118,7 @@ async function persistDocuments(
                 checksum: file.checksum,
                 sourceType: file.sourceType,
                 sourceRef: file.sourceRef,
+                driveAccountEmail: file.driveAccountEmail ?? null,
                 indexingStatus: indexImmediately
                     ? "PENDING"
                     : "UNPLANNED",
