@@ -2,7 +2,7 @@
 
 Bebert AI est une application desktop personnelle destinée à centraliser et exploiter une documentation technique à l’aide de l’IA.
 
-L’objectif est de regrouper des documents (PDF, TXT, DOCX, etc.), de les indexer automatiquement et de dialoguer avec un modèle de langage en s’appuyant sur un moteur RAG. Les modèles viennent de fournisseurs d’IA externes que chaque utilisateur ajoute avec sa clé API : Anthropic ou Ollama Cloud pour la génération, Voyage AI ou Google Gemini pour l’embedding.
+L’objectif est de regrouper des documents (PDF, TXT, DOCX, etc.), de les indexer automatiquement et de dialoguer avec un modèle de langage en s’appuyant sur un moteur RAG. Les modèles viennent de fournisseurs d’IA externes que chaque utilisateur ajoute avec sa clé API : Anthropic ou Ollama Cloud pour la génération, Voyage AI, Google Gemini ou DeepInfra pour l’embedding. Sur une machine avec Ollama, le fournisseur « Ollama local » indexe gratuitement, et l’export `.bebert` transfère ensuite le résultat vers une autre instance sans rien réindexer.
 
 Documents, base et vecteurs restent sur le serveur de l’application, avec une interface simple destinée à un usage quotidien et une configuration avancée séparée.
 
@@ -25,6 +25,8 @@ Documents, base et vecteurs restent sur le serveur de l’application, avec une 
 - Indexation asynchrone avec BullMQ
 - Suivi de la progression de l’indexation en temps réel via SSE
 - Configuration du pipeline d’import, d’extraction, de chunking, d’embedding, de retrieval et de génération
+- Export et import de documents indexés (fichier `.bebert` : texte découpé, vecteurs et fichiers), sans réindexation
+- Réindexation limitée à l’embedding quand seul le modèle d’embedding change (pas de nouvel OCR)
 
 ## Architecture
 
@@ -50,7 +52,7 @@ Lors d’une conversation, les chunks pertinents sont récupérés depuis Qdrant
 - SQLite
 
 ### IA
-- Anthropic, Ollama Cloud, Voyage AI, Google Gemini
+- Anthropic, Ollama Cloud, Ollama local, Voyage AI, Google Gemini, DeepInfra
 - AIProviderRegistry
 - Qdrant
 
@@ -74,6 +76,7 @@ src/
 ├── hooks/               # Hooks React
 ├── lib/
 │   ├── ai/              # Providers et moteur IA
+│   ├── bundle/          # Export et import des fichiers .bebert
 │   ├── documents/       # Import et stockage documentaire
 │   ├── mutations/       # Écritures DB
 │   ├── queries/         # Lectures DB
@@ -83,7 +86,8 @@ src/
 └── workers/             # Workers BullMQ
 scripts/
 ├── eval-retrieval/      # Évaluation de la recherche (npm run eval:retrieval), voir son README
-└── bench-indexing.ts    # Chronométrage de l'OCR et de l'embedding (npm run bench:indexing)
+├── bench-indexing.ts    # Chronométrage de l'OCR et de l'embedding (npm run bench:indexing)
+└── eval-embedding-compat.ts  # Compatibilité d'un modèle d'embedding entre Ollama et un fournisseur (npm run eval:compat)
 ```
 
 ## Prérequis
@@ -143,6 +147,11 @@ DOCUMENTS_STORAGE_PATH="./data/documents"
 
 REDIS_URL="redis://localhost:6379"
 QDRANT_URL="http://localhost:6333"
+
+# Optionnel : les exports et imports .bebert en cours (supprimés au bout de 24 h)
+BUNDLES_PATH="./data/bundles"
+# Optionnel : propose le fournisseur « Ollama local » (laisser vide sur un serveur sans Ollama)
+OLLAMA_URL="http://localhost:11434"
 ```
 
 Initialiser Prisma :
@@ -287,6 +296,7 @@ Tant que l’application Google est en mode Test, Google invalide la connexion a
 - Retrieval documentaire
 - Chat avec génération par les fournisseurs de chaque utilisateur
 - Configuration du pipeline
+- Export / import `.bebert` et fournisseurs Ollama local et DeepInfra
 
 ### À venir
 
@@ -295,6 +305,25 @@ Tant que l’application Google est en mode Test, Google invalide la connexion a
 - Finalisation de certains paramètres de retrieval et génération
 - Suppression des dernières configurations IA hard-codées
 - Raffinement du suivi d’état des `IndexingJob`
+
+## Export et import (`.bebert`)
+
+Un fichier `.bebert` transporte des documents **déjà indexés** d’une instance ou d’un compte à l’autre : leurs métadonnées, leur texte découpé, leurs vecteurs denses et leurs fichiers. Importés, ils rejoignent la bibliothèque sans extraction, OCR ni embedding. Les vecteurs BM25 sont recalculés par Qdrant à partir du texte.
+
+- **Exporter** : bouton « Exporter » de la page Documents (bibliothèque, un projet ou tout) ou action groupée sur une sélection. Seuls les documents indexés partent. Les fichiers locaux sont toujours inclus ; les fichiers Google Drive au choix, sinon les documents Drive gardent leur lien et s’ouvrent avec le même compte Google. Le fichier se télécharge depuis le dialogue pendant 24 h.
+- **Importer** : « Ajouter / Importer » > « Export BebertAI (.bebert) », jusqu’à 10 Go. Tout est vérifié avant la première écriture (archive, sha256, lignes, tailles), puis des phrases témoins (« canaris ») sont encodées de nouveau avec le modèle d’embedding de l’utilisateur : si ses vecteurs diffèrent de ceux du fichier (similarité sous 0,99), l’import est refusé. Les documents déjà présents (même checksum) sont ignorés : réimporter un fichier ne change rien.
+- **Format** : archive tar gzip contenant `manifest.json`, `canary.json`, `documents.ndjson`, `chunks.ndjson`, `vectors.f32` (float32, une ligne par chunk) et `files/<sha256>` (voir `src/lib/bundle/format.ts`).
+
+### Indexer en local, chercher sur le web
+
+L’indexation d’un gros corpus peut tourner gratuitement sur une machine avec GPU, puis être transférée sur le serveur web, où les questions sont encodées par un fournisseur qui sert **le même modèle** :
+
+| | Machine locale | Serveur web |
+|---|---|---|
+| Fournisseur d’embedding | Ollama local (`OLLAMA_URL`) | DeepInfra |
+| Modèle | `qwen3-embedding:4b-q8_0` | `Qwen/Qwen3-Embedding-4B` |
+
+Mesuré avec `npm run eval:compat` : similarité 0,999 entre les deux encodages et même qualité de recherche ; environ 70 000 chunks par heure sur une RTX 5070. La variante Q4 d’Ollama est trop éloignée et serait refusée par les canaris. L’instruction de requête de Qwen3 est ajoutée par l’application, quel que soit le fournisseur.
 
 ## Philosophie du projet
 
