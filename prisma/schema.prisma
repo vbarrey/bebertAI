@@ -374,7 +374,10 @@ enum Capability {
 }
 
 enum AIProviderType {
+  // Ollama on the machine of OLLAMA_URL: offered only where it is set.
+  OLLAMA_LOCAL
   OLLAMA_CLOUD
+  DEEPINFRA
   VOYAGE
   GOOGLE
   OPENAI

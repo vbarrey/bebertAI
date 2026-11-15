@@ -4,8 +4,8 @@ import { AIInitializer } from "../AIInitializer";
 import { createProviderClient, syncProviderModels } from "@/lib/ai/provider-factory";
 import { encryptApiKey, hasClearApiKey } from "@/lib/ai/provider-access";
 
-// Providers created from the settings by each user, with their API key.
-const REMOTE_PROVIDER_TYPES: AIProviderType[] = [AIProviderType.OLLAMA_CLOUD, AIProviderType.ANTHROPIC, AIProviderType.VOYAGE, AIProviderType.GOOGLE];
+// Providers created from the settings by each user, with their API key (Ollama local without).
+const REMOTE_PROVIDER_TYPES: AIProviderType[] = [AIProviderType.OLLAMA_LOCAL, AIProviderType.OLLAMA_CLOUD, AIProviderType.ANTHROPIC, AIProviderType.VOYAGE, AIProviderType.GOOGLE, AIProviderType.DEEPINFRA];
 
 export class RemoteProvidersInitializer implements AIInitializer {
   name: string = "REMOTE PROVIDERS INIT";

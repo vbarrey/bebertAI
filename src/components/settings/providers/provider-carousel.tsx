@@ -12,12 +12,14 @@ type ProviderCarouselProps = {
   providers: Provider[];
   selectedProviderId: string | null;
   onSelectProvider: (providerId: string) => void;
+  ollamaLocal: boolean;
 };
 
 export function ProviderCarousel({
   providers,
   selectedProviderId,
   onSelectProvider,
+  ollamaLocal,
 }: ProviderCarouselProps) {
   return (
     <section className="border-b px-4 py-4 md:px-8 md:py-6">
@@ -76,7 +78,7 @@ export function ProviderCarousel({
         })}
 
         <div className="flex w-56 shrink-0 snap-start items-center md:w-64">
-          <CreateProviderDialog />
+          <CreateProviderDialog ollamaLocal={ollamaLocal} />
         </div>
       </div>
     </section>

@@ -10,9 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 type AISettingsProps = {
   providers: Provider[];
+  // Ollama local can be added: OLLAMA_URL is set on this server.
+  ollamaLocal: boolean;
 };
 
-export function ProvidersSettings({ providers }: AISettingsProps) {
+export function ProvidersSettings({ providers, ollamaLocal }: AISettingsProps) {
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
     providers[0]?.id ?? null,
   );
@@ -28,6 +30,7 @@ export function ProvidersSettings({ providers }: AISettingsProps) {
         providers={providers}
         selectedProviderId={selectedProviderId}
         onSelectProvider={setSelectedProviderId}
+        ollamaLocal={ollamaLocal}
       />
 
       <ScrollArea className="min-h-0 flex-1 max-md:flex-none">

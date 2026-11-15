@@ -19,11 +19,14 @@ import { ApiKeyProviderType, createApiKeyProvider } from "@/lib/mutations/aiProv
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 
 // What differs between the providers reached with an API key.
-const providerForms: Record<ApiKeyProviderType, { name: string; apiKeyUrl: string; modelPlaceholder: string; hasHost: boolean }> = {
+// apiKeyUrl null: no key (Ollama local).
+const providerForms: Record<ApiKeyProviderType, { name: string; apiKeyUrl: string | null; modelPlaceholder: string; hasHost: boolean }> = {
+  OLLAMA_LOCAL: { name: "Ollama local", apiKeyUrl: null, modelPlaceholder: "qwen3-embedding:4b-q8_0", hasHost: false },
   OLLAMA_CLOUD: { name: "Ollama Cloud", apiKeyUrl: "ollama.com/settings/keys", modelPlaceholder: "gpt-oss:120b", hasHost: true },
   ANTHROPIC: { name: "Anthropic", apiKeyUrl: "platform.claude.com/settings/keys", modelPlaceholder: "claude-opus-5-5", hasHost: false },
   VOYAGE: { name: "Voyage AI", apiKeyUrl: "dashboard.voyageai.com", modelPlaceholder: "voyage-4", hasHost: false },
   GOOGLE: { name: "Google Gemini", apiKeyUrl: "aistudio.google.com/apikey", modelPlaceholder: "gemini-embedding-2", hasHost: false },
+  DEEPINFRA: { name: "DeepInfra", apiKeyUrl: "deepinfra.com/dash/api_keys", modelPlaceholder: "Qwen/Qwen3-Embedding-4B", hasHost: false },
 };
 
 type ApiKeyProviderFormProps = {
@@ -118,7 +121,7 @@ export function ApiKeyProviderForm({
           </Field>
         )}
 
-        <Field>
+        {form.apiKeyUrl && <Field>
           <FieldLabel htmlFor="api-key">Clé API</FieldLabel>
 
           <Input
@@ -134,7 +137,7 @@ export function ApiKeyProviderForm({
             À créer sur {form.apiKeyUrl}. Elle est vérifiée avant
             l&apos;ajout du fournisseur.
           </FieldDescription>
-        </Field>
+        </Field>}
 
         <Field>
           <FieldLabel htmlFor="default-model">Modèle par défaut</FieldLabel>

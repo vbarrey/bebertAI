@@ -15,6 +15,8 @@
  */
 import "dotenv/config";
 
+import { embeddingQueryText } from "@/lib/rag/embedding/embedder";
+
 import { argument, prisma, QUESTION_STYLES, QUESTIONS_FILE, readJson, type EvaluationItem } from "./eval-retrieval/common";
 
 const OLLAMA_URL = argument("ollama-url", "http://localhost:11434");
@@ -23,9 +25,6 @@ const PROVIDER_URL = argument("provider-url", "https://openrouter.ai/api/v1");
 const PROVIDER_MODEL = argument("provider-model", "qwen/qwen3-embedding-4b");
 const PROVIDER_KEY = process.env.COMPAT_API_KEY;
 const TOP_K = 5;
-
-// Qwen3-Embedding's query format (model card): documents go without instruction.
-const QUERY_INSTRUCTION = "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:";
 
 type Encoder = { name: string; embed: (texts: string[]) => Promise<number[][]> };
 
@@ -40,7 +39,7 @@ function cosine(a: Float32Array, b: Float32Array): number {
     return sum;
 }
 
-async function postJson(url: string, body: unknown, headers: Record<string, string> = {}, attempt = 1): Promise<any> {
+async function postJson<T>(url: string, body: unknown, headers: Record<string, string> = {}, attempt = 1): Promise<T> {
     const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
@@ -54,19 +53,19 @@ async function postJson(url: string, body: unknown, headers: Record<string, stri
     if (attempt >= 5) throw new Error(error);
     console.warn(`\n  ${error}\n  nouvel essai dans 30 s`);
     await new Promise((resolve) => setTimeout(resolve, 30_000));
-    return postJson(url, body, headers, attempt + 1);
+    return postJson<T>(url, body, headers, attempt + 1);
 }
 
 const ollama = (model: string): Encoder => ({
     name: model,
-    embed: async (input) => (await postJson(`${OLLAMA_URL}/api/embed`, { model, input })).embeddings,
+    embed: async (input) => (await postJson<{ embeddings: number[][] }>(`${OLLAMA_URL}/api/embed`, { model, input })).embeddings,
 });
 
 const provider: Encoder = {
     name: `${PROVIDER_MODEL} (distant)`,
     embed: async (input) => {
-        const { data } = await postJson(`${PROVIDER_URL}/embeddings`, { model: PROVIDER_MODEL, input }, { Authorization: `Bearer ${PROVIDER_KEY}` });
-        return (data as { index: number; embedding: number[] }[]).sort((a, b) => a.index - b.index).map(({ embedding }) => embedding);
+        const { data } = await postJson<{ data: { index: number; embedding: number[] }[] }>(`${PROVIDER_URL}/embeddings`, { model: PROVIDER_MODEL, input }, { Authorization: `Bearer ${PROVIDER_KEY}` });
+        return data.sort((a, b) => a.index - b.index).map(({ embedding }) => embedding);
     },
 };
 
@@ -97,7 +96,7 @@ async function main() {
     const isSource = (chunk: (typeof chunks)[number], item: EvaluationItem) =>
         chunk.documentName === item.documentName && chunk.pageNumber === item.pageNumber;
     const items = allItems.filter((item) => chunks.some((chunk) => isSource(chunk, item)));
-    const questions = items.flatMap((item) => QUESTION_STYLES.map((style) => ({ item, style, text: QUERY_INSTRUCTION + item.questions[style] })));
+    const questions = items.flatMap((item) => QUESTION_STYLES.map((style) => ({ item, style, text: embeddingQueryText(PROVIDER_MODEL, item.questions[style]) })));
     console.log(`${chunks.length} chunks, ${questions.length} questions (${allItems.length - items.length} passages introuvables ignorés)\n`);
 
     const encoders = [...OLLAMA_MODELS.map(ollama), provider];

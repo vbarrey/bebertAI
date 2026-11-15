@@ -18,7 +18,7 @@ import type { ApiKeyProviderType } from "@/lib/mutations/aiProvider";
 import { ProviderTypeSelector, providerTypes } from "./provider-type-selector";
 import { ApiKeyProviderForm } from "./provider-form/api-key-provider";
 
-export function CreateProviderDialog() {
+export function CreateProviderDialog({ ollamaLocal }: { ollamaLocal: boolean }) {
   const [open, setOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<ApiKeyProviderType | null>(null);
 
@@ -55,7 +55,7 @@ export function CreateProviderDialog() {
         </DialogHeader>
 
         {selectedType === null ? (
-          <ProviderTypeSelector onSelect={setSelectedType} />
+          <ProviderTypeSelector onSelect={setSelectedType} ollamaLocal={ollamaLocal} />
         ) : (
           <ApiKeyProviderForm
             type={selectedType}

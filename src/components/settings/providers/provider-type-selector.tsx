@@ -8,20 +8,24 @@ import { ProviderSourceIcon } from "./provider-source-icon";
 
 type Props = {
   onSelect: (type: ApiKeyProviderType) => void;
+  // Offers Ollama local: OLLAMA_URL is set on this server.
+  ollamaLocal?: boolean;
 };
 
 // The types a provider can be created with: OpenAI has no client yet.
 export const providerTypes = [
+  { type: "OLLAMA_LOCAL", name: "Ollama local", description: "Modèles Ollama de cette machine, gratuits.", icon: "/icons/ollama.svg", source: "LOCAL" },
   { type: "OLLAMA_CLOUD", name: "Ollama Cloud", description: "Modèles Ollama hébergés sur ollama.com.", icon: "/icons/ollama.svg", source: "REMOTE" },
   { type: "ANTHROPIC", name: "Anthropic", description: "Modèles Claude, pour la génération.", icon: "/icons/anthropic.svg", source: "REMOTE" },
   { type: "VOYAGE", name: "Voyage AI", description: "Modèles d'embedding.", icon: "/icons/voyage.svg", source: "REMOTE" },
   { type: "GOOGLE", name: "Google Gemini", description: "Embedding Gemini, gratuit sur l'offre gratuite.", icon: "/icons/gemini.svg", source: "REMOTE" },
+  { type: "DEEPINFRA", name: "DeepInfra", description: "Embedding Qwen3, le même modèle qu'Ollama local.", icon: "/icons/deepinfra.svg", source: "REMOTE" },
 ] as const;
 
-export function ProviderTypeSelector({ onSelect }: Props) {
+export function ProviderTypeSelector({ onSelect, ollamaLocal = false }: Props) {
   return (
     <div className="grid grid-cols-2 gap-3 py-4">
-      {providerTypes.map((provider) => (
+      {providerTypes.filter(({ type }) => ollamaLocal || type !== "OLLAMA_LOCAL").map((provider) => (
         <button
           key={provider.type}
           type="button"

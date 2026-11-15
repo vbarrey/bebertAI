@@ -9,6 +9,8 @@ import { VoyageProvider } from "./voyage/provider";
 import { parseVoyageConfig } from "./voyage/config";
 import { GoogleProvider } from "./google/provider";
 import { parseGoogleConfig } from "./google/config";
+import { DeepInfraProvider, parseDeepInfraConfig } from "./deepinfra/provider";
+import { OllamaLocalProvider } from "./ollama-local/provider";
 import { decryptApiKey } from "./provider-access";
 
 export function createProviderClient(stored: AIProvider): AIProviderClient {
@@ -24,6 +26,10 @@ export function createProviderClient(stored: AIProvider): AIProviderClient {
       return new VoyageProvider(provider.id, provider.name, parseVoyageConfig(provider.configuration));
     case AIProviderType.GOOGLE:
       return new GoogleProvider(provider.id, provider.name, parseGoogleConfig(provider.configuration));
+    case AIProviderType.DEEPINFRA:
+      return new DeepInfraProvider(provider.id, provider.name, parseDeepInfraConfig(provider.configuration));
+    case AIProviderType.OLLAMA_LOCAL:
+      return new OllamaLocalProvider(provider.id, provider.name);
     default:
       throw new Error(`Type de fournisseur non supporté : ${provider.type}`);
   }

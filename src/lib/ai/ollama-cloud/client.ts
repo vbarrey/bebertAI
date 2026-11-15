@@ -1,5 +1,5 @@
-// The Ollama API on ollama.com, behind a bearer API key.
-import { OllamaChatRequest, OllamaModel, OllamaChatChunk, OllamaChatResponse } from "./types";
+// The Ollama API on ollama.com, behind a bearer API key; Ollama local too, without key.
+import { OllamaChatRequest, OllamaModel, OllamaChatChunk, OllamaChatResponse, OllamaEmbedRequest, OllamaEmbedResponse } from "./types";
 import {
   OllamaError,
   OllamaConnectionError,
@@ -69,6 +69,11 @@ export class OllamaCloudClient {
     return data.models;
   }
 
+  async embed(input: OllamaEmbedRequest): Promise<OllamaEmbedResponse> {
+    const res = await this.request("/api/embed", { method: "POST", body: JSON.stringify(input) });
+    return res.json();
+  }
+
   // /api/tags answers without key: a chat without model checks the key (refused before the model) and generates nothing.
   async checkApiKey(): Promise<void> {
     try {
@@ -105,7 +110,7 @@ export class OllamaCloudClient {
         ...init,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.apiKey}`,
+          ...(this.config.apiKey ? { Authorization: `Bearer ${this.config.apiKey}` } : {}),
         },
       });
     } catch (error) {

@@ -3,6 +3,7 @@ import { getProvidersWithModels } from "@/lib/queries/aiProvider";
 
 import { ProvidersSettings } from "@/components/settings/providers/providers-settings";
 import { requireUser } from "@/lib/session";
+import { env } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Fournisseurs et modèles" };
 
@@ -10,5 +11,5 @@ export default async function AISettingsPage() {
   const user = await requireUser();
   const providers = await getProvidersWithModels(user);
 
-  return <ProvidersSettings providers={providers} />;
+  return <ProvidersSettings providers={providers} ollamaLocal={Boolean(env.OLLAMA_URL)} />;
 }

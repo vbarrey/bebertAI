@@ -27,6 +27,16 @@ export function embeddingContextLength(chunkSize: number): number {
   return Math.ceil(chunkSize / 1024) * 1024;
 }
 
+// Qwen3-Embedding (Ollama "qwen3-embedding:4b-q8_0", DeepInfra "Qwen/Qwen3-Embedding-4B") expects an instruction before
+// the query, none before the documents (model card). Added here, not by the provider: Ollama and DeepInfra must
+// receive the same text for their vectors to match.
+const QWEN3_QUERY_INSTRUCTION = "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:";
+
+/** The text embedded for a search query with this model. */
+export function embeddingQueryText(modelName: string, query: string): string {
+  return /qwen3-embedding/i.test(modelName) ? QWEN3_QUERY_INSTRUCTION + query : query;
+}
+
 /** Same model and same text give the same vector: a reindex that keeps the text reuses it. */
 export function embeddingCacheKey(modelName: string, text: string): string {
   return createHash("sha256").update(`${modelName}\0${text}`).digest("hex");

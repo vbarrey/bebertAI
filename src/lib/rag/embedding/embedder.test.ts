@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import type { Chunk } from "@prisma/client";
 
 import type { AIProviderClient } from "@/lib/ai/provider";
-import { DocumentEmbedder, embeddingContextLength, type EmbeddingCache } from "./embedder";
+import { DocumentEmbedder, embeddingContextLength, embeddingQueryText, type EmbeddingCache } from "./embedder";
 
 const chunk = (id: string, text: string) => ({ id, documentId: "doc", text }) as Chunk;
 
@@ -106,5 +106,17 @@ describe("embeddingContextLength", () => {
         assert.equal(embeddingContextLength(2000), 2048);
         assert.equal(embeddingContextLength(2048), 2048);
         assert.equal(embeddingContextLength(2049), 3072);
+    });
+});
+
+describe("embeddingQueryText", () => {
+    it("puts the Qwen3 instruction before a query, whoever serves the model", () => {
+        for (const model of ["qwen3-embedding:4b-q8_0", "Qwen/Qwen3-Embedding-4B"]) {
+            assert.equal(embeddingQueryText(model, "moteur"), "Instruct: Given a web search query, retrieve relevant passages that answer the query" + String.fromCharCode(10) + "Query:moteur");
+        }
+    });
+
+    it("leaves the query of another model as it is", () => {
+        assert.equal(embeddingQueryText("voyage-4", "moteur"), "moteur");
     });
 });

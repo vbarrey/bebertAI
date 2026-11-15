@@ -2,6 +2,7 @@ import { AIProviderClient } from "@/lib/ai/provider";
 import { qdrant } from "@/lib/qdrant/client";
 import { getChunksByIds, getChunksInRanges } from "@/lib/queries/chunk";
 import type { PipelineParameters } from "@/lib/pipeline/parameters";
+import { embeddingQueryText } from "@/lib/rag/embedding/embedder";
 import { buildHybridQuery } from "./hybrid-query";
 import type { QueryTranslations } from "./query-translator";
 
@@ -47,7 +48,7 @@ export class DocumentRetriever {
     async embedQuery(query: string): Promise<number[]> {
         const embeddings = await this.embeddingProvider.embed({
             model: this.embeddingModelName,
-            input: [query],
+            input: [embeddingQueryText(this.embeddingModelName, query)],
             contextLength: this.contextLength,
             cpuOnly: true,
             inputType: "query",

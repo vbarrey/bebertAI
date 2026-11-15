@@ -28,6 +28,8 @@ const EnvSchema = z.object({
   DOCUMENTS_STORAGE_PATH: z.string().default("./data/documents"),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   QDRANT_URL: z.url().default("http://localhost:6333"),
+  // Ollama on this machine (http://localhost:11434): unset, the "Ollama local" provider is not offered.
+  OLLAMA_URL: z.url().optional(),
 
   // Documents the worker indexes at once.
   INDEXING_CONCURRENCY: z.coerce.number().int().positive().default(2),

@@ -9,6 +9,9 @@ import { OllamaCloudProvider } from "@/lib/ai/ollama-cloud/provider";
 import { AnthropicProvider } from "@/lib/ai/anthropic/provider";
 import { VoyageProvider } from "@/lib/ai/voyage/provider";
 import { GoogleProvider } from "@/lib/ai/google/provider";
+import { DeepInfraProvider } from "@/lib/ai/deepinfra/provider";
+import { OllamaLocalProvider } from "@/lib/ai/ollama-local/provider";
+import { env } from "@/lib/env";
 import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 import { createProviderClient, syncProviderModels } from "@/lib/ai/provider-factory";
 import { requireUser } from "@/lib/session";
@@ -26,11 +29,13 @@ const ApiKeyProviderSchema = z.object({
   description: DescriptionSchema,
   // Ollama Cloud only.
   host: z.url("Adresse invalide.").trim().default(OLLAMA_CLOUD_HOST),
-  apiKey: z.string().trim().min(1, "La clé API est requise."),
+  // Required, except by Ollama local.
+  apiKey: z.string().trim().default(""),
   defaultModel: z.string().trim().optional().transform((model) => model || undefined),
 });
 
-const API_KEY_PROVIDER_TYPES = [AIProviderType.OLLAMA_CLOUD, AIProviderType.ANTHROPIC, AIProviderType.VOYAGE, AIProviderType.GOOGLE] as const;
+// Ollama local has no key, but is created from the same form.
+const API_KEY_PROVIDER_TYPES = [AIProviderType.OLLAMA_LOCAL, AIProviderType.OLLAMA_CLOUD, AIProviderType.ANTHROPIC, AIProviderType.VOYAGE, AIProviderType.GOOGLE, AIProviderType.DEEPINFRA] as const;
 
 export type ApiKeyProviderType = (typeof API_KEY_PROVIDER_TYPES)[number];
 export type CreateApiKeyProviderInput = z.input<typeof ApiKeyProviderSchema>;
@@ -54,16 +59,29 @@ export async function createApiKeyProvider(
   }
 
   const { name, description, host, ...credentials } = parsed.data;
-  const configuration = type === AIProviderType.OLLAMA_CLOUD ? { host, ...credentials } : credentials;
+  const local = type === AIProviderType.OLLAMA_LOCAL;
+  if (local && !env.OLLAMA_URL) {
+    return { error: "Ollama local n'est pas disponible sur ce serveur." };
+  }
+  if (!local && !credentials.apiKey) {
+    return { error: "La clé API est requise." };
+  }
+  const configuration: { apiKey?: string; defaultModel?: string; host?: string } = local
+    ? { defaultModel: credentials.defaultModel }
+    : type === AIProviderType.OLLAMA_CLOUD ? { host, ...credentials } : credentials;
 
   try {
-    const client = type === AIProviderType.OLLAMA_CLOUD
-      ? new OllamaCloudProvider("", name, { host, ...credentials })
-      : type === AIProviderType.ANTHROPIC
-        ? new AnthropicProvider("", name, credentials)
-        : type === AIProviderType.VOYAGE
-          ? new VoyageProvider("", name, credentials)
-          : new GoogleProvider("", name, credentials);
+    const client = local
+      ? new OllamaLocalProvider("", name)
+      : type === AIProviderType.OLLAMA_CLOUD
+        ? new OllamaCloudProvider("", name, { host, ...credentials })
+        : type === AIProviderType.ANTHROPIC
+          ? new AnthropicProvider("", name, credentials)
+          : type === AIProviderType.VOYAGE
+            ? new VoyageProvider("", name, credentials)
+            : type === AIProviderType.DEEPINFRA
+              ? new DeepInfraProvider("", name, credentials)
+              : new GoogleProvider("", name, credentials);
     await client.checkApiKey();
   } catch (error) {
     return { error: error instanceof Error ? userErrorMessage(error) : "Impossible de joindre le fournisseur." };
@@ -73,8 +91,7 @@ export async function createApiKeyProvider(
   let provider;
   try {
     provider = await prisma.aIProvider.create({
-      // Every provider reached with an API key runs its models remotely.
-      data: { userId: user.id, type, source: AIProviderSource.REMOTE, name, description, configuration: encryptApiKey(configuration) },
+      data: { userId: user.id, type, source: local ? AIProviderSource.LOCAL : AIProviderSource.REMOTE, name, description, configuration: encryptApiKey(configuration) },
     });
   } catch (error) {
     // The database error repeats the data sent, the API key included: it stays in the server logs.
