@@ -12,6 +12,7 @@
     "test": "tsx --conditions=react-server --test \"src/**/*.test.ts\"",
     "eval:questions": "tsx --conditions=react-server scripts/eval-retrieval/generate-questions.ts",
     "eval:retrieval": "tsx --conditions=react-server scripts/eval-retrieval/evaluate.ts",
+    "eval:compat": "tsx --conditions=react-server scripts/eval-embedding-compat.ts",
     "bench:indexing": "tsx --conditions=react-server scripts/bench-indexing.ts",
     "bench:load": "tsx --conditions=react-server scripts/load-test.ts",
     "backup": "tsx --conditions=react-server scripts/backup.ts"
