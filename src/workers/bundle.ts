@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { createRedisConnection } from "@/lib/queue/redis";
 import { BUNDLE_QUEUE, type BundleJobData } from "@/lib/queue/bundle";
 import { runExportJob } from "@/lib/bundle/export";
+import { runImportJob } from "@/lib/bundle/import";
 
 const NAME = "Bundle-Worker";
 
@@ -31,6 +32,7 @@ export function startBundleWorker() {
     const bundleJob = await prisma.bundleJob.findUnique({ where: { id: job.data.bundleJobId }, select: { kind: true } });
     if (!bundleJob) return;
     if (bundleJob.kind === BundleJobKind.EXPORT) await runExportJob(job.data.bundleJobId);
+    else await runImportJob(job.data.bundleJobId);
   }, { connection: createRedisConnection(), concurrency: 1 });
 
   worker.on("failed", (job, error) => console.error(`[${NAME}] Job ${job?.id} failed:`, error));

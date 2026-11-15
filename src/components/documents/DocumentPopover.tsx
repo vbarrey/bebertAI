@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
     HardDrive,
+    PackageOpen,
     Plus,
 } from "lucide-react";
 import Image from "next/image";
@@ -18,6 +19,7 @@ import {
 
 import { LocalDocumentImportDialog } from "./LocalDocumentImportDialog";
 import { GoogleDriveImportDialog } from "./GoogleDriveImportDialog";
+import { BundleImportDialog } from "./BundleImportDialog";
 import { Document } from "@prisma/client";
 
 type Props = {
@@ -34,6 +36,9 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
         useState(false);
 
     const [localImportOpen, setLocalImportOpen] =
+        useState(false);
+
+    const [bundleImportOpen, setBundleImportOpen] =
         useState(false);
 
     const [driveImportOpen, setDriveImportOpen] =
@@ -108,6 +113,21 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
                         />
                         Google Drive
                     </Button>
+
+                    {/* Into the library, whatever the page: not offered from a project. */}
+                    {!projectId && (
+                        <Button
+                            variant="ghost"
+                            className="w-full justify-start"
+                            onClick={() => {
+                                setPopoverOpen(false);
+                                setBundleImportOpen(true);
+                            }}
+                        >
+                            <PackageOpen className="mr-2 size-4" />
+                            Export BebertAI (.bebert)
+                        </Button>
+                    )}
                 </PopoverContent>
             </Popover>
 
@@ -118,6 +138,8 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
                 onIndexingStarted={onIndexingStarted}
                 projectId={projectId}
             />
+
+            <BundleImportDialog open={bundleImportOpen} onOpenChange={setBundleImportOpen} />
 
             <GoogleDriveImportDialog
                 open={driveImportOpen}

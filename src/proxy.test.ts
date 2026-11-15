@@ -64,5 +64,7 @@ describe("proxy matcher", () => {
   it("leaves out the import uploads: it would keep only their first 10 MB", () => {
     assert.equal(matches("/api/documents/import"), false);
     assert.equal(matches("/api/documents/import/analyze"), false);
+    assert.equal(matches("/api/bundles/import"), false);
+    assert.equal(matches("/api/bundles/abc"), true);
   });
 });
