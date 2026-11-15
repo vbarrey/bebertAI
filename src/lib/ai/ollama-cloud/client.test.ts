@@ -68,4 +68,8 @@ describe("OllamaCloudClient", () => {
     it("refuses a configuration without API key", () => {
         assert.throws(() => parseOllamaCloudConfig({ host: "https://ollama.com" }), /Invalid Ollama Cloud configuration/);
     });
+
+    it("calls ollama.com whatever address was stored", () => {
+        assert.equal(parseOllamaCloudConfig({ apiKey: "k", host: "http://qdrant:6333" }).host, "https://ollama.com");
+    });
 });

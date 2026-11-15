@@ -14,14 +14,15 @@ export function parseOllamaCloudConfig(config: unknown): OllamaCloudConfiguratio
     !("apiKey" in config) ||
     typeof config.apiKey !== "string" ||
     !config.apiKey ||
-    ("host" in config && typeof config.host !== "string") ||
     ("defaultModel" in config && config.defaultModel != null && typeof config.defaultModel !== "string")
   ) {
     throw new Error("Invalid Ollama Cloud configuration");
   }
 
   return {
-    host: "host" in config && config.host ? (config.host as string) : OLLAMA_CLOUD_HOST,
+    // Always ollama.com, whatever was stored: an address chosen by the user would make the server call any address,
+    // the internal services of its Docker network included (Qdrant, Redis).
+    host: OLLAMA_CLOUD_HOST,
     apiKey: config.apiKey,
     defaultModel: "defaultModel" in config ? (config.defaultModel as string | undefined) : undefined,
   };

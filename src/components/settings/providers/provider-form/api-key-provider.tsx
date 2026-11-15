@@ -16,17 +16,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 import { ApiKeyProviderType, createApiKeyProvider } from "@/lib/mutations/aiProvider";
-import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 
 // What differs between the providers reached with an API key.
 // apiKeyUrl null: no key (Ollama local).
-const providerForms: Record<ApiKeyProviderType, { name: string; apiKeyUrl: string | null; modelPlaceholder: string; hasHost: boolean }> = {
-  OLLAMA_LOCAL: { name: "Ollama local", apiKeyUrl: null, modelPlaceholder: "qwen3-embedding:4b-q8_0", hasHost: false },
-  OLLAMA_CLOUD: { name: "Ollama Cloud", apiKeyUrl: "ollama.com/settings/keys", modelPlaceholder: "gpt-oss:120b", hasHost: true },
-  ANTHROPIC: { name: "Anthropic", apiKeyUrl: "platform.claude.com/settings/keys", modelPlaceholder: "claude-opus-5-5", hasHost: false },
-  VOYAGE: { name: "Voyage AI", apiKeyUrl: "dashboard.voyageai.com", modelPlaceholder: "voyage-4", hasHost: false },
-  GOOGLE: { name: "Google Gemini", apiKeyUrl: "aistudio.google.com/apikey", modelPlaceholder: "gemini-embedding-2", hasHost: false },
-  DEEPINFRA: { name: "DeepInfra", apiKeyUrl: "deepinfra.com/dash/api_keys", modelPlaceholder: "Qwen/Qwen3-Embedding-4B", hasHost: false },
+const providerForms: Record<ApiKeyProviderType, { name: string; apiKeyUrl: string | null; modelPlaceholder: string }> = {
+  OLLAMA_LOCAL: { name: "Ollama local", apiKeyUrl: null, modelPlaceholder: "qwen3-embedding:4b-q8_0" },
+  OLLAMA_CLOUD: { name: "Ollama Cloud", apiKeyUrl: "ollama.com/settings/keys", modelPlaceholder: "gpt-oss:120b" },
+  ANTHROPIC: { name: "Anthropic", apiKeyUrl: "platform.claude.com/settings/keys", modelPlaceholder: "claude-opus-5-5" },
+  VOYAGE: { name: "Voyage AI", apiKeyUrl: "dashboard.voyageai.com", modelPlaceholder: "voyage-4" },
+  GOOGLE: { name: "Google Gemini", apiKeyUrl: "aistudio.google.com/apikey", modelPlaceholder: "gemini-embedding-2" },
+  DEEPINFRA: { name: "DeepInfra", apiKeyUrl: "deepinfra.com/dash/api_keys", modelPlaceholder: "Qwen/Qwen3-Embedding-4B" },
 };
 
 type ApiKeyProviderFormProps = {
@@ -44,7 +43,6 @@ export function ApiKeyProviderForm({
 
   const [name, setName] = useState(form.name);
   const [description, setDescription] = useState("");
-  const [host, setHost] = useState(OLLAMA_CLOUD_HOST);
   const [apiKey, setApiKey] = useState("");
   const [defaultModel, setDefaultModel] = useState("");
 
@@ -58,7 +56,7 @@ export function ApiKeyProviderForm({
     setLoading(true);
 
     try {
-      const result = await createApiKeyProvider(type, { name, description, host, apiKey, defaultModel });
+      const result = await createApiKeyProvider(type, { name, description, apiKey, defaultModel });
 
       if (result?.error) {
         setError(result.error);
@@ -107,19 +105,6 @@ export function ApiKeyProviderForm({
           <FieldDescription>Facultatif : pour distinguer vos fournisseurs entre eux.</FieldDescription>
         </Field>
 
-        {form.hasHost && (
-          <Field>
-            <FieldLabel htmlFor="host">Adresse de l&apos;API</FieldLabel>
-
-            <Input
-              id="host"
-              type="url"
-              value={host}
-              onChange={(event) => setHost(event.target.value)}
-              required
-            />
-          </Field>
-        )}
 
         {form.apiKeyUrl && <Field>
           <FieldLabel htmlFor="api-key">Clé API</FieldLabel>

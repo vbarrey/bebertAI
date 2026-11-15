@@ -6,13 +6,13 @@ import { AIProviderSource, AIProviderType, type Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { OllamaCloudProvider } from "@/lib/ai/ollama-cloud/provider";
+import { parseOllamaCloudConfig } from "@/lib/ai/ollama-cloud/config";
 import { AnthropicProvider } from "@/lib/ai/anthropic/provider";
 import { VoyageProvider } from "@/lib/ai/voyage/provider";
 import { GoogleProvider } from "@/lib/ai/google/provider";
 import { DeepInfraProvider } from "@/lib/ai/deepinfra/provider";
 import { OllamaLocalProvider } from "@/lib/ai/ollama-local/provider";
 import { env } from "@/lib/env";
-import { OLLAMA_CLOUD_HOST } from "@/lib/ai/ollama-cloud/config";
 import { createProviderClient, syncProviderModels } from "@/lib/ai/provider-factory";
 import { requireUser } from "@/lib/session";
 import { encryptApiKey, manageableProviders } from "@/lib/ai/provider-access";
@@ -27,8 +27,6 @@ const DescriptionSchema = z.string().trim().max(500, "Commentaire trop long (500
 const ApiKeyProviderSchema = z.object({
   name: NameSchema,
   description: DescriptionSchema,
-  // Ollama Cloud only.
-  host: z.url("Adresse invalide.").trim().default(OLLAMA_CLOUD_HOST),
   // Required, except by Ollama local.
   apiKey: z.string().trim().default(""),
   defaultModel: z.string().trim().optional().transform((model) => model || undefined),
@@ -58,7 +56,7 @@ export async function createApiKeyProvider(
     return { error: parsed.error.issues.map((issue) => issue.message).join(" ") };
   }
 
-  const { name, description, host, ...credentials } = parsed.data;
+  const { name, description, ...credentials } = parsed.data;
   const local = type === AIProviderType.OLLAMA_LOCAL;
   if (local && !env.OLLAMA_URL) {
     return { error: "Ollama local n'est pas disponible sur ce serveur." };
@@ -66,15 +64,15 @@ export async function createApiKeyProvider(
   if (!local && !credentials.apiKey) {
     return { error: "La clé API est requise." };
   }
-  const configuration: { apiKey?: string; defaultModel?: string; host?: string } = local
+  const configuration: { apiKey?: string; defaultModel?: string } = local
     ? { defaultModel: credentials.defaultModel }
-    : type === AIProviderType.OLLAMA_CLOUD ? { host, ...credentials } : credentials;
+    : credentials;
 
   try {
     const client = local
       ? new OllamaLocalProvider("", name)
       : type === AIProviderType.OLLAMA_CLOUD
-        ? new OllamaCloudProvider("", name, { host, ...credentials })
+        ? new OllamaCloudProvider("", name, parseOllamaCloudConfig(credentials))
         : type === AIProviderType.ANTHROPIC
           ? new AnthropicProvider("", name, credentials)
           : type === AIProviderType.VOYAGE
