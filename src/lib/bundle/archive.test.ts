@@ -30,6 +30,7 @@ function manifest(files: Record<string, string>): BundleManifest {
         counts: { documents: 1, chunks: 1, files: 1 },
         embedding: { providerType: "OLLAMA_LOCAL", model: "qwen3-embedding:4b-q8_0", dimension: 2 },
         sparse: { k: 1.2, b: 0.75, asciiFolding: true },
+        extraction: { ocrEnabled: true, ocrMinCharsPerPage: 50, ocrLanguages: ["fra", "eng"] },
         chunking: { chunkSize: 2000, chunkOverlap: 200 },
         driveAccounts: [],
         sha256: Object.fromEntries(Object.entries(files).map(([name, content]) => [name, sha256(content)])),

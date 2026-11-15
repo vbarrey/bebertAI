@@ -212,6 +212,8 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                 displayName: string;
                 status: JobStatus;
                 errorMessage?: string;
+                // Indexed, but not quite as asked: the old chunks kept without the file.
+                warning?: string;
             };
 
             const status = jobStatusToIndexingStatus[data.status];
@@ -234,6 +236,10 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                     setProgressByDocument((progress) => without(progress, data.documentId));
                     router.refresh();
                 });
+
+                if (data.warning) {
+                    toast.warning(`« ${data.displayName} » réindexé partiellement`, { description: data.warning });
+                }
 
                 if (data.status === JobStatus.FAILED) {
                     toast.error(`Échec de l'indexation de « ${data.displayName} »`, {

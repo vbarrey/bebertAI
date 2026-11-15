@@ -26,11 +26,14 @@ export async function startIndexingJob(
 
 export async function completeIndexingJob(
   id: string,
+  // Indexed, but not quite as asked (KEPT_CHUNKS_WARNING): kept with the job.
+  warning?: string,
 ) {
   return prisma.indexingJob.update({
     where: { id },
     data: {
       status: "COMPLETED",
+      errorMessage: warning ?? null,
       finishedAt: new Date(),
       document: { update: { indexingStatus: "PROCESSED", indexedAt: new Date() } },
     },

@@ -116,9 +116,9 @@ export async function GET(request: NextRequest) {
           return;
         }
 
-        const language = (returnvalue as { language?: string | null } | null)?.language ?? null;
+        const { language = null, warning } = (returnvalue as { language?: string | null; warning?: string } | null) ?? {};
 
-        send("status", { jobId, documentId: documentIds.get(jobId), status: "COMPLETED", language });
+        send("status", { jobId, documentId: documentIds.get(jobId), displayName: displayNames.get(jobId), status: "COMPLETED", language, warning });
         finish(jobId);
       };
 

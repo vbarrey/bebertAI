@@ -109,7 +109,8 @@ async function reindexDocument(userId: string, documentId: string): Promise<{ in
         return { error: "Le document est déjà en cours d'indexation." };
       }
 
-      await tx.chunk.deleteMany({ where: { documentId: document.id } });
+      // The chunks stay: the worker embeds them again when they were made with the pipeline's chunking, or keeps them
+      // when the file is out of reach; otherwise it replaces them.
       await tx.document.update({ where: { id: document.id }, data: { indexingStatus: IndexingStatus.PENDING } });
 
       return tx.indexingJob.create({ data: { documentId: document.id, status: JobStatus.QUEUED } });

@@ -196,6 +196,7 @@ export async function runExportJob(jobId: string): Promise<void> {
             counts: { documents: result.documents, chunks: result.chunks, files: result.files },
             embedding: { providerType: (await prisma.aIProvider.findUniqueOrThrow({ where: { id: parameters.embedding.providerId } })).type, model: parameters.embedding.modelName, dimension },
             sparse: parameters.embedding.sparse,
+            extraction: parameters.extraction,
             chunking: parameters.chunking,
             driveAccounts: [...driveAccounts].map(([email, count]) => ({ email, documents: count })),
             sha256,

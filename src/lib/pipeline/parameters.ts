@@ -98,6 +98,17 @@ export type PipelineParameters = z.infer<typeof PipelineParametersSchema>;
 // Steps whose output is stored in the index: changing them makes the indexed documents stale.
 export const REINDEX_STEPS = ["extraction", "chunking", "embedding"] as const satisfies readonly (keyof PipelineParameters)[];
 
+/**
+ * The extraction and chunking a document's chunks were made with (Document.chunkedWith). Same signature as the
+ * pipeline's: a reindex only embeds its chunks again, without the file, the OCR nor the chunking.
+ */
+export function chunkingSignature(parameters: Pick<PipelineParameters, "extraction" | "chunking">): string {
+    return JSON.stringify({
+        extraction: ExtractionParametersSchema.parse(parameters.extraction),
+        chunking: ChunkingParametersSchema.parse(parameters.chunking),
+    });
+}
+
 export function requiresReindex(previous: PipelineParameters, next: PipelineParameters): boolean {
     return REINDEX_STEPS.some((step) => JSON.stringify(previous[step]) !== JSON.stringify(next[step]));
 }

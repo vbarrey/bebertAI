@@ -26,7 +26,10 @@ import {
 
 import { INDEXING_STAGE_LABELS, IndexingStage } from "@/lib/queue/types";
 import { getPipelineProvider, PipelineConfig } from "@/lib/pipeline/config";
-import { PipelineParametersSchema } from "@/lib/pipeline/parameters";
+import { chunkingSignature, PipelineParametersSchema } from "@/lib/pipeline/parameters";
+import { KEPT_CHUNKS_WARNING, keepsChunksWithoutFile, reusesChunks } from "@/lib/rag/indexing/reindex";
+import { prisma } from "@/lib/prisma";
+import type { Chunk } from "@prisma/client";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 import { withDocumentFile } from "@/lib/documents/storage";
 import { isPermanentDriveError } from "@/lib/google-drive/client";
@@ -105,56 +108,75 @@ async function initialize() {
         const parameters = PipelineParametersSchema.parse(pipelineConfig.parameters);
         const extractionParameters = parameters.extraction;
 
-        const extractor = getDocumentExtractor(
-          DocumentFormatSchema.parse(document.format),
-          extractionParameters,
-        );
+        const signature = chunkingSignature(parameters);
+        const existingChunks = await prisma.chunk.findMany({ where: { documentId: document.id }, orderBy: { position: "asc" } });
+        let persistedChunks: Chunk[] = existingChunks;
+        let documentLanguage = document.language;
+        // Shown with the completion: the document was indexed, but not quite as asked.
+        let warning: string | undefined;
 
-        await updateProgress(IndexingStage.EXTRACTING);
-
-        // OCR runs inside this stage: progress stays on EXTRACTING with the pages done so far.
-        const extracted = await withDocumentFile(document, (filePath) => extractor.extract(
-          filePath,
-          document,
-          (current, total) => job.updateProgress({ stage: IndexingStage.EXTRACTING, current, total }),
-        ));
-
-        // Every later step works on the same text: NFC, part numbers in Latin letters.
-        const extraction = {
-          ...extracted,
-          blocks: extracted.blocks.map((block) => ({ ...block, text: normalizeExtractedText(block.text) })),
-        };
-
-        const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);
-
-        await updateProgress(IndexingStage.CHUNKING);
-
-        // A book may hold an annex in another language: detected per chunk, the whole document as the fallback,
-        // and null (BM25 without stemmer) when neither tells.
-        const documentLanguage = detectLanguage(extraction.blocks.map((block) => block.text).join("\n"));
-
-        const chunks = (await chunker.chunk(extraction)).map((chunk) => ({
-          ...chunk,
-          language: detectLanguage(chunk.text) ?? documentLanguage,
-        }));
-
-        if (chunks.length === 0) {
-          // Retrying cannot help: the file has no text layer.
-          throw new UnrecoverableError(
-            extractionParameters.ocrEnabled
-              ? "Aucun texte extractible dans le document, même par OCR."
-              : "Aucun texte extractible dans le document (PDF scanné ?). Activez l'OCR dans Réglages > Pipeline.",
+        if (!reusesChunks(document, existingChunks.length, signature)) {
+          const extractor = getDocumentExtractor(
+            DocumentFormatSchema.parse(document.format),
+            extractionParameters,
           );
+
+          await updateProgress(IndexingStage.EXTRACTING);
+
+          let extracted: Awaited<ReturnType<typeof extractor.extract>> | null = null;
+          try {
+            // OCR runs inside this stage: progress stays on EXTRACTING with the pages done so far.
+            extracted = await withDocumentFile(document, (filePath) => extractor.extract(
+              filePath,
+              document,
+              (current, total) => job.updateProgress({ stage: IndexingStage.EXTRACTING, current, total }),
+            ));
+          } catch (error) {
+            if (!keepsChunksWithoutFile(existingChunks.length, error)) throw error;
+            warning = KEPT_CHUNKS_WARNING;
+          }
+
+          if (extracted) {
+            // Every later step works on the same text: NFC, part numbers in Latin letters.
+            const extraction = {
+              ...extracted,
+              blocks: extracted.blocks.map((block) => ({ ...block, text: normalizeExtractedText(block.text) })),
+            };
+
+            const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);
+
+            await updateProgress(IndexingStage.CHUNKING);
+
+            // A book may hold an annex in another language: detected per chunk, the whole document as the fallback,
+            // and null (BM25 without stemmer) when neither tells.
+            const detected = detectLanguage(extraction.blocks.map((block) => block.text).join("\n"));
+            documentLanguage = detected;
+
+            const chunks = (await chunker.chunk(extraction)).map((chunk) => ({
+              ...chunk,
+              language: detectLanguage(chunk.text) ?? detected,
+            }));
+
+            if (chunks.length === 0) {
+              // Retrying cannot help: the file has no text layer.
+              throw new UnrecoverableError(
+                extractionParameters.ocrEnabled
+                  ? "Aucun texte extractible dans le document, même par OCR."
+                  : "Aucun texte extractible dans le document (PDF scanné ?). Activez l'OCR dans Réglages > Pipeline.",
+              );
+            }
+
+            await updateProgress(IndexingStage.PERSISTING_CHUNKS);
+
+            persistedChunks = await replaceDocumentChunks(
+              document.id,
+              chunks,
+            );
+
+            await setDocumentLanguage(document.id, detected);
+            await prisma.document.update({ where: { id: document.id }, data: { chunkedWith: signature } });
+          }
         }
-
-        await updateProgress(IndexingStage.PERSISTING_CHUNKS);
-
-        const persistedChunks = await replaceDocumentChunks(
-          document.id,
-          chunks,
-        );
-
-        await setDocumentLanguage(document.id, documentLanguage);
 
         const embedder = new DocumentEmbedder(
           embeddingProvider,
@@ -204,7 +226,7 @@ async function initialize() {
           );
         });
 
-        await completeIndexingJob(indexingJob.id);
+        await completeIndexingJob(indexingJob.id, warning);
 
         await updateProgress(IndexingStage.COMPLETED);
 
@@ -214,6 +236,7 @@ async function initialize() {
           embeddings: embeddings.length,
           // Forwarded by the SSE route so the documents table shows it without a reload.
           language: documentLanguage,
+          warning,
         };
       } catch (error) {
         const message = `${INDEXING_STAGE_LABELS[stage] ?? stage} : ${

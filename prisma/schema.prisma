@@ -224,6 +224,9 @@ model Document {
   // Drive documents: the Google account they were imported from, exported with them (a bundle imported elsewhere
   // shows which account to connect to open them). Null when unknown.
   driveAccountEmail String?
+  // The extraction and chunking its chunks were made with (chunkingSignature): when the pipeline still has them, a
+  // reindex only embeds the chunks again. Null when unknown (indexed before it existed): a full reindex.
+  chunkedWith String?
 
   indexedAt      DateTime?
   createdAt      DateTime       @default(now())

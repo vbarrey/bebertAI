@@ -18,7 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { getPipelineConfig } from "@/lib/pipeline/runtime";
 import { getPipelineProvider } from "@/lib/pipeline/config";
-import { BM25_LANGUAGES, type PipelineParameters } from "@/lib/pipeline/parameters";
+import { BM25_LANGUAGES, chunkingSignature, type PipelineParameters } from "@/lib/pipeline/parameters";
 import { embeddingQueryText } from "@/lib/rag/embedding/embedder";
 import { ensureChunksCollection } from "@/lib/qdrant/collections";
 import { deleteDocumentEmbeddings, upsertChunkEmbeddings } from "@/lib/qdrant/points";
@@ -201,6 +201,8 @@ async function importDocument(
     document: DocumentLine,
     chunks: { line: ChunkLine; vector: number[] }[],
     parameters: PipelineParameters,
+    // How the bundle's chunks were made (chunkingSignature).
+    chunkedWith: string,
 ): Promise<void> {
     const id = randomUUID();
     const storagePath = document.file ? id : null;
@@ -241,6 +243,7 @@ async function importDocument(
                     sourceRef: fromDrive ? document.sourceRef : null,
                     driveAccountEmail: document.driveAccount,
                     storagePath,
+                    chunkedWith,
                     // Out of the searches until its vectors are in Qdrant.
                     indexingStatus: IndexingStatus.PROCESSING,
                 },
@@ -291,6 +294,7 @@ export async function runImportJob(jobId: string): Promise<void> {
 
         const result: ImportResult = { imported: 0, skipped: 0, failed: [], chunks: 0, driveAccounts: [], warnings: differences(manifest, parameters) };
         const byChecksum = new Map(documents.map((document) => [document.checksum, document]));
+        const chunkedWith = chunkingSignature(manifest);
         const known = new Set((await prisma.document.findMany({
             where: { userId: job.userId, checksum: { in: documents.map(({ checksum }) => checksum) } },
             select: { checksum: true },
@@ -323,11 +327,11 @@ export async function runImportJob(jobId: string): Promise<void> {
         for await (const { checksum, chunks } of documentChunks(directory, manifest.embedding.dimension)) {
             const document = byChecksum.get(checksum)!;
             withChunks.add(checksum);
-            await finish(document, chunks.length, () => importDocument(job.userId, directory, document, chunks, parameters));
+            await finish(document, chunks.length, () => importDocument(job.userId, directory, document, chunks, parameters, chunkedWith));
         }
         // Indexed without any text (an empty page): imported too, with no chunk.
         for (const document of documents.filter(({ checksum }) => !withChunks.has(checksum))) {
-            await finish(document, 0, () => importDocument(job.userId, directory, document, [], parameters));
+            await finish(document, 0, () => importDocument(job.userId, directory, document, [], parameters, chunkedWith));
         }
 
         const connection = await prisma.googleDriveConnection.findUnique({ where: { userId: job.userId }, select: { email: true } });

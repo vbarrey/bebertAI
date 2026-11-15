@@ -15,6 +15,7 @@
 import { z } from "zod";
 
 import { DocumentFormatSchema } from "@/lib/documents/format";
+import { ExtractionParametersSchema } from "@/lib/pipeline/parameters";
 
 export const BUNDLE_FORMAT_VERSION = 1;
 export const BUNDLE_EXTENSION = ".bebert";
@@ -61,6 +62,8 @@ export const BundleManifestSchema = z.object({
         dimension: z.number().int().positive().max(16384),
     }),
     sparse: z.object({ k: z.number().positive(), b: z.number().min(0).max(1), asciiFolding: z.boolean() }),
+    // How the chunks were made: the same as the importing pipeline's, a reindex only embeds them again.
+    extraction: ExtractionParametersSchema,
     chunking: z.object({ chunkSize: z.number().int().positive(), chunkOverlap: z.number().int().nonnegative() }),
     // The Google accounts of the Drive documents without their file: the one to connect to open them.
     driveAccounts: z.array(z.object({ email: z.string(), documents: z.number().int().positive() })),
