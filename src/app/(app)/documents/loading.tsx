@@ -48,7 +48,7 @@ export default function DocumentsLoading() {
               <th className="w-[13%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-14" /></th>
               <th className="w-[8%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-10" /></th>
               <th className="w-[9%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-12" /></th>
-              <th className="md:w-24 lg:w-[9%] hidden md:table-cell"><Bar className="mx-auto h-4 w-14" /></th>
+              <th className="md:w-24 hidden md:table-cell"><Bar className="mx-auto h-4 w-14" /></th>
               <th className="w-24 md:w-32 lg:w-[11%]"><Bar className="mx-auto h-4 w-12" /></th>
               <th className="w-[12%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-20" /></th>
               <th className="md:w-28 lg:w-[12%] hidden md:table-cell"><Bar className="mx-auto h-4 w-20" /></th>
@@ -67,7 +67,7 @@ export default function DocumentsLoading() {
                 <td className="hidden lg:table-cell"><Bar className="mx-auto h-5 w-20 rounded-full" /></td>
                 <td className="hidden lg:table-cell"><Bar className="mx-auto h-4 w-8" /></td>
                 <td className="hidden lg:table-cell"><Bar className="mx-auto h-4 w-16" /></td>
-                <td className="hidden md:table-cell"><Bar className="mx-auto h-4 w-14" /></td>
+                <td className="hidden md:table-cell"><Bar className="mx-auto h-4 w-6" /></td>
                 <td><Bar className="mx-auto h-5 w-16 rounded-full" /></td>
                 <td className="hidden lg:table-cell"><Bar className="mx-auto h-4 w-20" /></td>
                 <td className="hidden md:table-cell"><Bar className="h-4 w-20" /></td>

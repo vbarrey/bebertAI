@@ -29,13 +29,18 @@ import { cn } from "@/lib/utils";
 import type { DocumentRow } from "@/lib/queries/document";
 import type { IndexingSteps } from "@/lib/queue/types";
 
-// Document.language holds the BM25 language detected at indexing.
-const languageLabels: Record<string, string> = {
-    french: "Français",
-    english: "Anglais",
-    russian: "Russe",
-    german: "Allemand",
+// Document.language holds the BM25 language detected at indexing: its code in the column, its name on hover.
+const languages: Record<string, { code: string; name: string }> = {
+    french: { code: "FR", name: "Français" },
+    english: { code: "EN", name: "Anglais" },
+    russian: { code: "RU", name: "Russe" },
+    german: { code: "DE", name: "Allemand" },
 };
+
+function Language({ language }: { language: string }) {
+    const { code, name } = languages[language] ?? { code: language.slice(0, 2).toUpperCase(), name: language };
+    return <abbr title={name} className="cursor-default no-underline">{code}</abbr>;
+}
 
 // What the cells need from the page, handed to the table rather than captured: the columns are defined once.
 type DocumentTableMeta = {
@@ -150,9 +155,9 @@ const columns: ColumnDef<DocumentRow>[] = [
         accessorKey: "language",
         header: "Langue",
         sortDescFirst: false,
-        cell: ({ row: { original: doc } }) => (doc.language ? languageLabels[doc.language] ?? doc.language : "—"),
+        cell: ({ row: { original: doc } }) => (doc.language ? <Language language={doc.language} /> : "—"),
         meta: {
-            header: "md:w-24 lg:w-[9%] hidden md:table-cell",
+            header: "md:w-24 hidden md:table-cell",
             cell: "hidden md:table-cell text-center text-muted-foreground",
         } satisfies ColumnClasses,
     },
