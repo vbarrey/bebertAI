@@ -10,7 +10,7 @@ export const DOCUMENTS_PAGE_SIZE = 50;
 export const DOCUMENTS_MAX_LIMIT = 1000;
 
 // The columns the table sorts on. Not the status: its filter already groups the documents by status.
-export const documentSortColumns = ["displayName", "format", "fileSize", "language", "indexedAt", "updatedAt", "createdAt"] as const;
+export const documentSortColumns = ["displayName", "project", "format", "fileSize", "language", "indexedAt", "updatedAt", "createdAt"] as const;
 export type DocumentSortColumn = (typeof documentSortColumns)[number];
 
 export const documentListQuerySchema = z.object({

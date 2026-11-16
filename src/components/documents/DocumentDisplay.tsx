@@ -351,16 +351,16 @@ export function DocumentsDisplay({ initialPage, stats, googleDriveResult, projec
                         onValueChange={(v) => changeFilters(() => setLocationFilter(v))}
                         value={locationFilter}
                     >
-                        <SelectTrigger aria-label="Emplacement">
-                            <SelectValue placeholder="Emplacement">
-                                {locationFilter === "ALL" ? "Tous les emplacements"
+                        <SelectTrigger aria-label="Projet">
+                            <SelectValue placeholder="Projet">
+                                {locationFilter === "ALL" ? "Tous les projets"
                                     : locationFilter === "LIBRARY" ? "Bibliothèque"
                                     : stats.ownerProjects.find(({ id }) => id === locationFilter)?.name}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="ALL">Tous les emplacements</SelectItem>
-                            <SelectItem value="LIBRARY">Bibliothèque</SelectItem>
+                            <SelectItem value="ALL">Tous les projets</SelectItem>
+                            <SelectItem value="LIBRARY">Bibliothèque (sans projet)</SelectItem>
                             {stats.ownerProjects.map(({ id, name }) => (
                                 <SelectItem key={id} value={id}>{name}</SelectItem>
                             ))}

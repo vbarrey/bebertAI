@@ -24,6 +24,8 @@ function withIndexingState<T extends WithLatestJob>({ indexingJobs: [job], ...do
 // The sort of each column. Case-insensitive for the text: SQLite compares bytes otherwise, "Zèbre" before "abeille".
 const sortExpressions: Record<DocumentSortColumn, Prisma.Sql> = {
   displayName: Prisma.sql`"displayName" COLLATE NOCASE`,
+  // The name of the project it was imported for: null for a library document, last.
+  project: Prisma.sql`(SELECT "name" FROM "Project" WHERE "Project"."id" = "Document"."ownerProjectId") COLLATE NOCASE`,
   format: Prisma.sql`"format" COLLATE NOCASE`,
   fileSize: Prisma.sql`"fileSize"`,
   language: Prisma.sql`"language"`,
@@ -93,7 +95,6 @@ export async function getDocumentStats(userId: string) {
     prisma.project.findMany({
       where: { userId, ownedDocuments: { some: {} } },
       select: { id: true, name: true },
-      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -104,7 +105,8 @@ export async function getDocumentStats(userId: string) {
   return {
     counts,
     total: byStatus.reduce((sum, group) => sum + group._count._all, 0),
-    ownerProjects,
+    // In the alphabetical order of the project column, whatever the case (SQLite compares bytes).
+    ownerProjects: ownerProjects.sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" })),
   };
 }
 

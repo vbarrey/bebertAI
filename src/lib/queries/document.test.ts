@@ -18,6 +18,7 @@ let documents: typeof import("@/lib/queries/document");
 
 const userId = "user-pages";
 let projectId: string;
+let archivesId: string;
 
 async function names(query: Partial<DocumentListQuery> = {}, offset = 0, limit = 50) {
   const page = await documents.getDocumentsPage(userId, { ...defaultDocumentListQuery, ...query, offset, limit });
@@ -32,19 +33,23 @@ describe("documents page: sorted, filtered and sliced by the database", () => {
     await prisma.user.create({ data: { id: userId, name: "pages", email: "pages@example.com" } });
     await prisma.user.create({ data: { id: "someone-else", name: "other", email: "other@example.com" } });
     projectId = (await prisma.project.create({ data: { userId, name: "Projet", documentScope: "ALL" } })).id;
+    // Lowercase: before "Projet" alphabetically, after it byte by byte.
+    archivesId = (await prisma.project.create({ data: { userId, name: "archives", documentScope: "ALL" } })).id;
+    // No document of its own: not offered by the filter.
+    await prisma.project.create({ data: { userId, name: "Vide", documentScope: "ALL" } });
 
-    const rows: [string, number | null, string | null, "PROCESSED" | "FAILED" | "UNPLANNED", boolean][] = [
-      ["beta.pdf", 300, "french", "PROCESSED", false],
-      ["Alpha.txt", 100, null, "UNPLANNED", false],
-      ["zeta.docx", null, "english", "FAILED", true],
-      ["Gamma 100%.txt", 200, "french", "PROCESSED", false],
-      ["gamma_1.txt", 50, null, "PROCESSED", true],
+    const rows: [string, number | null, string | null, "PROCESSED" | "FAILED" | "UNPLANNED", "project" | "archives" | null][] = [
+      ["beta.pdf", 300, "french", "PROCESSED", null],
+      ["Alpha.txt", 100, null, "UNPLANNED", "archives"],
+      ["zeta.docx", null, "english", "FAILED", "project"],
+      ["Gamma 100%.txt", 200, "french", "PROCESSED", null],
+      ["gamma_1.txt", 50, null, "PROCESSED", "project"],
     ];
-    for (const [index, [displayName, fileSize, language, indexingStatus, owned]] of rows.entries()) {
+    for (const [index, [displayName, fileSize, language, indexingStatus, owner]] of rows.entries()) {
       await prisma.document.create({
         data: {
           userId, displayName, fileSize, language, indexingStatus, format: displayName.split(".").pop()!.toUpperCase(),
-          checksum: `c${index}`, sourceType: "LOCAL", ownerProjectId: owned ? projectId : null,
+          checksum: `c${index}`, sourceType: "LOCAL", ownerProjectId: owner === "project" ? projectId : owner === "archives" ? archivesId : null,
           createdAt: new Date(2026, 0, index + 1),
         },
       });
@@ -94,13 +99,25 @@ describe("documents page: sorted, filtered and sliced by the database", () => {
     assert.deepEqual((await names({ search: "a_1" })).names, ["gamma_1.txt"]);
   });
 
+  it("projects sorted alphabetically whatever their case, the library documents last in both orders", async () => {
+    const asc = (await names({ sort: "project", order: "asc" })).names;
+    assert.equal(asc[0], "Alpha.txt");
+    assert.deepEqual(asc.slice(1, 3).sort(), ["gamma_1.txt", "zeta.docx"]);
+    assert.deepEqual(asc.slice(3).sort(), ["Gamma 100%.txt", "beta.pdf"]);
+
+    const desc = (await names({ sort: "project", order: "desc" })).names;
+    assert.deepEqual(desc.slice(0, 2).sort(), ["gamma_1.txt", "zeta.docx"]);
+    assert.equal(desc[2], "Alpha.txt");
+    assert.deepEqual(desc.slice(3).sort(), ["Gamma 100%.txt", "beta.pdf"]);
+  });
+
   it("status and location filters", async () => {
     assert.deepEqual(await names({ status: "PROCESSED", sort: "displayName", order: "asc" }), {
       names: ["beta.pdf", "Gamma 100%.txt", "gamma_1.txt"],
       total: 3,
     });
     assert.deepEqual((await names({ location: "LIBRARY", sort: "displayName", order: "asc" })).names,
-      ["Alpha.txt", "beta.pdf", "Gamma 100%.txt"]);
+      ["beta.pdf", "Gamma 100%.txt"]);
     assert.deepEqual((await names({ location: projectId, sort: "displayName", order: "asc" })).names, ["gamma_1.txt", "zeta.docx"]);
     assert.deepEqual((await names({ location: projectId, status: "FAILED" })).names, ["zeta.docx"]);
   });
@@ -110,6 +127,6 @@ describe("documents page: sorted, filtered and sliced by the database", () => {
 
     assert.deepEqual(stats.counts, { PROCESSED: 3, FAILED: 1, UNPLANNED: 1 });
     assert.equal(stats.total, 5);
-    assert.deepEqual(stats.ownerProjects, [{ id: projectId, name: "Projet" }]);
+    assert.deepEqual(stats.ownerProjects, [{ id: archivesId, name: "archives" }, { id: projectId, name: "Projet" }]);
   });
 });

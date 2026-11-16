@@ -110,21 +110,31 @@ const columns: ColumnDef<DocumentRow>[] = [
                         {doc.displayName}
                     </TooltipContent>
                 </Tooltip>
+                {/* Narrower screens: the project column is hidden, its name stays under the title. */}
                 {doc.ownerProject && (
-                    <Badge variant="secondary" className="mt-1 ml-6 flex max-w-48 gap-1">
-                        <FolderOpen className="size-3 shrink-0" />
-                        <TruncatedText>{doc.ownerProject.name}</TruncatedText>
-                    </Badge>
+                    <ProjectBadge name={doc.ownerProject.name} className="mt-1 ml-6 lg:hidden" />
                 )}
             </>
         ),
         // No width: this auto column absorbs the slack, so the selection column keeps its exact animated width.
     },
     {
+        // The project the document was imported for; none for a library document, last in both orders.
+        id: "project",
+        accessorFn: (doc) => doc.ownerProject?.name ?? null,
+        header: "Projet",
+        sortDescFirst: false,
+        cell: ({ row: { original: doc } }) => (doc.ownerProject ? <ProjectBadge name={doc.ownerProject.name} className="mx-auto" /> : "—"),
+        meta: {
+            header: "w-[13%] hidden lg:table-cell",
+            cell: "hidden lg:table-cell text-center text-muted-foreground",
+        } satisfies ColumnClasses,
+    },
+    {
         accessorKey: "format",
         header: "Type",
         sortDescFirst: false,
-        meta: { header: "w-[12.5%] hidden lg:table-cell", cell: "hidden lg:table-cell text-center" } satisfies ColumnClasses,
+        meta: { header: "w-[8%] hidden lg:table-cell", cell: "hidden lg:table-cell text-center" } satisfies ColumnClasses,
     },
     {
         accessorKey: "fileSize",
@@ -132,7 +142,7 @@ const columns: ColumnDef<DocumentRow>[] = [
         sortDescFirst: true,
         cell: ({ row: { original: doc } }) => `${doc.fileSize ? (doc.fileSize / 1024 / 1024).toFixed(2) : "—"} MB`,
         meta: {
-            header: "w-[12.5%] hidden lg:table-cell",
+            header: "w-[9%] hidden lg:table-cell",
             cell: "hidden lg:table-cell text-center text-muted-foreground",
         } satisfies ColumnClasses,
     },
@@ -142,7 +152,7 @@ const columns: ColumnDef<DocumentRow>[] = [
         sortDescFirst: false,
         cell: ({ row: { original: doc } }) => (doc.language ? languageLabels[doc.language] ?? doc.language : "—"),
         meta: {
-            header: "w-[10%] hidden md:table-cell",
+            header: "md:w-24 lg:w-[9%] hidden md:table-cell",
             cell: "hidden md:table-cell text-center text-muted-foreground",
         } satisfies ColumnClasses,
     },
@@ -158,7 +168,7 @@ const columns: ColumnDef<DocumentRow>[] = [
                 progress={tableMeta(table.options.meta).progressByDocument[doc.id]}
             />
         ),
-        meta: { header: "w-24 md:w-[12.5%]", cell: "text-center" } satisfies ColumnClasses,
+        meta: { header: "w-24 md:w-32 lg:w-[11%]", cell: "text-center" } satisfies ColumnClasses,
     },
     {
         accessorKey: "indexedAt",
@@ -166,7 +176,7 @@ const columns: ColumnDef<DocumentRow>[] = [
         sortDescFirst: true,
         cell: ({ row: { original: doc } }) => (doc.indexedAt ? relativeDate(doc.indexedAt) : "—"),
         meta: {
-            header: "w-[12.5%] hidden lg:table-cell",
+            header: "w-[12%] hidden lg:table-cell",
             cell: "hidden lg:table-cell text-muted-foreground text-center",
         } satisfies ColumnClasses,
     },
@@ -175,7 +185,7 @@ const columns: ColumnDef<DocumentRow>[] = [
         header: "Dernière modification",
         sortDescFirst: true,
         cell: ({ row: { original: doc } }) => relativeDate(doc.updatedAt),
-        meta: { header: "w-[12.5%] hidden md:table-cell", cell: "hidden md:table-cell text-muted-foreground" } satisfies ColumnClasses,
+        meta: { header: "md:w-28 lg:w-[12%] hidden md:table-cell", cell: "hidden md:table-cell text-muted-foreground" } satisfies ColumnClasses,
     },
     {
         id: "actions",
@@ -185,7 +195,7 @@ const columns: ColumnDef<DocumentRow>[] = [
             const { onIndexingStarted, onDeleted } = tableMeta(table.options.meta);
             return <DocumentActions document={doc} onIndexingStarted={onIndexingStarted} onDeleted={onDeleted} />;
         },
-        meta: { header: "w-20 md:w-[12.5%]", cell: "text-center" } satisfies ColumnClasses,
+        meta: { header: "w-20 md:w-24", cell: "text-center" } satisfies ColumnClasses,
     },
 ];
 
@@ -386,6 +396,15 @@ function SortableHeader({
             {title}
             <Icon className={cn("size-3.5 shrink-0", !sorted && "text-muted-foreground/60")} />
         </Button>
+    );
+}
+
+function ProjectBadge({ name, className }: { name: string; className?: string }) {
+    return (
+        <Badge variant="secondary" className={cn("flex max-w-48 gap-1", className)}>
+            <FolderOpen className="size-3 shrink-0" />
+            <TruncatedText>{name}</TruncatedText>
+        </Badge>
     );
 }
 

@@ -45,13 +45,14 @@ export default function DocumentsLoading() {
             {/* As high as the real header and rows, whose titles and dates wrap on narrower columns. */}
             <tr className="h-[41px] md:h-[65px] [&>th]:px-2 md:[&>th]:px-4">
               <th><Bar className="mx-auto h-4 w-16" /></th>
-              <th className="w-[12.5%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-10" /></th>
-              <th className="w-[12.5%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-12" /></th>
-              <th className="w-[10%] hidden md:table-cell"><Bar className="mx-auto h-4 w-14" /></th>
-              <th className="w-24 md:w-[12.5%]"><Bar className="mx-auto h-4 w-12" /></th>
-              <th className="w-[12.5%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-20" /></th>
-              <th className="w-[12.5%] hidden md:table-cell"><Bar className="mx-auto h-4 w-20" /></th>
-              <th className="w-20 md:w-[12.5%]"><Bar className="mx-auto h-4 w-14" /></th>
+              <th className="w-[13%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-14" /></th>
+              <th className="w-[8%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-10" /></th>
+              <th className="w-[9%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-12" /></th>
+              <th className="md:w-24 lg:w-[9%] hidden md:table-cell"><Bar className="mx-auto h-4 w-14" /></th>
+              <th className="w-24 md:w-32 lg:w-[11%]"><Bar className="mx-auto h-4 w-12" /></th>
+              <th className="w-[12%] hidden lg:table-cell"><Bar className="mx-auto h-4 w-20" /></th>
+              <th className="md:w-28 lg:w-[12%] hidden md:table-cell"><Bar className="mx-auto h-4 w-20" /></th>
+              <th className="w-20 md:w-24"><Bar className="mx-auto h-4 w-14" /></th>
             </tr>
           </thead>
           <tbody>
@@ -63,6 +64,7 @@ export default function DocumentsLoading() {
                     <Bar className="h-4 w-full max-w-36" />
                   </div>
                 </td>
+                <td className="hidden lg:table-cell"><Bar className="mx-auto h-5 w-20 rounded-full" /></td>
                 <td className="hidden lg:table-cell"><Bar className="mx-auto h-4 w-8" /></td>
                 <td className="hidden lg:table-cell"><Bar className="mx-auto h-4 w-16" /></td>
                 <td className="hidden md:table-cell"><Bar className="mx-auto h-4 w-14" /></td>
