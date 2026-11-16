@@ -75,7 +75,7 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
             >
                 <PopoverTrigger asChild>
                     <Button>
-                        <Plus className="mr-2 size-4" />
+                        <Plus data-icon="inline-start" />
                         {projectId ? "Importer dans le projet" : "Ajouter / Importer"}
                     </Button>
                 </PopoverTrigger>

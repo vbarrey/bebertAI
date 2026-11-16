@@ -117,7 +117,7 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">
+      <span className="text-xs text-muted-foreground tabular-nums">
         {documents.length} sélectionné(s)
       </span>
 
@@ -125,12 +125,10 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            size="sm"
-            className="gap-2"
             disabled={loading || documents.length === 0}
           >
             Actions
-            <ChevronDown className="size-4" />
+            <ChevronDown data-icon="inline-end" />
           </Button>
         </PopoverTrigger>
 
@@ -207,12 +205,10 @@ export function DocumentBulkActions({ documents, onIndexingStarted, onDeleted, o
 
       <Button
         variant="ghost"
-        size="sm"
-        className="gap-2"
         disabled={loading}
         onClick={onCancel}
       >
-        <X className="size-4" />
+        <X data-icon="inline-start" />
         Annuler
       </Button>
 

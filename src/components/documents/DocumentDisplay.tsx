@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { OnChangeFn, RowSelectionState, SortingState } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { IndexingStatus, JobStatus } from "@prisma/client";
 import { DocumentImportPopover } from "./DocumentPopover";
 import { ExportDialog } from "./ExportDialog";
-import { Card, CardContent } from "../ui/card";
 import type { IndexingSteps } from "@/lib/queue/types";
 import { defaultDocumentListQuery, type DocumentListQuery, type DocumentSortColumn } from "@/lib/documents/list-query";
 import type { DocumentRow, DocumentStats, DocumentsPage } from "@/lib/queries/document";
@@ -283,14 +281,14 @@ export function DocumentsDisplay({ initialPage, stats, googleDriveResult, projec
     return (
         <div className="p-6 max-w-7xl mx-auto">
             {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold">Documents</h1>
-                    <p className="text-muted-foreground mt-1">Gestion et suivi de vos documents indexés.</p>
+                    <h1 className="text-2xl font-bold">Documents</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Gestion et suivi de vos documents indexés.</p>
                 </div>
-                <div className="mt-4 flex gap-2 lg:mt-0">
-                    <Button variant="outline" className="gap-2" onClick={() => { setExportIds(null); setExportOpen(true); }}>
-                        <Upload className="size-4" />
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => { setExportIds(null); setExportOpen(true); }}>
+                        <Upload data-icon="inline-start" />
                         Exporter
                     </Button>
                     <DocumentImportPopover addDocuments={refresh} onIndexingStarted={onIndexingStarted} googleDriveResult={googleDriveResult} />
@@ -298,53 +296,35 @@ export function DocumentsDisplay({ initialPage, stats, googleDriveResult, projec
                 <ExportDialog open={exportOpen} onOpenChange={setExportOpen} projects={projects} documentIds={exportIds} />
             </div>
 
-            {/* Stats + Filters */}
-            {/* Phone: the status select below shows the same counts. */}
-            <div className="mb-8 hidden grid-cols-4 gap-4 md:grid">
+            {/* The status filter, with the count of each status. A row that scrolls sideways on a phone. */}
+            <div role="group" aria-label="Statut" className="-mx-6 mb-4 flex gap-2 overflow-x-auto px-6 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
                 {statusOptions.map((opt) => {
-                        const count = statusCount(opt.value);
-                        return (
-                            <Card
-                                key={opt.value}
-                                className={cn(
-                                    "cursor-pointer flex-row items-center py-4 transition-all duration-200 hover:border-primary hover:shadow-md",
-                                    statusFilter === opt.value && "border-primary",
-                                )}
-                                onClick={() => changeFilters(() => setStatusFilter(toIndexingStatus(opt.value as string)))}
-                            >
-                                <CardContent className="flex items-center gap-2 whitespace-nowrap px-4">
-                                    <Badge variant="outline">{count}</Badge> <span>{opt.label}</span>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+                    const selected = statusFilter === opt.value;
+                    return (
+                        <Button
+                            key={opt.value}
+                            variant={selected ? "default" : "outline"}
+                            aria-pressed={selected}
+                            className="shrink-0"
+                            onClick={() => changeFilters(() => setStatusFilter(toIndexingStatus(opt.value as string)))}
+                        >
+                            {opt.label}
+                            <span className={cn("tabular-nums", selected ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                                {statusCount(opt.value)}
+                            </span>
+                        </Button>
+                    );
+                })}
             </div>
 
-            {/* Search & Filters */}
-            <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
+            {/* Search, project & selection */}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
                 <Input
                     placeholder="Rechercher par nom"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className="w-full sm:max-w-xs"
                 />
-                <Select
-                    onValueChange={(v) => changeFilters(() => setStatusFilter(toIndexingStatus(v as string)))}
-                    value={statusFilter}
-                >
-                    <SelectTrigger aria-label="Statut">
-                        <SelectValue placeholder="Statut">
-                            {statusFilter === "ALL" ? "Tous les statuts" : statusOptions.find((opt) => opt.value === statusFilter)?.label}
-                        </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        {statusOptions.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label} ({statusCount(opt.value)})
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
                 {/* Only once documents were imported for a project. */}
                 {stats.ownerProjects.length > 0 && (
                     <Select
@@ -385,8 +365,8 @@ export function DocumentsDisplay({ initialPage, stats, googleDriveResult, projec
                                     onExport={(documentIds) => { setExportIds(documentIds); setExportOpen(true); }}
                                 />
                             ) : (
-                                <Button variant="outline" size="sm" className="gap-2" onClick={() => setSelectionMode(true)}>
-                                    <ListChecks className="size-4" />
+                                <Button variant="outline" onClick={() => setSelectionMode(true)}>
+                                    <ListChecks data-icon="inline-start" />
                                     Sélectionner
                                 </Button>
                             )}

@@ -11,7 +11,7 @@ import {
     type SortingState,
 } from "@tanstack/react-table";
 import { AnimatePresence, motion } from "motion/react";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import Image from "next/image";
 import { ArrowDown, ArrowUp, ChevronsUpDown, File, FolderOpen } from "lucide-react";
@@ -56,8 +56,24 @@ type ColumnClasses = { header?: string; cell?: string };
 const tableMeta = (meta: unknown) => meta as DocumentTableMeta;
 const columnClasses = (meta: unknown) => (meta ?? {}) as ColumnClasses;
 
-function relativeDate(date: Date) {
-    return formatDistanceToNow(date, { addSuffix: true, locale: fr });
+// The day, short enough for one line; the time and how long ago on hover.
+function ShortDate({ date }: { date: Date }) {
+    const title = `${format(date, "d MMMM yyyy 'à' HH:mm", { locale: fr })} (${formatDistanceToNow(date, { addSuffix: true, locale: fr })})`;
+    return <time dateTime={date.toISOString()} title={title} className="cursor-default">{format(date, "d MMM yyyy", { locale: fr })}</time>;
+}
+
+const sizeFormat = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
+
+// In French units: o, Ko, Mo, Go.
+function formatSize(bytes: number) {
+    const units = ["o", "Ko", "Mo", "Go"];
+    let value = bytes;
+    let unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+        value /= 1024;
+        unit++;
+    }
+    return `${sizeFormat.format(value)} ${units[unit]}`;
 }
 
 /**
@@ -139,13 +155,13 @@ const columns: ColumnDef<DocumentRow>[] = [
         accessorKey: "format",
         header: "Type",
         sortDescFirst: false,
-        meta: { header: "w-[8%] hidden lg:table-cell", cell: "hidden lg:table-cell text-center" } satisfies ColumnClasses,
+        meta: { header: "w-[8%] hidden lg:table-cell", cell: "hidden lg:table-cell text-center text-muted-foreground" } satisfies ColumnClasses,
     },
     {
         accessorKey: "fileSize",
         header: "Taille",
         sortDescFirst: true,
-        cell: ({ row: { original: doc } }) => `${doc.fileSize ? (doc.fileSize / 1024 / 1024).toFixed(2) : "—"} MB`,
+        cell: ({ row: { original: doc } }) => (doc.fileSize ? formatSize(doc.fileSize) : "—"),
         meta: {
             header: "w-[9%] hidden lg:table-cell",
             cell: "hidden lg:table-cell text-center text-muted-foreground",
@@ -173,13 +189,13 @@ const columns: ColumnDef<DocumentRow>[] = [
                 progress={tableMeta(table.options.meta).progressByDocument[doc.id]}
             />
         ),
-        meta: { header: "w-24 md:w-32 lg:w-[11%]", cell: "text-center" } satisfies ColumnClasses,
+        meta: { header: "w-28 md:w-32 lg:w-[11%]", cell: "text-center" } satisfies ColumnClasses,
     },
     {
         accessorKey: "indexedAt",
-        header: "Dernière indexation",
+        header: "Indexé le",
         sortDescFirst: true,
-        cell: ({ row: { original: doc } }) => (doc.indexedAt ? relativeDate(doc.indexedAt) : "—"),
+        cell: ({ row: { original: doc } }) => (doc.indexedAt ? <ShortDate date={doc.indexedAt} /> : "—"),
         meta: {
             header: "w-[12%] hidden lg:table-cell",
             cell: "hidden lg:table-cell text-muted-foreground text-center",
@@ -187,20 +203,21 @@ const columns: ColumnDef<DocumentRow>[] = [
     },
     {
         accessorKey: "updatedAt",
-        header: "Dernière modification",
+        header: "Modifié le",
         sortDescFirst: true,
-        cell: ({ row: { original: doc } }) => relativeDate(doc.updatedAt),
-        meta: { header: "md:w-28 lg:w-[12%] hidden md:table-cell", cell: "hidden md:table-cell text-muted-foreground" } satisfies ColumnClasses,
+        cell: ({ row: { original: doc } }) => <ShortDate date={doc.updatedAt} />,
+        meta: { header: "md:w-28 lg:w-[12%] hidden md:table-cell", cell: "hidden md:table-cell text-center text-muted-foreground" } satisfies ColumnClasses,
     },
     {
         id: "actions",
-        header: "Actions",
+        // Its menu buttons say what they are: no title needed above them.
+        header: () => <span className="sr-only">Actions</span>,
         enableSorting: false,
         cell: ({ row: { original: doc }, table }) => {
             const { onIndexingStarted, onDeleted } = tableMeta(table.options.meta);
             return <DocumentActions document={doc} onIndexingStarted={onIndexingStarted} onDeleted={onDeleted} />;
         },
-        meta: { header: "w-20 md:w-24", cell: "text-center" } satisfies ColumnClasses,
+        meta: { header: "w-10 md:w-12", cell: "text-center" } satisfies ColumnClasses,
     },
 ];
 
@@ -285,7 +302,7 @@ export function DocumentTable({
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-xl border">
-                    <Table className="table-fixed text-base">
+                    <Table className="table-fixed">
                         <TableHeader className="bg-muted/20">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -314,7 +331,7 @@ export function DocumentTable({
                                                 key={header.id}
                                                 aria-sort={column.getCanSort() ? (sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none") : undefined}
                                                 className={cn(
-                                                    "h-auto px-2 py-2 text-center whitespace-normal md:px-4",
+                                                    "h-auto px-2 py-2 text-center font-medium whitespace-normal text-muted-foreground md:px-4",
                                                     columnClasses(column.columnDef.meta).header,
                                                 )}
                                             >
@@ -344,7 +361,7 @@ export function DocumentTable({
                                         <TableCell
                                             key={cell.id}
                                             className={cn(
-                                                "px-2 py-3 whitespace-normal md:px-4",
+                                                "px-2 py-2.5 whitespace-normal md:px-4",
                                                 columnClasses(cell.column.columnDef.meta).cell,
                                             )}
                                         >
@@ -395,7 +412,10 @@ function SortableHeader({
         <Button
             variant="ghost"
             size="sm"
-            className="-mx-2 h-auto gap-1 px-2 py-1 text-[length:inherit] font-medium whitespace-normal"
+            className={cn(
+                "-mx-2 h-auto gap-1 px-2 py-1 text-[length:inherit] font-medium whitespace-normal hover:text-foreground",
+                sorted && "text-foreground",
+            )}
             onClick={onToggle}
         >
             {title}
