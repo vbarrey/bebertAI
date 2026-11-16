@@ -1,29 +1,26 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { OnChangeFn, RowSelectionState, SortingState } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { DocumentStatusBadge } from "@/components/documents/DocumentStatusBadge";
-import { DocumentActions } from "@/components/documents/DocumentActions";
 import { DocumentBulkActions } from "@/components/documents/DocumentBulkActions";
-import { File, FolderOpen, ListChecks, Upload } from "lucide-react";
-import { TruncatedText } from "@/components/ui/truncated-text";
-import Image from "next/image";
+import { DocumentTable } from "@/components/documents/DocumentTable";
+import { useDocumentList } from "@/components/documents/useDocumentList";
+import { ListChecks, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
-import { formatDistanceToNow } from "date-fns";
-import { fr } from "date-fns/locale";
-import { Document, IndexingStatus, JobStatus } from "@prisma/client";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { IndexingStatus, JobStatus } from "@prisma/client";
 import { DocumentImportPopover } from "./DocumentPopover";
 import { ExportDialog } from "./ExportDialog";
 import { Card, CardContent } from "../ui/card";
 import type { IndexingSteps } from "@/lib/queue/types";
+import { defaultDocumentListQuery, type DocumentListQuery, type DocumentSortColumn } from "@/lib/documents/list-query";
+import type { DocumentRow, DocumentStats, DocumentsPage } from "@/lib/queries/document";
 
 const toIndexingStatus = (status: string): IndexingStatus | "ALL" => {
     switch (status) {
@@ -58,8 +55,6 @@ const statusOptions = [
     { label: "Jamais indexé", value: IndexingStatus.UNPLANNED },
 ];
 
-const PerPage = 10;
-
 const jobStatusToIndexingStatus: Partial<Record<JobStatus, IndexingStatus>> = {
     QUEUED: IndexingStatus.PENDING,
     RUNNING: IndexingStatus.PROCESSING,
@@ -70,34 +65,25 @@ const jobStatusToIndexingStatus: Partial<Record<JobStatus, IndexingStatus>> = {
 
 const finishedJobStatuses: JobStatus[] = [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED];
 
-// Document.language holds the BM25 language detected at indexing.
-const languageLabels: Record<string, string> = {
-    french: "Français",
-    english: "Anglais",
-    russian: "Russe",
-    german: "Allemand",
-};
-
-type DocumentRow = Document & {
-    indexingError?: string | null;
-    activeJobId?: string | null;
-    // Imported for this project only; null for a library document.
-    ownerProject?: { id: string; name: string } | null;
-};
+// The search is sent once the user stops typing, not at each letter.
+const SEARCH_DELAY_MS = 300;
 
 // "LIBRARY", or the id of the project the documents were imported for.
 type LocationFilter = "ALL" | "LIBRARY" | string;
 
 type Props = {
-    // Rendered by the server again after each document action and import: never copied into a state.
-    documents: DocumentRow[]
+    // The first slice of the documents, in the default sort and without filter: the page then loads the next ones.
+    initialPage: DocumentsPage
+    // Rendered by the server again after each document action and import: the page then loads its documents again.
+    stats: DocumentStats
     googleDriveResult?: string
     // The user's projects, to export one.
     projects: { id: string; name: string }[]
 }
 
-// What the indexing events tell before the server renders the documents again.
-type LiveStatus = Pick<DocumentRow, "indexingStatus" | "indexingError">;
+// What the indexing events tell before the documents are loaded again. Settled: the job is over, the status final;
+// dropped once a reload started after it brought the document as the server now has it.
+type LiveStatus = Pick<DocumentRow, "indexingStatus" | "indexingError"> & { settledAt?: number };
 
 function without<T>(record: Record<string, T>, key: string): Record<string, T> {
     const next = { ...record };
@@ -106,95 +92,110 @@ function without<T>(record: Record<string, T>, key: string): Record<string, T> {
 }
 
 // ----- Page ----
-export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult, projects }: Props) {
+export function DocumentsDisplay({ initialPage, stats, googleDriveResult, projects }: Props) {
     const [exportOpen, setExportOpen] = useState(false);
     // The documents picked for the export; null: chosen in the dialog.
     const [exportIds, setExportIds] = useState<string[] | null>(null);
     const router = useRouter();
-    const [, startTransition] = useTransition();
-    const [liveStatus, setLiveStatus] = useState<Record<string, LiveStatus>>({});
-    const documents = serverDocuments.map((document) =>
-        liveStatus[document.id] ? { ...document, ...liveStatus[document.id] } : document,
-    );
+    const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | IndexingStatus>("ALL");
     const [locationFilter, setLocationFilter] = useState<LocationFilter>("ALL");
-    const [page, setPage] = useState(1);
-    const [selectionMode, setSelectionMode] = useState(false);
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-    const filtered = documents.filter((d) => {
-        const matchesSearch =
-            d.displayName.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus = statusFilter === "ALL" ? true : d.indexingStatus === statusFilter;
-        const matchesLocation = locationFilter === "ALL"
-            || (locationFilter === "LIBRARY" ? !d.ownerProjectId : d.ownerProjectId === locationFilter);
-        return matchesSearch && matchesStatus && matchesLocation;
+    const [sort, setSort] = useState<Pick<DocumentListQuery, "sort" | "order">>({
+        sort: defaultDocumentListQuery.sort,
+        order: defaultDocumentListQuery.order,
     });
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-    // The projects that have their own documents, for the location filter.
-    const ownerProjects = [...new Map(
-        documents.flatMap((d) => (d.ownerProject ? [[d.ownerProject.id, d.ownerProject.name] as const] : [])),
-    )];
+    const list = useDocumentList({ search, status: statusFilter, location: locationFilter, ...sort }, initialPage);
+
+    const [liveStatus, setLiveStatus] = useState<Record<string, LiveStatus>>({});
+    const documents = list.documents.map((document) =>
+        liveStatus[document.id] ? { ...document, ...liveStatus[document.id] } : document,
+    );
+
+    // The default sort (the newest first) is no column's.
+    const sorting: SortingState = sort.sort === defaultDocumentListQuery.sort ? [] : [{ id: sort.sort, desc: sort.order === "desc" }];
+
+    const onSortingChange: OnChangeFn<SortingState> = (updater) => {
+        const [column] = typeof updater === "function" ? updater(sorting) : updater;
+        changeFilters(() => setSort(column
+            ? { sort: column.id as DocumentSortColumn, order: column.desc ? "desc" : "asc" }
+            : { sort: defaultDocumentListQuery.sort, order: defaultDocumentListQuery.order }));
+    };
 
     const statusCount = (status: string) =>
-        status === "ALL" ? documents.length : documents.filter((d) => d.indexingStatus === status).length;
+        status === "ALL" ? stats.total : stats.counts[status as IndexingStatus] ?? 0;
 
-    const totalPages = Math.ceil(filtered.length / PerPage);
-    const paginated = filtered.slice((page - 1) * PerPage, page * PerPage);
+    const selectedDocuments = documents.filter((d) => rowSelection[d.id]);
 
-    const selectedDocuments = documents.filter((d) => selectedIds.has(d.id));
-    const selectedOnPage = paginated.filter((d) => selectedIds.has(d.id)).length;
-    const pageCheckState =
-        selectedOnPage === 0 ? false : selectedOnPage === paginated.length ? true : "indeterminate";
-
-    function toggleSelected(documentId: string, checked: boolean) {
-        setSelectedIds((ids) => {
-            const next = new Set(ids);
-            if (checked) next.add(documentId);
-            else next.delete(documentId);
-            return next;
-        });
-    }
-
-    function togglePage() {
-        const select = pageCheckState !== true;
-        setSelectedIds((ids) => {
-            const next = new Set(ids);
-            paginated.forEach((d) => (select ? next.add(d.id) : next.delete(d.id)));
-            return next;
-        });
+    function deselect(documentId: string) {
+        setRowSelection((selection) => without(selection, documentId));
     }
 
     function exitSelection() {
         setSelectionMode(false);
-        setSelectedIds(new Set());
+        setRowSelection({});
     }
 
-    // Never act on documents hidden by the filters: changing them resets the selection.
+    // Never act on documents hidden by the filters or not loaded in the new order: changing them resets the selection.
     function changeFilters(update: () => void) {
         update();
-        setPage(1);
-        setSelectedIds(new Set());
+        setRowSelection({});
     }
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            const trimmed = searchInput.trim();
+            if (trimmed !== search) changeFilters(() => setSearch(trimmed));
+        }, SEARCH_DELAY_MS);
+        return () => clearTimeout(timeout);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- the input alone starts the delay.
+    }, [searchInput]);
 
     // The imports go through API routes, which cannot send the page back like a server action: it asks for it.
     const refresh = () => router.refresh();
 
-    // Jobs already queued or running when the page opens are followed too.
-    const [activeJobIds, setActiveJobIds] = useState<string[]>(() =>
-        serverDocuments.flatMap((document) => (document.activeJobId ? [document.activeJobId] : [])),
-    );
+    // Rendered again by the server (an action, an import, the end of an indexing): the documents loaded may have
+    // changed, their order too. Not at the first rendering: the server gave the first slice with it.
+    const renderedStats = useRef(stats);
+    useEffect(() => {
+        if (stats === renderedStats.current) return;
+        renderedStats.current = stats;
+
+        const startedAt = performance.now();
+        void list.reload().then((applied) => {
+            if (!applied) return;
+            setLiveStatus((live) => Object.fromEntries(
+                Object.entries(live).filter(([, status]) => status.settledAt === undefined || status.settledAt > startedAt),
+            ));
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- a new rendering of the server alone reloads.
+    }, [stats]);
+
+    // The jobs followed: those started from this page, and those queued or running of the documents loaded. Not
+    // those over, which a reload under way can still tell running.
+    const [startedJobIds, setStartedJobIds] = useState<string[]>([]);
+    const [endedJobIds, setEndedJobIds] = useState<ReadonlySet<string>>(() => new Set());
+    const activeJobIds = [...new Set([
+        ...startedJobIds,
+        ...list.documents.flatMap((document) => (document.activeJobId ? [document.activeJobId] : [])),
+    ])].filter((id) => !endedJobIds.has(id));
+    // By value: the same jobs keep the same connection, whatever the renderings.
+    const activeJobsKey = activeJobIds.join(",");
+
     const [progressByDocument, setProgressByDocument] = useState<Record<string, IndexingSteps>>({});
     useEffect(() => {
-        if (activeJobIds.length === 0) {
+        if (!activeJobsKey) {
             return;
         }
 
+        const jobIds = activeJobsKey.split(",");
+        const endJobs = (ended: string[]) => setEndedJobIds((ids) => new Set([...ids, ...ended]));
+
         // A single connection for every active job: browsers cap SSE connections per origin.
-        const eventSource = new EventSource(
-            `/api/indexing-jobs/events?ids=${activeJobIds.join(",")}`,
-        );
+        const eventSource = new EventSource(`/api/indexing-jobs/events?ids=${activeJobsKey}`);
 
         eventSource.addEventListener("progress", (event) => {
             const { documentId, data } = JSON.parse(event.data) as {
@@ -222,20 +223,23 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                 return;
             }
 
+            const finished = finishedJobStatuses.includes(data.status);
+
             setLiveStatus((live) => ({
                 ...live,
-                [data.documentId]: { indexingStatus: status, indexingError: data.errorMessage ?? null },
+                [data.documentId]: {
+                    indexingStatus: status,
+                    indexingError: data.errorMessage ?? null,
+                    settledAt: finished ? performance.now() : undefined,
+                },
             }));
 
-            if (finishedJobStatuses.includes(data.status)) {
-                // Changed by the worker, not by an action of this page: the server renders the documents again
-                // (status, language, date of indexing). In a transition: the live status is dropped together with
-                // the arrival of the new rendering, the former status never shows in between.
-                startTransition(() => {
-                    setLiveStatus((live) => without(live, data.documentId));
-                    setProgressByDocument((progress) => without(progress, data.documentId));
-                    router.refresh();
-                });
+            if (finished) {
+                // Changed by the worker, not by an action of this page: the server renders the page again, which
+                // loads the documents again (status, language, date of indexing). The live status is kept until then:
+                // the former status never shows in between.
+                setProgressByDocument((progress) => without(progress, data.documentId));
+                router.refresh();
 
                 if (data.warning) {
                     toast.warning(`« ${data.displayName} » réindexé partiellement`, { description: data.warning });
@@ -247,9 +251,7 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                     });
                 }
 
-                setActiveJobIds((jobIds) =>
-                    jobIds.filter((id) => id !== data.jobId),
-                );
+                endJobs([data.jobId]);
             }
         });
 
@@ -259,28 +261,23 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                 return;
             }
 
-            console.error("SSE error for indexing jobs:", activeJobIds);
-
-            setActiveJobIds((jobIds) =>
-                jobIds.filter((id) => !activeJobIds.includes(id)),
-            );
+            console.error("SSE error for indexing jobs:", jobIds);
+            endJobs(jobIds);
         };
 
         return () => {
             eventSource.close();
         };
-    }, [activeJobIds, router]);
+    }, [activeJobsKey, router]);
 
     function onIndexingStarted(jobId: string) {
-        setActiveJobIds((jobIds) => [
-            ...jobIds,
-            jobId,
-        ]);
-    };
+        setStartedJobIds((jobIds) => [...jobIds, jobId]);
+    }
 
-    // Gone from the documents the server sends back with the action's result.
+    // Out of the list at once; the server confirms it with the action's result.
     function onDocumentDeleted(documentId: string) {
-        toggleSelected(documentId, false);
+        deselect(documentId);
+        list.remove([documentId]);
     }
 
     return (
@@ -327,8 +324,8 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
             <div className="mb-6 flex flex-wrap items-center gap-2 sm:gap-4">
                 <Input
                     placeholder="Rechercher par nom"
-                    value={search}
-                    onChange={(e) => changeFilters(() => setSearch(e.target.value))}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                     className="w-full sm:max-w-xs"
                 />
                 <Select
@@ -349,7 +346,7 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                     </SelectContent>
                 </Select>
                 {/* Only once documents were imported for a project. */}
-                {ownerProjects.length > 0 && (
+                {stats.ownerProjects.length > 0 && (
                     <Select
                         onValueChange={(v) => changeFilters(() => setLocationFilter(v))}
                         value={locationFilter}
@@ -358,13 +355,13 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                             <SelectValue placeholder="Emplacement">
                                 {locationFilter === "ALL" ? "Tous les emplacements"
                                     : locationFilter === "LIBRARY" ? "Bibliothèque"
-                                    : ownerProjects.find(([id]) => id === locationFilter)?.[1]}
+                                    : stats.ownerProjects.find(({ id }) => id === locationFilter)?.name}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="ALL">Tous les emplacements</SelectItem>
                             <SelectItem value="LIBRARY">Bibliothèque</SelectItem>
-                            {ownerProjects.map(([id, name]) => (
+                            {stats.ownerProjects.map(({ id, name }) => (
                                 <SelectItem key={id} value={id}>{name}</SelectItem>
                             ))}
                         </SelectContent>
@@ -383,7 +380,7 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                                     documents={selectedDocuments}
                                     onIndexingStarted={onIndexingStarted}
                                     onDeleted={onDocumentDeleted}
-                                    onDone={() => setSelectedIds(new Set())}
+                                    onDone={() => setRowSelection({})}
                                     onCancel={exitSelection}
                                     onExport={(documentIds) => { setExportIds(documentIds); setExportOpen(true); }}
                                 />
@@ -398,174 +395,23 @@ export function DocumentsDisplay({ documents: serverDocuments, googleDriveResult
                 </div>
             </div>
 
-            {/* Table */}
-            {paginated.length === 0 ? (
-                <div className="p-6 text-center text-muted-foreground">Aucun document trouvé.</div>
-            ) : (
-                <div className="overflow-x-auto rounded-xl border">
-                    <table className="w-full table-fixed">
-                        <thead className="bg-muted/20">
-                            <tr>
-                                {/* Always rendered so the column width can animate open/closed (table-fixed reads widths from the header). */}
-                                <motion.th
-                                    initial={false}
-                                    animate={{ width: selectionMode ? 40 : 0 }}
-                                    className="overflow-hidden p-0"
-                                >
-                                    <SelectionCell show={selectionMode}>
-                                        <Checkbox
-                                            checked={pageCheckState}
-                                            onCheckedChange={togglePage}
-                                            aria-label="Sélectionner les documents de la page"
-                                        />
-                                    </SelectionCell>
-                                </motion.th>
-                                {/* No width: this auto column absorbs the slack, so the selection column keeps its exact animated width. */}
-                                <th className="px-2 py-2 md:px-4">Fichier</th>
-                                <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Type</th>
-                                <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Taille</th>
-                                <th className="w-[10%] px-4 py-2 hidden md:table-cell">Langue</th>
-                                <th className="w-24 px-2 py-2 md:w-[12.5%] md:px-4">Statut</th>
-                                <th className="w-[12.5%] px-4 py-2 hidden lg:table-cell">Dernière indexation</th>
-                                <th className="w-[12.5%] px-4 py-2 hidden md:table-cell">Dernière modification</th>
-                                <th className="w-20 px-2 py-2 md:w-[12.5%] md:px-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paginated.map((doc) => {
-                                const sizeMB = ((doc.fileSize ?? -1) / 1024 / 1024).toFixed(2);
-                                return (
-                                    <tr
-                                        key={doc.id}
-                                        data-state={selectedIds.has(doc.id) ? "selected" : undefined}
-                                        className="border-t transition-colors data-[state=selected]:bg-muted/50 [&>td]:px-2 md:[&>td]:px-4 [&>td]:py-3"
-                                    >
-                                        <td className="overflow-hidden p-0!">
-                                            <SelectionCell show={selectionMode}>
-                                                <Checkbox
-                                                    checked={selectedIds.has(doc.id)}
-                                                    onCheckedChange={(checked) => toggleSelected(doc.id, checked === true)}
-                                                    aria-label={`Sélectionner ${doc.displayName}`}
-                                                />
-                                            </SelectionCell>
-                                        </td>
-                                        <td>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        {doc.sourceType === "GOOGLE_DRIVE" ? (
-                                                            <Image
-                                                                src="/icons/google-drive.svg"
-                                                                alt="Google Drive"
-                                                                width={16}
-                                                                height={16}
-                                                                className="size-4 shrink-0"
-                                                            />
-                                                        ) : (
-                                                            <File className="size-4 shrink-0" />
-                                                        )}
-                                                        <div className="truncate cursor-default min-w-0">
-                                                            {doc.displayName}
-                                                        </div>
-                                                    </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="top" className="max-w-md break-all">
-                                                    {doc.displayName}
-                                                </TooltipContent>
-                                            </Tooltip>
-                                            {doc.ownerProject && (
-                                                <Badge variant="secondary" className="mt-1 ml-6 flex max-w-48 gap-1">
-                                                    <FolderOpen className="size-3 shrink-0" />
-                                                    <TruncatedText>{doc.ownerProject.name}</TruncatedText>
-                                                </Badge>
-                                            )}
-                                        </td>
-                                        <td className="hidden lg:table-cell text-center">{doc.format}</td>
-                                        <td className="hidden lg:table-cell text-center text-muted-foreground">
-                                            {doc.fileSize ? sizeMB : "—"} MB
-                                        </td>
-                                        <td className="hidden md:table-cell text-center text-muted-foreground">
-                                            {doc.language ? languageLabels[doc.language] ?? doc.language : "—"}
-                                        </td>
-                                        <td className="text-center">
-                                            <DocumentStatusBadge status={doc.indexingStatus} error={doc.indexingError} progress={progressByDocument[doc.id]} />
-                                        </td>
-                                        <td className="hidden lg:table-cell text-muted-foreground text-center">
-                                            {doc.indexedAt
-                                                ? formatDistanceToNow(new Date(doc.indexedAt), {
-                                                    addSuffix: true,
-                                                    locale: fr,
-                                                })
-                                                : "—"}
-                                        </td>
-                                        <td className="hidden md:table-cell text-muted-foreground">
-                                            {formatDistanceToNow(new Date(doc.updatedAt), {
-                                                addSuffix: true,
-                                                locale: fr,
-                                            })}
-                                        </td>
-                                        <td className="text-center">
-                                            <DocumentActions document={doc} onIndexingStarted={onIndexingStarted} onDeleted={onDocumentDeleted} />
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={page === 1}
-                        onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                    >
-                        Précédent
-                    </Button>
-                    {/* Too many page buttons for a phone: the position instead. */}
-                    <span className="text-sm text-muted-foreground sm:hidden">{page} / {totalPages}</span>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                        <Button
-                            key={p}
-                            variant={p === page ? "default" : "ghost"}
-                            size="sm"
-                            className="hidden sm:inline-flex"
-                            onClick={() => setPage(p)}
-                        >
-                            {p}
-                        </Button>
-                    ))}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={page === totalPages}
-                        onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                    >
-                        Suivant
-                    </Button>
-                </div>
-            )}
+            <DocumentTable
+                documents={documents}
+                sorting={sorting}
+                onSortingChange={onSortingChange}
+                rowSelection={rowSelection}
+                onRowSelectionChange={setRowSelection}
+                total={list.total}
+                hasMore={list.hasMore}
+                loading={list.loading}
+                error={list.error}
+                onLoadMore={list.loadMore}
+                onRetry={list.hasMore && list.documents.length > 0 ? list.loadMore : () => void list.reload()}
+                selectionMode={selectionMode}
+                progressByDocument={progressByDocument}
+                onIndexingStarted={onIndexingStarted}
+                onDeleted={onDocumentDeleted}
+            />
         </div>
-    );
-}
-
-function SelectionCell({ show, children }: { show: boolean; children: React.ReactNode }) {
-    return (
-        <AnimatePresence initial={false}>
-            {show && (
-                <motion.div
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -12 }}
-                    className="flex justify-center"
-                >
-                    {children}
-                </motion.div>
-            )}
-        </AnimatePresence>
     );
 }

@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
+import { defaultDocumentListQuery } from "@/lib/documents/list-query";
+
 // A database of its own, created by the migrations: set before the modules reading DATABASE_URL are loaded.
 const directory = mkdtempSync(path.join(tmpdir(), "bebert-ownership-"));
 process.env.ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
@@ -93,7 +95,11 @@ describe("ownership: a user sees nothing of another user's", () => {
   });
 
   it("documents page and project documents", async () => {
-    assert.deepEqual((await documents.getAllDocuments(b.user.id)).map((document) => document.id).sort(), [b.library.id, b.owned.id].sort());
+    const page = await documents.getDocumentsPage(b.user.id, { ...defaultDocumentListQuery, offset: 0, limit: 50 });
+    assert.deepEqual(page.documents.map((document) => document.id).sort(), [b.library.id, b.owned.id].sort());
+    assert.equal(page.total, 2);
+    assert.equal((await documents.getDocumentStats(b.user.id)).total, 2);
+    assert.deepEqual((await documents.getDocumentStats(b.user.id)).ownerProjects.map((project) => project.id), [b.project.id]);
 
     // Asked for Alice's project, Bob gets none of Alice's documents (the page answers 404 anyway).
     const ofAlicesProject = await documents.getProjectDocuments(a.project.id, b.user.id);
