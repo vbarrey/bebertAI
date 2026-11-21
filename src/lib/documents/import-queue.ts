@@ -26,17 +26,18 @@ export function nextToStart(items: { id: string; step: ImportStep }[], max: numb
     .map((item) => item.id);
 }
 
-/** An item before `id` has this checksum: the same file twice in the import. */
+/**
+ * Another item under way claimed this checksum: the same file twice in the import. The first to finish its checksum
+ * claims it, whatever its place in the queue. A finished one no longer does: imported, the check finds it.
+ */
 export function isQueueDuplicate(
   items: { id: string; checksum?: string; step: ImportStep }[],
   id: string,
   checksum: string,
 ): boolean {
-  const index = items.findIndex((item) => item.id === id);
-
-  return items
-    .slice(0, index)
-    .some((item) => item.checksum === checksum && item.step !== "skipped" && item.step !== "error");
+  return items.some(
+    (item) => item.id !== id && item.checksum === checksum && !["done", "skipped", "error"].includes(item.step),
+  );
 }
 
 const sizeFormat = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });

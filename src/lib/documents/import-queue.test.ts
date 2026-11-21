@@ -16,9 +16,10 @@ describe("import queue", () => {
     assert.deepEqual(nextToStart(items, 3), ["c", "d"]);
   });
 
-  it("finds an earlier item with the same checksum, not a skipped one", () => {
+  it("finds another item under way claiming the same checksum, not a finished one", () => {
     const items = [
-      { id: "a", step: "done" as const, checksum: "x" },
+      { id: "a", step: "uploading" as const, checksum: "x" },
+      { id: "d", step: "done" as const, checksum: "z" },
       { id: "b", step: "skipped" as const, checksum: "y" },
       { id: "c", step: "hashing" as const },
     ];
@@ -26,6 +27,8 @@ describe("import queue", () => {
     assert.equal(isQueueDuplicate(items, "c", "x"), true);
     assert.equal(isQueueDuplicate(items, "c", "y"), false);
     assert.equal(isQueueDuplicate(items, "a", "x"), false);
+    assert.equal(isQueueDuplicate(items, "c", "z"), false);
+    assert.equal(isQueueDuplicate([{ id: "a", step: "hashing" }, { id: "b", step: "uploading", checksum: "x" }], "a", "x"), true);
   });
 
   it("formats sizes in French", () => {

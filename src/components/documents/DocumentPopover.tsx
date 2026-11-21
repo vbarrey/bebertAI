@@ -20,6 +20,8 @@ import {
 import { LocalDocumentImportDialog } from "./LocalDocumentImportDialog";
 import { GoogleDriveImportDialog } from "./GoogleDriveImportDialog";
 import { BundleImportDialog } from "./BundleImportDialog";
+import { ImportQueuePanel } from "./ImportQueuePanel";
+import { useImportQueue } from "./useImportQueue";
 import { Document } from "@prisma/client";
 
 type Props = {
@@ -43,6 +45,9 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
 
     const [driveImportOpen, setDriveImportOpen] =
         useState(googleDriveResult === "connected");
+
+    // Kept here, not in the dialogs: the import goes on once they are closed.
+    const queue = useImportQueue({ addDocuments, onIndexingStarted, projectId });
 
     const router = useRouter();
     const pathname = usePathname();
@@ -134,9 +139,7 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
             <LocalDocumentImportDialog
                 open={localImportOpen}
                 onOpenChange={setLocalImportOpen}
-                addDocuments={addDocuments}
-                onIndexingStarted={onIndexingStarted}
-                projectId={projectId}
+                queue={queue}
             />
 
             <BundleImportDialog open={bundleImportOpen} onOpenChange={setBundleImportOpen} />
@@ -144,10 +147,12 @@ export function DocumentImportPopover({ addDocuments, onIndexingStarted, googleD
             <GoogleDriveImportDialog
                 open={driveImportOpen}
                 onOpenChange={setDriveImportOpen}
-                addDocuments={addDocuments}
-                onIndexingStarted={onIndexingStarted}
-                projectId={projectId}
+                queue={queue}
             />
+
+            {!localImportOpen && !driveImportOpen && queue.items.length > 0 && (
+                <ImportQueuePanel queue={queue} floating />
+            )}
         </>
     );
 }
