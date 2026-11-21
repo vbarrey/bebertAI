@@ -39,9 +39,9 @@
     "lucide-react": "^1.27.0",
     "mammoth": "^1.12.1",
     "motion": "^13.2.0",
-    "next": "16.2.12",
+    "next": "16.4.6",
     "next-themes": "^0.4.6",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^10.6.1",
     "prisma": "^7.9.1",
     "radix-ui": "^1.6.7",
     "react": "19.2.4",
@@ -68,8 +68,15 @@
     "babel-plugin-react-compiler": "1.0.0",
     "concurrently": "^10.0.5",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.4.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "undici": "^7.30.2",
+    "effect": "^3.22.5",
+    "@ts-morph/common": {
+      "minimatch": "^11.0.9"
+    }
   }
 }
