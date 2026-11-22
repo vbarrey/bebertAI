@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { JobStatus, type Document } from "@prisma/client";
 
+import type { IndexingSteps } from "@/lib/queue/types";
 import { pipelineCapabilities } from "@/lib/pipeline/capabilities";
 import { getDocumentFormat, type DocumentFormat } from "@/lib/documents/format";
 import { MAX_FILE_SIZE } from "@/lib/documents/upload-limits";
@@ -34,7 +35,8 @@ export type ImportItem = {
   // The result or the error of a finished item.
   message?: string;
   jobId?: string;
-  jobStatus?: JobStatus;
+  // The worker's last progress, while indexed.
+  indexing?: IndexingSteps;
 };
 
 type ImportResult = { importedDocuments: Document[]; createdJobIds: string[] };
@@ -250,7 +252,7 @@ export function useImportQueue({ addDocuments, onIndexingStarted, projectId }: O
 
       if (jobId) {
         onIndexingStarted(jobId);
-        update(id, { step: "indexing", jobId, jobStatus: JobStatus.QUEUED });
+        update(id, { step: "indexing", jobId });
       } else {
         update(id, {
           step: "done",
@@ -299,6 +301,15 @@ export function useImportQueue({ addDocuments, onIndexingStarted, projectId }: O
 
     const eventSource = new EventSource(`/api/indexing-jobs/events?ids=${indexingJobsKey}`);
 
+    eventSource.addEventListener("progress", (event) => {
+      const { jobId, data } = JSON.parse(event.data) as { jobId: string; data: IndexingSteps };
+      const item = itemsRef.current.find((candidate) => candidate.jobId === jobId);
+
+      if (item?.step === "indexing") {
+        update(item.id, { indexing: data });
+      }
+    });
+
     eventSource.addEventListener("status", (event) => {
       const data = JSON.parse(event.data) as { jobId: string; status: JobStatus; errorMessage?: string };
       const item = itemsRef.current.find((candidate) => candidate.jobId === data.jobId);
@@ -309,16 +320,13 @@ export function useImportQueue({ addDocuments, onIndexingStarted, projectId }: O
 
       switch (data.status) {
         case JobStatus.COMPLETED:
-          update(item.id, { step: "done", jobStatus: data.status, message: "Indexé" });
+          update(item.id, { step: "done", message: "Indexé" });
           break;
         case JobStatus.FAILED:
-          update(item.id, { step: "error", jobStatus: data.status, message: data.errorMessage ?? "Échec de l'indexation" });
+          update(item.id, { step: "error", message: data.errorMessage ?? "Échec de l'indexation" });
           break;
         case JobStatus.CANCELLED:
-          update(item.id, { step: "done", jobStatus: data.status, message: "Indexation annulée" });
-          break;
-        default:
-          update(item.id, { jobStatus: data.status });
+          update(item.id, { step: "done", message: "Indexation annulée" });
       }
     });
 

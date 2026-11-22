@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { JobStatus } from "@prisma/client";
 import { AlertCircle, Check, ChevronDown, ChevronUp, CircleDashed, MinusCircle, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { cn } from "@/lib/utils";
 import type { ConflictRule } from "@/lib/documents/import-queue";
 
+import { IndexingProgress } from "./DocumentStatusBadge";
 import { isFinished, isPending, type ImportItem, type ImportQueue } from "./useImportQueue";
 
 function stepLabel(item: ImportItem): string {
@@ -26,8 +27,6 @@ function stepLabel(item: ImportItem): string {
       return "Déjà présent";
     case "uploading":
       return item.source.kind === "local" ? `Envoi ${Math.round((item.progress ?? 0) * 100)} %` : "Import";
-    case "indexing":
-      return item.jobStatus === JobStatus.RUNNING ? "Indexation en cours" : "Indexation en attente";
     default:
       return item.message ?? "";
   }
@@ -62,14 +61,16 @@ function QueueRow({ item, queue }: { item: ImportItem; queue: ImportQueue }) {
         <TruncatedText className="pl-6 text-xs text-muted-foreground">{item.relativePath}</TruncatedText>
       )}
 
-      <p className={cn("pl-6 text-xs", item.step === "error" ? "text-destructive" : "text-muted-foreground")}>
-        {stepLabel(item)}
-      </p>
+      {item.step === "indexing" ? (
+        <IndexingProgress progress={item.indexing} className="space-y-1 pl-6 text-xs" />
+      ) : (
+        <p className={cn("pl-6 text-xs", item.step === "error" ? "text-destructive" : "text-muted-foreground")}>
+          {stepLabel(item)}
+        </p>
+      )}
 
       {item.step === "uploading" && item.source.kind === "local" && (
-        <div className="ml-6 h-1 overflow-hidden rounded bg-muted">
-          <div className="h-full bg-primary transition-[width]" style={{ width: `${(item.progress ?? 0) * 100}%` }} />
-        </div>
+        <Progress value={(item.progress ?? 0) * 100} aria-label="Progression de l'envoi" className="ml-6 w-auto" />
       )}
 
       {item.step === "conflict" && (
