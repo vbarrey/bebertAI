@@ -20,11 +20,11 @@ export type IndexingSteps = {
 // Shown in the indexing progress card and prefixed to error messages so the UI tells which step failed.
 export const INDEXING_STAGE_LABELS: Partial<Record<IndexingStage, string>> = {
   [IndexingStage.CREATING]: "Préparation",
-  [IndexingStage.WAITING_EXTRACTION]: "En attente du CPU",
+  [IndexingStage.WAITING_EXTRACTION]: "En attente de l'extraction",
   [IndexingStage.EXTRACTING]: "Extraction du texte",
   [IndexingStage.CHUNKING]: "Découpage",
   [IndexingStage.PERSISTING_CHUNKS]: "Enregistrement des chunks",
-  [IndexingStage.WAITING_EMBEDDING]: "En attente du GPU",
+  [IndexingStage.WAITING_EMBEDDING]: "En attente de l'embedding",
   [IndexingStage.EMBEDDING]: "Embedding",
   [IndexingStage.PERSISTING_EMBEDDINGS]: "Enregistrement des vecteurs (Qdrant)",
   [IndexingStage.COMPLETED]: "Terminé",
