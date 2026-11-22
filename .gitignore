@@ -33,3 +33,6 @@ CLAUDE.md
 # Server backups (docker compose backup service)
 /backups
 *.tar
+
+# Indexing throughput results (npm run bench:throughput)
+/bench-results

@@ -42,7 +42,8 @@ services:
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
       # Documents the worker indexes at once.
-      INDEXING_CONCURRENCY: ${INDEXING_CONCURRENCY:-2}
+      INDEXING_CPU_SLOTS: ${INDEXING_CPU_SLOTS:-2}
+      INDEXING_GPU_SLOTS: ${INDEXING_GPU_SLOTS:-1}
 
     volumes:
       - data:/app/data

@@ -52,27 +52,36 @@ export function DocumentStatusBadge({ status, error, progress }: Props) {
 }
 
 function IndexingProgressCard({ progress, children }: { progress?: IndexingSteps; children: React.ReactNode }) {
-  const percent = progress ? indexingProgressPercent(progress) : 0;
-  // No progress yet: the job waits in the queue, or started before the page was opened.
-  const label = progress ? INDEXING_STAGE_LABELS[progress.stage] ?? progress.stage : "En attente du worker";
-
   return (
     <HoverCard openDelay={100} closeDelay={100}>
       <HoverCardTrigger asChild>
         <button type="button" className="m-auto flex cursor-help">{children}</button>
       </HoverCardTrigger>
-      <HoverCardContent className="w-64 space-y-2">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="font-medium">{label}</span>
-          <span className="tabular-nums text-muted-foreground">{percent} %</span>
-        </div>
-        <Progress value={percent} aria-label="Progression de l'indexation" />
-        {progress?.total ? (
-          <p className="text-muted-foreground tabular-nums">
-            {progress.stage === IndexingStage.EMBEDDING ? "Chunk" : "Page"} {progress.current ?? 0} / {progress.total}
-          </p>
-        ) : null}
+      <HoverCardContent className="w-64">
+        <IndexingProgress progress={progress} />
       </HoverCardContent>
     </HoverCard>
+  );
+}
+
+/** The stage of an indexing, its share done and the pages or chunks done, from the worker's last progress. */
+export function IndexingProgress({ progress, className }: { progress?: IndexingSteps; className?: string }) {
+  const percent = progress ? indexingProgressPercent(progress) : 0;
+  // No progress yet: the job waits in the queue, or started before the page was opened.
+  const label = progress ? INDEXING_STAGE_LABELS[progress.stage] ?? progress.stage : "En attente du worker";
+
+  return (
+    <div className={cn("space-y-2", className)}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-medium">{label}</span>
+        <span className="tabular-nums text-muted-foreground">{percent} %</span>
+      </div>
+      <Progress value={percent} aria-label="Progression de l'indexation" />
+      {progress?.total ? (
+        <p className="text-muted-foreground tabular-nums">
+          {progress.stage === IndexingStage.EMBEDDING ? "Chunk" : "Page"} {progress.current ?? 0} / {progress.total}
+        </p>
+      ) : null}
+    </div>
   );
 }

@@ -1,8 +1,10 @@
 export enum IndexingStage {
   CREATING = "CREATING",
+  WAITING_EXTRACTION = "WAITING_EXTRACTION",
   EXTRACTING = "EXTRACTING",
   CHUNKING = "CHUNKING",
   PERSISTING_CHUNKS = "PERSISTING_CHUNKS",
+  WAITING_EMBEDDING = "WAITING_EMBEDDING",
   EMBEDDING = "EMBEDDING",
   PERSISTING_EMBEDDINGS = "PERSISTING_EMBEDDINGS",
   COMPLETED = "COMPLETED",
@@ -18,9 +20,11 @@ export type IndexingSteps = {
 // Shown in the indexing progress card and prefixed to error messages so the UI tells which step failed.
 export const INDEXING_STAGE_LABELS: Partial<Record<IndexingStage, string>> = {
   [IndexingStage.CREATING]: "Préparation",
+  [IndexingStage.WAITING_EXTRACTION]: "En attente du CPU",
   [IndexingStage.EXTRACTING]: "Extraction du texte",
   [IndexingStage.CHUNKING]: "Découpage",
   [IndexingStage.PERSISTING_CHUNKS]: "Enregistrement des chunks",
+  [IndexingStage.WAITING_EMBEDDING]: "En attente du GPU",
   [IndexingStage.EMBEDDING]: "Embedding",
   [IndexingStage.PERSISTING_EMBEDDINGS]: "Enregistrement des vecteurs (Qdrant)",
   [IndexingStage.COMPLETED]: "Terminé",
@@ -36,13 +40,19 @@ const PROGRESS_STAGES = [
   IndexingStage.PERSISTING_EMBEDDINGS,
 ];
 
+const WAITING_FOR: Partial<Record<IndexingStage, IndexingStage>> = {
+  [IndexingStage.WAITING_EXTRACTION]: IndexingStage.EXTRACTING,
+  [IndexingStage.WAITING_EMBEDDING]: IndexingStage.EMBEDDING,
+};
+
 /** Progress of an indexing job in percent, the OCR pages done filling the extraction share. */
 export function indexingProgressPercent({ stage, current, total }: IndexingSteps): number {
   if (stage === IndexingStage.COMPLETED) {
     return 100;
   }
 
-  const index = PROGRESS_STAGES.indexOf(stage);
+  // Waiting for a slot: at the start of the stage it waits for.
+  const index = PROGRESS_STAGES.indexOf(WAITING_FOR[stage] ?? stage);
 
   if (index < 0) {
     return 0;

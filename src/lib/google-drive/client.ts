@@ -27,6 +27,8 @@ export type DriveItem = {
     // Import format of a file, null for a folder or a file the pipeline does not support.
     format: DocumentFormat | null;
     size: number | null;
+    // SHA-256 of the content, given by Drive for the files it stores (not the Google Docs).
+    checksum: string | null;
     modifiedTime: string;
 };
 
@@ -40,6 +42,7 @@ type DriveFile = {
     name: string;
     mimeType: string;
     size?: string;
+    sha256Checksum?: string;
     modifiedTime: string;
 };
 
@@ -75,7 +78,7 @@ async function driveFetch<T>(userId: string, path: string, parameters: Record<st
     return (await driveRequest(userId, path, parameters)).json();
 }
 
-const FILE_FIELDS = "id, name, mimeType, size, modifiedTime";
+const FILE_FIELDS = "id, name, mimeType, size, sha256Checksum, modifiedTime";
 
 function checkDriveId(id: string) {
     if (!isDriveId(id)) {
@@ -94,6 +97,7 @@ function toDriveItem(file: DriveFile): DriveItem {
         isFolder,
         format: format && pipelineCapabilities.import.supportedFormat.includes(format) ? format : null,
         size: file.size ? Number(file.size) : null,
+        checksum: file.sha256Checksum?.toLowerCase() ?? null,
         modifiedTime: file.modifiedTime,
     };
 }

@@ -16,15 +16,12 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 
-import type { Document } from "@prisma/client";
 import type { DriveFolderPage, DriveItem } from "@/lib/google-drive/client";
-import type {
-  DocumentImportAnalysis,
-  DocumentImportConflictAction,
-} from "@/types/document-import";
+import { formatSize } from "@/lib/documents/import-queue";
+import { cn } from "@/lib/utils";
 
-import { DocumentImportConflictDialog } from "./DocumentImportConflictDialog";
-import { DocumentImportReview } from "./DocumentImportReview";
+import { ImportOptions, ImportQueuePanel } from "./ImportQueuePanel";
+import type { ImportQueue } from "./useImportQueue";
 
 type Connection =
   | { connected: false }
@@ -40,11 +37,13 @@ type FolderStep = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  addDocuments: (documents: Document[]) => void;
-  onIndexingStarted: (jobId: string) => void;
-  // Imported for this project only; already there, they join its selection.
-  projectId?: string;
+  queue: ImportQueue;
 };
+
+type DriveFile = DriveItem & { relativePath?: string };
+
+// The files under a picked folder, "loading" while they are listed.
+type FolderFiles = "loading" | DriveFile[];
 
 const ROOT: FolderStep = { id: "root", name: "Mon Drive" };
 const SHARED: FolderStep = { id: "sharedWithMe", name: "Partagés avec moi" };
@@ -79,26 +78,7 @@ function plural(count: number) {
   return count !== 1 ? "s" : "";
 }
 
-async function postJson<T>(url: string, body: unknown, fallbackError: string): Promise<T> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await response.json();
-
-  if (response.status === 401) {
-    throw new NotConnectedError();
-  }
-
-  if (!response.ok) {
-    throw new Error(data.error ?? fallbackError);
-  }
-
-  return data;
-}
-
-export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIndexingStarted, projectId }: Props) {
+export function GoogleDriveImportDialog({ open, onOpenChange, queue }: Props) {
   // Undefined while the status loads.
   const [connection, setConnection] = useState<Connection>();
 
@@ -116,13 +96,8 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
   // Kept while browsing: files and folders can be picked in several folders.
   const [selected, setSelected] = useState<Map<string, DriveItem>>(new Map());
 
-  const [indexImmediately, setIndexImmediately] = useState(true);
-  const [analysis, setAnalysis] = useState<DocumentImportAnalysis | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [decisions, setDecisions] = useState<Map<string, DocumentImportConflictAction>>(new Map());
-  const [conflictsOpen, setConflictsOpen] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
+  // Listed when a folder is picked: its size, then the files of the import.
+  const [folderFiles, setFolderFiles] = useState<Map<string, FolderFiles>>(new Map());
 
   async function loadFolder(nextPath: FolderStep[], pageToken?: string) {
     const request = ++latestRequest.current;
@@ -209,87 +184,69 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
       setNextPageToken(null);
       setError(null);
       setSelected(new Map());
-      setIndexImmediately(true);
-      setAnalysis(null);
-      setDecisions(new Map());
-      setConflictsOpen(false);
-      setImportError(null);
+      setFolderFiles(new Map());
     }
   }
 
-  function handleError(error: unknown, setMessage: (message: string) => void) {
-    if (error instanceof NotConnectedError) {
-      setAnalysis(null);
-      setConnection({ connected: false });
-    } else {
-      setMessage(error instanceof Error ? error.message : "Une erreur est survenue.");
-    }
+  function setFolder(id: string, files: FolderFiles | null) {
+    setFolderFiles((current) => {
+      const next = new Map(current);
+
+      if (files) {
+        next.set(id, files);
+      } else {
+        next.delete(id);
+      }
+
+      return next;
+    });
   }
 
-  // Downloads every picked file once to compute its checksum: long for big folders.
-  async function analyzeSelection() {
-    const items = [...selected.values()];
-
-    setAnalyzing(true);
-    setError(null);
-    setImportError(null);
+  // Metadata only: a few requests to Drive for a big folder, nothing downloaded.
+  async function loadFolderFiles(folder: DriveItem) {
+    setFolder(folder.id, "loading");
 
     try {
-      setAnalysis(await postJson<DocumentImportAnalysis>(
-        "/api/google-drive/import/analyze",
-        {
-          fileIds: items.filter((item) => !item.isFolder).map((item) => item.id),
-          folderIds: items.filter((item) => item.isFolder).map((item) => item.id),
-        },
-        "L'analyse a échoué.",
-      ));
-      setDecisions(new Map());
+      const response = await fetch(`/api/google-drive/folder-files?id=${encodeURIComponent(folder.id)}`);
+      const data = await response.json();
+
+      if (response.status === 401) {
+        throw new NotConnectedError();
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Impossible de lister le dossier.");
+      }
+
+      setFolder(folder.id, data.files);
     } catch (error) {
-      handleError(error, setError);
-    } finally {
-      setAnalyzing(false);
+      setFolder(folder.id, null);
+      toggle(folder, false);
+
+      if (error instanceof NotConnectedError) {
+        setConnection({ connected: false });
+      } else {
+        setError(`« ${folder.name} » : ${error instanceof Error ? error.message : "une erreur est survenue."}`);
+      }
     }
   }
 
-  async function importDocuments() {
-    if (!analysis || importing) {
-      return;
+  // The picked files and the files of the picked folders, each once, go to the import queue.
+  function importSelection() {
+    const files = new Map<string, DriveFile>();
+
+    for (const item of selected.values()) {
+      const listed = item.isFolder ? folderFiles.get(item.id) : [item];
+
+      for (const file of Array.isArray(listed) ? listed : []) {
+        if (!files.has(file.id)) {
+          files.set(file.id, file);
+        }
+      }
     }
 
-    if (analysis.files.some((file) => file.conflict && !decisions.has(file.key))) {
-      setConflictsOpen(true);
-      return;
-    }
-
-    setImporting(true);
-    setImportError(null);
-
-    try {
-      const data = await postJson<{ importedDocuments: Document[]; createdJobIds: string[] }>(
-        "/api/google-drive/import",
-        {
-          files: analysis.files.map(({ sourceRef, displayName, format, fileSize, checksum }) => ({
-            sourceRef,
-            displayName,
-            format,
-            fileSize,
-            checksum,
-          })),
-          decisions: Object.fromEntries(decisions),
-          indexImmediately,
-          projectId,
-        },
-        "L'import a échoué.",
-      );
-
-      addDocuments(data.importedDocuments);
-      data.createdJobIds.forEach(onIndexingStarted);
-      handleOpenChange(false);
-    } catch (error) {
-      handleError(error, setImportError);
-    } finally {
-      setImporting(false);
-    }
+    queue.addDrive([...files.values()]);
+    setSelected(new Map());
   }
 
   async function disconnect() {
@@ -319,16 +276,51 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
 
       return next;
     });
+
+    if (checked && item.isFolder && !folderFiles.has(item.id)) {
+      void loadFolderFiles(item);
+    }
+  }
+
+  // The files that will be imported (supported format), under a folder or picked.
+  const importable = (files: DriveFile[]) => files.filter((file) => file.format !== null);
+  const sizeOf = (files: DriveFile[]) => files.reduce((total, file) => total + (file.size ?? 0), 0);
+
+  function folderSummary(folder: DriveItem) {
+    const files = folderFiles.get(folder.id);
+
+    if (files === undefined) {
+      return null;
+    }
+
+    if (files === "loading") {
+      return "calcul…";
+    }
+
+    const count = importable(files).length;
+
+    return `${count} fichier${plural(count)} · ${formatSize(sizeOf(importable(files)))}`;
   }
 
   const selectedFolders = [...selected.values()].filter((item) => item.isFolder).length;
   const selectedFiles = selected.size - selectedFolders;
-  const conflicts = analysis?.files.filter((file) => file.conflict) ?? [];
+  const pickedFolders = [...selected.values()].filter((item) => item.isFolder).map((item) => folderFiles.get(item.id));
+  const computing = pickedFolders.some((files) => !Array.isArray(files));
+  const selectionSize = sizeOf(importable([
+    ...[...selected.values()].filter((item) => !item.isFolder),
+    ...pickedFolders.flatMap((files) => (Array.isArray(files) ? files : [])),
+  ]));
+  const queueShown = queue.items.length > 0;
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="w-full min-w-0 max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-2xl">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className={cn(
+          "w-full min-w-0 max-h-[calc(100vh-2rem)] overflow-hidden",
+          queueShown ? "sm:max-w-5xl md:grid-cols-[minmax(0,1fr)_22rem]" : "sm:max-w-2xl",
+        )}
+      >
+        <div className="grid min-w-0 gap-4">
           <DialogHeader>
             <DialogTitle>Importer depuis Google Drive</DialogTitle>
 
@@ -338,13 +330,7 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
             </DialogDescription>
           </DialogHeader>
 
-          {analysis ? (
-            <DocumentImportReview
-              analysis={analysis}
-              decisions={decisions}
-              importError={importError}
-            />
-          ) : connection === undefined ? (
+          {connection === undefined ? (
             <div className="flex justify-center py-10">
               <Spinner className="size-6 text-muted-foreground" />
             </div>
@@ -451,10 +437,14 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
                         </span>
                       )}
 
+                      {item.isFolder && selected.has(item.id) && (
+                        <span className="shrink-0 text-xs text-muted-foreground">{folderSummary(item)}</span>
+                      )}
+
                       {!item.isFolder && (
                         <span className="shrink-0 text-xs text-muted-foreground">
                           {item.format
-                            ? `${item.format}${item.size !== null ? ` · ${(item.size / 1024 / 1024).toFixed(2)} MB` : ""}`
+                            ? `${item.format}${item.size !== null ? ` · ${formatSize(item.size)}` : ""}`
                             : "Non supporté"}
                         </span>
                       )}
@@ -486,17 +476,7 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="drive-index-immediately"
-                  checked={indexImmediately}
-                  onCheckedChange={(checked) => setIndexImmediately(checked === true)}
-                />
-
-                <label htmlFor="drive-index-immediately" className="cursor-pointer text-sm">
-                  Indexer maintenant
-                </label>
-              </div>
+              <ImportOptions queue={queue} id="drive" />
             </div>
           )}
 
@@ -507,66 +487,30 @@ export function GoogleDriveImportDialog({ open, onOpenChange, addDocuments, onIn
           )}
 
           <DialogFooter className="items-center">
-            {!analysis ? (
-              <>
-                {selected.size > 0 && (
-                  <span className="mr-auto text-sm text-muted-foreground">
-                    {selectedFiles > 0 && `${selectedFiles} fichier${plural(selectedFiles)}`}
-                    {selectedFiles > 0 && selectedFolders > 0 && " et "}
-                    {selectedFolders > 0 && `${selectedFolders} dossier${plural(selectedFolders)}`}
-                    {` sélectionné${plural(selected.size)}`}
-                  </span>
-                )}
-
-                <Button variant="outline" onClick={() => handleOpenChange(false)}>
-                  Annuler
-                </Button>
-
-                <Button
-                  disabled={!connection?.connected || selected.size === 0 || analyzing}
-                  onClick={analyzeSelection}
-                >
-                  {analyzing ? "Analyse..." : "Continuer"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  disabled={importing}
-                  onClick={() => {
-                    setAnalysis(null);
-                    setDecisions(new Map());
-                  }}
-                >
-                  Retour
-                </Button>
-
-                <Button
-                  disabled={importing || analysis.files.length === 0}
-                  onClick={importDocuments}
-                >
-                  {importing
-                    ? "Import..."
-                    : conflicts.some((file) => !decisions.has(file.key))
-                      ? "Vérifier les conflits"
-                      : `Importer ${analysis.files.length} fichier${plural(analysis.files.length)}`}
-                </Button>
-              </>
+            {selected.size > 0 && (
+              <span className="mr-auto text-sm text-muted-foreground">
+                {selectedFiles > 0 && `${selectedFiles} fichier${plural(selectedFiles)}`}
+                {selectedFiles > 0 && selectedFolders > 0 && " et "}
+                {selectedFolders > 0 && `${selectedFolders} dossier${plural(selectedFolders)}`}
+                {` sélectionné${plural(selected.size)} · ${computing ? "au moins " : ""}${formatSize(selectionSize)}`}
+              </span>
             )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <DocumentImportConflictDialog
-        open={conflictsOpen}
-        conflicts={conflicts}
-        onOpenChange={setConflictsOpen}
-        onResolved={(nextDecisions) => {
-          setDecisions(new Map(nextDecisions));
-          setConflictsOpen(false);
-        }}
-      />
-    </>
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              Fermer
+            </Button>
+
+            <Button
+              disabled={!connection?.connected || selected.size === 0 || computing}
+              onClick={importSelection}
+            >
+              {computing ? "Calcul…" : "Importer"}
+            </Button>
+          </DialogFooter>
+        </div>
+
+        {queueShown && <ImportQueuePanel queue={queue} />}
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -21,19 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 import { pipelineCapabilities } from "@/lib/pipeline/capabilities";
 import { EXTENSIONS_TO_FORMAT } from "@/lib/documents/format";
+import { formatSize } from "@/lib/documents/import-queue";
+import { cn } from "@/lib/utils";
 
-import type {
-  DocumentImportAnalysis,
-  DocumentImportConflictAction,
-} from "@/types/document-import";
-
-import { DocumentImportConflictDialog } from "./DocumentImportConflictDialog";
-import { DocumentImportReview } from "./DocumentImportReview";
-import { Document } from "@prisma/client";
-import { uploadLimitError } from "@/lib/documents/upload-limits";
+import { ImportOptions, ImportQueuePanel } from "./ImportQueuePanel";
+import type { ImportQueue } from "./useImportQueue";
 
 type ImportFile = {
   file: File;
@@ -43,10 +38,7 @@ type ImportFile = {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  addDocuments: (documents: Document[]) => void;
-  onIndexingStarted: (jobId: string) => void;
-  // Imported for this project only; already there, they join its selection.
-  projectId?: string;
+  queue: ImportQueue;
 };
 
 function getFileKey(item: ImportFile) {
@@ -61,9 +53,7 @@ function getFileKey(item: ImportFile) {
 export function LocalDocumentImportDialog({
   open,
   onOpenChange,
-  addDocuments,
-  onIndexingStarted,
-  projectId,
+  queue,
 }: Props) {
   const fileInputRef =
     useRef<HTMLInputElement>(null);
@@ -74,41 +64,8 @@ export function LocalDocumentImportDialog({
   const [files, setFiles] =
     useState<ImportFile[]>([]);
 
-  const [indexImmediately, setIndexImmediately] =
-    useState(true);
-
   const [dragging, setDragging] =
     useState(false);
-
-  const [analysis, setAnalysis] =
-    useState<DocumentImportAnalysis | null>(null);
-
-  const [analyzing, setAnalyzing] =
-    useState(false);
-
-  const [analysisError, setAnalysisError] =
-    useState<string | null>(null);
-
-  const [conflictsOpen, setConflictsOpen] =
-    useState(false);
-
-  /**
-   * Decisions are also used as the UI state for
-   * the resolved conflict badges.
-   *
-   * key = analysis file key
-   * value = user's decision
-   */
-  const [decisions, setDecisions] =
-    useState<
-      Map<string, DocumentImportConflictAction>
-    >(new Map());
-
-  const [importing, setImporting] =
-    useState(false);
-
-  const [importError, setImportError] =
-    useState<string | null>(null);
 
   const accept = useMemo(
     () =>
@@ -124,14 +81,6 @@ export function LocalDocumentImportDialog({
 
   function reset() {
     setFiles([]);
-    setIndexImmediately(true);
-    setAnalysis(null);
-    setAnalyzing(false);
-    setAnalysisError(null);
-    setConflictsOpen(false);
-    setDecisions(new Map());
-    setImporting(false);
-    setImportError(null);
     setDragging(false);
   }
 
@@ -326,199 +275,26 @@ export function LocalDocumentImportDialog({
     addFiles(droppedFiles);
   }
 
-  async function analyzeFiles() {
-    if (files.length === 0) {
-      return;
-    }
-
-    const limitError = uploadLimitError(files.map((item) => item.file));
-    if (limitError) {
-      setAnalysisError(limitError);
-      return;
-    }
-
-    setAnalyzing(true);
-    setAnalysisError(null);
-    setImportError(null);
-
-    try {
-      const formData = new FormData();
-
-      for (const item of files) {
-        formData.append(
-          "files",
-          item.file,
-        );
-
-        formData.append(
-          "relativePaths",
-          item.relativePath ?? "",
-        );
-      }
-
-      const response = await fetch(
-        "/api/documents/import/analyze",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ??
-          "L'analyse a échoué.",
-        );
-      }
-
-      setAnalysis(
-        data as DocumentImportAnalysis,
-      );
-
-      setDecisions(new Map());
-    } catch (error) {
-      setAnalysisError(
-        error instanceof Error
-          ? error.message
-          : "Une erreur est survenue.",
-      );
-    } finally {
-      setAnalyzing(false);
-    }
+  // The files go to the import queue; the dialog stays open for more.
+  function importFiles() {
+    queue.addLocal(files);
+    setFiles([]);
   }
 
-  function handleConflictResolved(
-    nextDecisions: Map<
-      string,
-      DocumentImportConflictAction
-    >,
-  ) {
-    /*
-     * The same state is used both for the import
-     * request and for the UI badges.
-     *
-     * No modification of analysis.files is needed.
-     */
-    setDecisions(
-      new Map(nextDecisions),
-    );
-
-    setConflictsOpen(false);
-  }
-
-  async function importDocuments() {
-    if (!analysis || importing) {
-      return;
-    }
-
-    const unresolvedConflicts =
-      analysis.files.filter(
-        (file) =>
-          file.conflict &&
-          !decisions.has(file.key),
-      );
-
-    if (unresolvedConflicts.length > 0) {
-      setConflictsOpen(true);
-      return;
-    }
-
-    setImporting(true);
-    setImportError(null);
-
-    try {
-      const formData = new FormData();
-
-      /*
-       * We deliberately send the complete original
-       * file list. The server receives the decisions
-       * separately and is responsible for applying them.
-       */
-      for (const item of files) {
-        formData.append(
-          "files",
-          item.file,
-        );
-
-        formData.append(
-          "relativePaths",
-          item.relativePath ?? "",
-        );
-      }
-
-      formData.append(
-        "decisions",
-        JSON.stringify(
-          Object.fromEntries(decisions),
-        ),
-      );
-
-      formData.append(
-        "indexImmediately",
-        String(indexImmediately),
-      );
-
-      if (projectId) {
-        formData.append("projectId", projectId);
-      }
-
-      const response = await fetch(
-        "/api/documents/import",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ??
-          "L'import a échoué.",
-        );
-      }
-
-      if ("importedDocuments" in data) {
-        const importedDocuments: Document[] = data.importedDocuments;
-        addDocuments(importedDocuments);
-      }
-
-      if ("createdJobIds" in data) {
-        const createdJobIds: string[] = data.createdJobIds;
-        createdJobIds.forEach((jobId) => {
-          onIndexingStarted(jobId);
-        });
-      }
-
-      handleOpenChange(false);
-    } catch (error) {
-      setImportError(
-        error instanceof Error
-          ? error.message
-          : "Une erreur est survenue.",
-      );
-    } finally {
-      setImporting(false);
-    }
-  }
-
-  const conflicts =
-    analysis?.files.filter(
-      (file) => file.conflict,
-    ) ?? [];
+  const queueShown = queue.items.length > 0;
 
   return (
-    <>
-      <Dialog
-        open={open}
-        onOpenChange={handleOpenChange}
+    <Dialog
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
+      <DialogContent
+        className={cn(
+          "w-full min-w-0 max-h-[calc(100vh-2rem)] overflow-hidden",
+          queueShown ? "sm:max-w-5xl md:grid-cols-[minmax(0,1fr)_22rem]" : "sm:max-w-2xl",
+        )}
       >
-        <DialogContent className="w-full min-w-0 max-h-[calc(100vh-2rem)] overflow-hidden sm:max-w-2xl">
+        <div className="grid min-w-0 gap-4">
           <DialogHeader>
             <DialogTitle>
               Importer des documents
@@ -531,249 +307,156 @@ export function LocalDocumentImportDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {!analysis ? (
-            <>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    fileInputRef.current?.click()
-                  }
-                >
-                  <FileIcon className="mr-2 size-4" />
-                  Ajouter des fichiers
-                </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() =>
+                fileInputRef.current?.click()
+              }
+            >
+              <FileIcon className="mr-2 size-4" />
+              Ajouter des fichiers
+            </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    folderInputRef.current?.click()
-                  }
-                >
-                  <FolderOpen className="mr-2 size-4" />
-                  Ajouter un dossier
-                </Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                folderInputRef.current?.click()
+              }
+            >
+              <FolderOpen className="mr-2 size-4" />
+              Ajouter un dossier
+            </Button>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept={accept}
-                  className="hidden"
-                  onChange={handleFileInput}
-                />
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={accept}
+              className="hidden"
+              onChange={handleFileInput}
+            />
 
-                <input
-                  ref={folderInputRef}
-                  type="file"
-                  multiple
-                  // @ts-expect-error webkitdirectory is not in React's types
-                  webkitdirectory=""
-                  accept={accept}
-                  className="hidden"
-                  onChange={handleFolderInput}
-                />
-              </div>
+            <input
+              ref={folderInputRef}
+              type="file"
+              multiple
+              // @ts-expect-error webkitdirectory is not in React's types
+              webkitdirectory=""
+              accept={accept}
+              className="hidden"
+              onChange={handleFolderInput}
+            />
+          </div>
 
-              <div
-                onDragEnter={(event) => {
-                  event.preventDefault();
-                  setDragging(true);
-                }}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setDragging(true);
-                }}
-                onDragLeave={(event) => {
-                  event.preventDefault();
-                  setDragging(false);
-                }}
-                onDrop={handleDrop}
-                className={[
-                  "flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition-colors",
-                  dragging
-                    ? "border-primary bg-muted/50"
-                    : "border-border",
-                ].join(" ")}
-              >
-                <Upload className="mb-3 size-6 text-muted-foreground" />
+          <div
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setDragging(false);
+            }}
+            onDrop={handleDrop}
+            className={[
+              "flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition-colors",
+              dragging
+                ? "border-primary bg-muted/50"
+                : "border-border",
+            ].join(" ")}
+          >
+            <Upload className="mb-3 size-6 text-muted-foreground" />
 
+            <p className="text-sm font-medium">
+              Glissez vos fichiers ou
+              dossiers ici
+            </p>
+
+            <p className="mt-1 text-xs text-muted-foreground">
+              Vous pouvez mélanger
+              fichiers et dossiers.
+            </p>
+          </div>
+
+          {files.length > 0 && (
+            <div className="min-w-0 w-full space-y-3">
+              <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">
-                  Glissez vos fichiers ou
-                  dossiers ici
+                  {files.length} fichier{files.length !== 1 ? "s" : ""}
+                  {" · "}
+                  {formatSize(files.reduce((total, item) => total + item.file.size, 0))}
                 </p>
 
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Vous pouvez mélanger
-                  fichiers et dossiers.
-                </p>
-              </div>
-
-              {files.length > 0 && (
-                <div className="min-w-0 w-full space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">
-                      {files.length} fichier
-                      {files.length !== 1
-                        ? "s"
-                        : ""}
-                    </p>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setFiles([])
-                      }
-                    >
-                      Tout supprimer
-                    </Button>
-                  </div>
-
-                  <div className="min-w-0 w-full max-h-[50vh] space-y-1 overflow-x-hidden overflow-y-auto">
-                    {files.map((item) => (
-                      <div
-                        key={getFileKey(item)}
-                        className="flex min-w-0 w-full items-center justify-between rounded-md border px-3 py-2"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm">
-                            {item.file.name}
-                          </p>
-
-                          {item.relativePath &&
-                            item.relativePath !==
-                            item.file.name && (
-                              <p className="truncate text-xs text-muted-foreground">
-                                {item.relativePath}
-                              </p>
-                            )}
-                        </div>
-
-                        <span className="ml-4 shrink-0 text-xs text-muted-foreground">
-                          {(
-                            item.file.size /
-                            1024 /
-                            1024
-                          ).toFixed(2)}{" "}
-                          MB
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="index-immediately"
-                  checked={indexImmediately}
-                  onCheckedChange={(checked) =>
-                    setIndexImmediately(
-                      checked === true,
-                    )
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setFiles([])
                   }
-                />
-
-                <label
-                  htmlFor="index-immediately"
-                  className="cursor-pointer text-sm"
                 >
-                  Indexer maintenant
-                </label>
+                  Tout supprimer
+                </Button>
               </div>
 
-              {analysisError && (
-                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-                  {analysisError}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <DocumentImportReview
-                analysis={analysis}
-                decisions={decisions}
-                importError={importError}
-              />
-            </>
+              <div className="min-w-0 w-full max-h-[40vh] space-y-1 overflow-x-hidden overflow-y-auto">
+                {files.map((item) => (
+                  <div
+                    key={getFileKey(item)}
+                    className="flex min-w-0 w-full items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <TruncatedText className="text-sm">
+                        {item.file.name}
+                      </TruncatedText>
+
+                      {item.relativePath &&
+                        item.relativePath !==
+                        item.file.name && (
+                          <TruncatedText className="text-xs text-muted-foreground">
+                            {item.relativePath}
+                          </TruncatedText>
+                        )}
+                    </div>
+
+                    <span className="ml-4 shrink-0 text-xs text-muted-foreground">
+                      {formatSize(item.file.size)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
+          <ImportOptions queue={queue} id="local" />
+
           <DialogFooter>
-            {!analysis ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    handleOpenChange(false)
-                  }
-                >
-                  Annuler
-                </Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                handleOpenChange(false)
+              }
+            >
+              Fermer
+            </Button>
 
-                <Button
-                  disabled={
-                    files.length === 0 ||
-                    analyzing
-                  }
-                  onClick={analyzeFiles}
-                >
-                  {analyzing
-                    ? "Analyse..."
-                    : "Continuer"}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  disabled={importing}
-                  onClick={() => {
-                    setAnalysis(null);
-                    setDecisions(new Map());
-                  }}
-                >
-                  Retour
-                </Button>
-
-                <Button
-                  disabled={
-                    importing ||
-                    analysis.files.length ===
-                    0
-                  }
-                  onClick={importDocuments}
-                >
-                  {importing
-                    ? "Import..."
-                    : conflicts.length > 0 &&
-                      conflicts.some(
-                        (file) =>
-                          !decisions.has(
-                            file.key,
-                          ),
-                      )
-                      ? "Vérifier les conflits"
-                      : `Importer ${analysis.files.length} fichier${analysis.files.length !==
-                        1
-                        ? "s"
-                        : ""
-                      }`}
-                </Button>
-              </>
-            )}
+            <Button
+              disabled={files.length === 0}
+              onClick={importFiles}
+            >
+              {files.length > 0
+                ? `Importer ${files.length} fichier${files.length !== 1 ? "s" : ""}`
+                : "Importer"}
+            </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
 
-      <DocumentImportConflictDialog
-        open={conflictsOpen}
-        conflicts={conflicts}
-        onOpenChange={setConflictsOpen}
-        onResolved={
-          handleConflictResolved
-        }
-      />
-    </>
+        {queueShown && <ImportQueuePanel queue={queue} />}
+      </DialogContent>
+    </Dialog>
   );
 }
