@@ -15,11 +15,14 @@ import { Document } from "@prisma/client";
 
 import { getOcrLanguages, ocrPdfPage } from "../ocr";
 import type { ExtractionParameters } from "@/lib/pipeline/parameters";
-import { mapWithConcurrency } from "@/lib/concurrency";
+import { createLimiter, mapWithConcurrency } from "@/lib/concurrency";
+import { env } from "@/lib/env";
 import { countMeaningfulChars } from "../text";
 
-// Tesseract uses about one core per page: half the threads, the indexing worker running two documents at once.
-const OCR_CONCURRENCY = Math.max(1, Math.floor(availableParallelism() / 2));
+// Tesseract uses one core per page (OMP_THREAD_LIMIT=1). One pool for every document of the worker: a scan alone
+// gets all of it, two scans share it. Two cores left to the app and the database.
+const OCR_THREADS = env.INDEXING_OCR_THREADS ?? Math.max(1, availableParallelism() - 2);
+const ocrSlot = createLimiter(OCR_THREADS);
 
 /**
  * Keeps the native text of each page and OCRs only the pages below the threshold.
@@ -40,11 +43,11 @@ export async function applyOcrToPages(
     const ocrResults = new Map<number, ExtractedBlock[]>();
     let done = 0;
 
-    await mapWithConcurrency(pagesToOcr, OCR_CONCURRENCY, async (page) => {
+    await mapWithConcurrency(pagesToOcr, OCR_THREADS, async (page) => {
         const pageNumber = page.pageNumber!;
 
         try {
-            ocrResults.set(pageNumber, await ocrPage(pageNumber));
+            ocrResults.set(pageNumber, await ocrSlot(() => ocrPage(pageNumber)));
         } catch (error) {
             const message = `OCR de la page ${pageNumber} : ${error instanceof Error ? error.message : String(error)}`;
 

@@ -9,6 +9,8 @@ describe("indexingProgressPercent", () => {
         assert.equal(indexingProgressPercent({ stage: IndexingStage.EXTRACTING }), 17);
         assert.equal(indexingProgressPercent({ stage: IndexingStage.EXTRACTING, current: 5, total: 10 }), 25);
         assert.equal(indexingProgressPercent({ stage: IndexingStage.CHUNKING }), 33);
+        assert.equal(indexingProgressPercent({ stage: IndexingStage.WAITING_EXTRACTION }), 17);
+        assert.equal(indexingProgressPercent({ stage: IndexingStage.WAITING_EMBEDDING }), 67);
         assert.equal(indexingProgressPercent({ stage: IndexingStage.PERSISTING_EMBEDDINGS }), 83);
         assert.equal(indexingProgressPercent({ stage: IndexingStage.COMPLETED }), 100);
     });

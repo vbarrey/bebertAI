@@ -30,6 +30,7 @@ import { chunkingSignature, PipelineParametersSchema } from "@/lib/pipeline/para
 import { KEPT_CHUNKS_WARNING, keepsChunksWithoutFile, reusesChunks } from "@/lib/rag/indexing/reindex";
 import { prisma } from "@/lib/prisma";
 import type { Chunk } from "@prisma/client";
+import { createLimiter } from "@/lib/concurrency";
 import { DocumentFormatSchema } from "@/lib/documents/format";
 import { withDocumentFile } from "@/lib/documents/storage";
 import { isPermanentDriveError } from "@/lib/google-drive/client";
@@ -44,8 +45,12 @@ export type IndexingJobData = {
 
 const NAME = "Document-Indexing-Worker";
 
-// Documents indexed at once: by default one OCRs on the CPU while the other one is embedded on the GPU.
-const CONCURRENCY = env.INDEXING_CONCURRENCY;
+// Each document takes a CPU slot to be extracted, then a GPU slot to be embedded: the CPU extracts the next documents
+// while the GPU embeds one, neither waits for the other. The worker holds as many documents again as extracting ones:
+// documents extracted and waiting for the GPU do not stop the extraction.
+const cpuSlot = createLimiter(env.INDEXING_CPU_SLOTS);
+const gpuSlot = createLimiter(env.INDEXING_GPU_SLOTS);
+const CONCURRENCY = 2 * env.INDEXING_CPU_SLOTS + env.INDEXING_GPU_SLOTS;
 
 let collectionWrites: Promise<unknown> = Promise.resolve();
 
@@ -116,66 +121,72 @@ async function initialize() {
         let warning: string | undefined;
 
         if (!reusesChunks(document, existingChunks.length, signature)) {
-          const extractor = getDocumentExtractor(
-            DocumentFormatSchema.parse(document.format),
-            extractionParameters,
-          );
+          await updateProgress(IndexingStage.WAITING_EXTRACTION);
 
-          await updateProgress(IndexingStage.EXTRACTING);
-
-          let extracted: Awaited<ReturnType<typeof extractor.extract>> | null = null;
-          try {
-            // OCR runs inside this stage: progress stays on EXTRACTING with the pages done so far.
-            extracted = await withDocumentFile(document, (filePath) => extractor.extract(
-              filePath,
-              document,
-              (current, total) => job.updateProgress({ stage: IndexingStage.EXTRACTING, current, total }),
-            ));
-          } catch (error) {
-            if (!keepsChunksWithoutFile(existingChunks.length, error)) throw error;
-            warning = KEPT_CHUNKS_WARNING;
-          }
-
-          if (extracted) {
-            // Every later step works on the same text: NFC, part numbers in Latin letters.
-            const extraction = {
-              ...extracted,
-              blocks: extracted.blocks.map((block) => ({ ...block, text: normalizeExtractedText(block.text) })),
-            };
-
-            const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);
-
-            await updateProgress(IndexingStage.CHUNKING);
-
-            // A book may hold an annex in another language: detected per chunk, the whole document as the fallback,
-            // and null (BM25 without stemmer) when neither tells.
-            const detected = detectLanguage(extraction.blocks.map((block) => block.text).join("\n"));
-            documentLanguage = detected;
-
-            const chunks = (await chunker.chunk(extraction)).map((chunk) => ({
-              ...chunk,
-              language: detectLanguage(chunk.text) ?? detected,
-            }));
-
-            if (chunks.length === 0) {
-              // Retrying cannot help: the file has no text layer.
-              throw new UnrecoverableError(
-                extractionParameters.ocrEnabled
-                  ? "Aucun texte extractible dans le document, même par OCR."
-                  : "Aucun texte extractible dans le document (PDF scanné ?). Activez l'OCR dans Réglages > Pipeline.",
-              );
-            }
-
-            await updateProgress(IndexingStage.PERSISTING_CHUNKS);
-
-            persistedChunks = await replaceDocumentChunks(
-              document.id,
-              chunks,
+          // Holds a CPU slot from the reading of the file to the chunks: the next document extracts meanwhile this one
+          // is embedded.
+          await cpuSlot(async () => {
+            const extractor = getDocumentExtractor(
+              DocumentFormatSchema.parse(document.format),
+              extractionParameters,
             );
 
-            await setDocumentLanguage(document.id, detected);
-            await prisma.document.update({ where: { id: document.id }, data: { chunkedWith: signature } });
-          }
+            await updateProgress(IndexingStage.EXTRACTING);
+
+            let extracted: Awaited<ReturnType<typeof extractor.extract>> | null = null;
+            try {
+              // OCR runs inside this stage: progress stays on EXTRACTING with the pages done so far.
+              extracted = await withDocumentFile(document, (filePath) => extractor.extract(
+                filePath,
+                document,
+                (current, total) => job.updateProgress({ stage: IndexingStage.EXTRACTING, current, total }),
+              ));
+            } catch (error) {
+              if (!keepsChunksWithoutFile(existingChunks.length, error)) throw error;
+              warning = KEPT_CHUNKS_WARNING;
+            }
+
+            if (extracted) {
+              // Every later step works on the same text: NFC, part numbers in Latin letters.
+              const extraction = {
+                ...extracted,
+                blocks: extracted.blocks.map((block) => ({ ...block, text: normalizeExtractedText(block.text) })),
+              };
+
+              const chunker = getDocumentChunker(pipelineConfig.parameters.chunking);
+
+              await updateProgress(IndexingStage.CHUNKING);
+
+              // A book may hold an annex in another language: detected per chunk, the whole document as the fallback,
+              // and null (BM25 without stemmer) when neither tells.
+              const detected = detectLanguage(extraction.blocks.map((block) => block.text).join("\n"));
+              documentLanguage = detected;
+
+              const chunks = (await chunker.chunk(extraction)).map((chunk) => ({
+                ...chunk,
+                language: detectLanguage(chunk.text) ?? detected,
+              }));
+
+              if (chunks.length === 0) {
+                // Retrying cannot help: the file has no text layer.
+                throw new UnrecoverableError(
+                  extractionParameters.ocrEnabled
+                    ? "Aucun texte extractible dans le document, même par OCR."
+                    : "Aucun texte extractible dans le document (PDF scanné ?). Activez l'OCR dans Réglages > Pipeline.",
+                );
+              }
+
+              await updateProgress(IndexingStage.PERSISTING_CHUNKS);
+
+              persistedChunks = await replaceDocumentChunks(
+                document.id,
+                chunks,
+              );
+
+              await setDocumentLanguage(document.id, detected);
+              await prisma.document.update({ where: { id: document.id }, data: { chunkedWith: signature } });
+            }
+          });
         }
 
         const embedder = new DocumentEmbedder(
@@ -184,12 +195,17 @@ async function initialize() {
           { contextLength: embeddingContextLength(parameters.chunking.chunkSize) },
         );
 
-        await updateProgress(IndexingStage.EMBEDDING);
+        await updateProgress(IndexingStage.WAITING_EMBEDDING);
 
-        const embeddings = await embedder.embed(
-          persistedChunks,
-          (current, total) => job.updateProgress({ stage: IndexingStage.EMBEDDING, current, total }),
-        );
+        // Freed before the writes to Qdrant: the GPU goes on to the next document.
+        const embeddings = await gpuSlot(async () => {
+          await updateProgress(IndexingStage.EMBEDDING);
+
+          return embedder.embed(
+            persistedChunks,
+            (current, total) => job.updateProgress({ stage: IndexingStage.EMBEDDING, current, total }),
+          );
+        });
 
         if (embeddings.length === 0) {
           throw new Error(

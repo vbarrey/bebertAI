@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { constants, setPriority, tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { UnrecoverableError } from "bullmq";
@@ -23,14 +23,21 @@ async function run(
     env?: Record<string, string>,
 ): Promise<string> {
     try {
-        const { stdout } = await execFileAsync(command, args, {
+        const running = execFileAsync(command, args, {
             timeout: COMMAND_TIMEOUT_MS,
             maxBuffer: 64 * 1024 * 1024,
             windowsHide: true,
             env: env && { ...process.env, ...env },
         });
 
-        return stdout;
+        // Below the app: the OCR takes the cores left, the pages and the chat stay fluid.
+        try {
+            setPriority(running.child.pid!, constants.priority.PRIORITY_BELOW_NORMAL);
+        } catch {
+            // Already ended, or not allowed: it runs at the normal priority.
+        }
+
+        return (await running).stdout;
     } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") {
             // Retrying cannot help until the binary is installed.

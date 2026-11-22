@@ -8,14 +8,16 @@ describe("environment variables", () => {
     const env = parseEnv({ REDIS_URL: "" });
 
     assert.equal(env.REDIS_URL, "redis://localhost:6379");
-    assert.equal(env.INDEXING_CONCURRENCY, 2);
+    assert.equal(env.INDEXING_CPU_SLOTS, 2);
+    assert.equal(env.INDEXING_GPU_SLOTS, 1);
+    assert.equal(env.INDEXING_OCR_THREADS, undefined);
     assert.equal(env.DOCUMENTS_STORAGE_PATH, "./data/documents");
     assert.equal(env.ADMIN_EMAIL, undefined);
   });
 
   it("reads the numbers and refuses a wrong value, naming it", () => {
-    assert.equal(parseEnv({ INDEXING_CONCURRENCY: "4" }).INDEXING_CONCURRENCY, 4);
-    assert.throws(() => parseEnv({ INDEXING_CONCURRENCY: "deux" }), /INDEXING_CONCURRENCY/);
+    assert.equal(parseEnv({ INDEXING_CPU_SLOTS: "4" }).INDEXING_CPU_SLOTS, 4);
+    assert.throws(() => parseEnv({ INDEXING_GPU_SLOTS: "deux" }), /INDEXING_GPU_SLOTS/);
     assert.throws(() => parseEnv({ ADMIN_EMAIL: "pas-un-email" }), /ADMIN_EMAIL/);
   });
 

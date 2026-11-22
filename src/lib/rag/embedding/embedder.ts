@@ -16,8 +16,8 @@ export type EmbeddingProgress = (current: number, total: number) => Promise<void
 
 // Small enough to report progress on long documents, large enough to keep the requests few.
 const BATCH_SIZE = 32;
-// A second request in flight hides the round trip to the provider between two batches.
-const PARALLEL_BATCHES = 2;
+// Requests in flight: the provider always has the next batch while it sends one back, the GPU never waits.
+const PARALLEL_BATCHES = 3;
 
 /**
  * Context of the embedding requests, chunks and queries alike. A token holds at least one character, so

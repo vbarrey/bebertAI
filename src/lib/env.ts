@@ -33,8 +33,11 @@ const EnvSchema = z.object({
   // Ollama on this machine (http://localhost:11434): unset, the "Ollama local" provider is not offered.
   OLLAMA_URL: z.url().optional(),
 
-  // Documents the worker indexes at once.
-  INDEXING_CONCURRENCY: z.coerce.number().int().positive().default(2),
+  // Documents extracted at once (CPU: text, OCR), and embedded at once (GPU with Ollama; more with a remote API).
+  INDEXING_CPU_SLOTS: z.coerce.number().int().positive().default(2),
+  INDEXING_GPU_SLOTS: z.coerce.number().int().positive().default(1),
+  // Tesseract processes for the whole worker. Unset: every core but two, left to the app.
+  INDEXING_OCR_THREADS: z.coerce.number().int().positive().optional(),
 
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),

@@ -104,9 +104,11 @@ La base, les documents et les collections Qdrant sont remplacés par ceux de la 
 
 Dans `.env` :
 
-- `INDEXING_CONCURRENCY` (2) : documents indexés en même temps par le worker.
+- `INDEXING_CPU_SLOTS` (2) : documents extraits en même temps (texte, OCR).
+- `INDEXING_GPU_SLOTS` (1) : documents envoyés à l'embedding en même temps. 1 avec Ollama sur la même machine, davantage avec une API distante.
+- `INDEXING_OCR_THREADS` (tous les cœurs moins deux) : processus Tesseract pour tout le worker, en priorité basse.
 
-Mesurer avec le test de charge (`npm run bench:load`, voir `scripts/load-test.ts`).
+Mesurer avec le test de charge (`npm run bench:load`, voir `scripts/load-test.ts`) et le débit d'indexation (`npm run bench:throughput`, voir `scripts/bench-throughput.ts`).
 
 Limites d'import : 100 Mo par fichier, 300 Mo par import.
 
